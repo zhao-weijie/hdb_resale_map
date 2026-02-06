@@ -6,7 +6,8 @@ dist/
 
 # Data files (large)
 /data/
-*.arrow
+scripts/data/
+# *.arrow # Allow arrow files
 *.parquet
 
 # Python
