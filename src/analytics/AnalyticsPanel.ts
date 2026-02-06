@@ -117,7 +117,7 @@ export class AnalyticsPanel {
 
     private startDragLat: number | null = null;
     private startDragLng: number | null = null;
-    private isSelecting = false;
+    // private isSelecting = false; // Unused
 
     private bindMapEvents(): void {
         // 1. Mobile Viewport Tracking (Always bind, check mode inside)
@@ -181,7 +181,7 @@ export class AnalyticsPanel {
         if (!bounds) return;
 
         const allData = this.dataLoader.getAllData();
-        const visibleData = allData.filter(t =>
+        const visibleData = allData.filter((t: HDBTransaction) =>
             t.latitude >= bounds.south && t.latitude <= bounds.north &&
             t.longitude >= bounds.west && t.longitude <= bounds.east
         );
@@ -196,7 +196,6 @@ export class AnalyticsPanel {
     }
 
     private setSelectionMode(active: boolean): void {
-        this.isSelecting = active;
         this.mapView.setSelectionMode(active);
 
         const btn = document.getElementById('select-area-btn');
@@ -239,8 +238,8 @@ export class AnalyticsPanel {
             return;
         }
 
-        const avgPrice = data.reduce((sum, t) => sum + t.resale_price, 0) / data.length;
-        const avgPsf = data.reduce((sum, t) => sum + t.price_psf, 0) / data.length;
+        const avgPrice = data.reduce((sum: number, t: HDBTransaction) => sum + t.resale_price, 0) / data.length;
+        const avgPsf = data.reduce((sum: number, t: HDBTransaction) => sum + t.price_psf, 0) / data.length;
         let minPrice = Infinity;
         let maxPrice = -Infinity;
         for (const t of data) {

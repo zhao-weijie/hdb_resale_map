@@ -1,6 +1,6 @@
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import { ScatterplotLayer } from '@deck.gl/layers';
+// import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import maplibregl from 'maplibre-gl';
@@ -193,11 +193,7 @@ export class MapView {
             pickable: true,
             radiusMinPixels: this.isMobile ? 3 : 2,
             radiusMaxPixels: 30,
-            onHover: (info) => {
-                if (info.object) {
-                    const d = info.object as HDBTransaction;
-                }
-            },
+            onHover: () => { }, // No tooltip for now
         }));
 
         // Add selection circle if active

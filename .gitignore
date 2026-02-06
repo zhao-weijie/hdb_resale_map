@@ -5,7 +5,7 @@ dist/
 .DS_Store
 
 # Data files (large)
-data/
+/data/
 *.arrow
 *.parquet
 
