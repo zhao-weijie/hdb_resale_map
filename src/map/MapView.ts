@@ -1,5 +1,5 @@
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, PolygonLayer } from '@deck.gl/layers';
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
@@ -12,6 +12,9 @@ export class MapView {
     private deckOverlay: MapboxOverlay | null = null;
     private dataLoader: DataLoader;
     private containerElement: HTMLElement;
+    private selectionCircle: any = null;
+    private selectionRect: any = null;
+
     private isMobile: boolean;
     private colorMode: ColorMode = 'price_psf';
     private selectedTransactions: HDBTransaction[] | null = null;
@@ -144,6 +147,55 @@ export class MapView {
     }
 
     /**
+     * Set selection type (radial or rect)
+     */
+    setSelectionType(_type: 'radial' | 'rect'): void {
+        // this.selectionType = type;
+        // Logic to switch visual cues (e.g. cursor, shapes)
+    }
+
+    /**
+     * Fly to specific location
+     */
+    flyTo(lat: number, lng: number): void {
+        this.map?.flyTo({
+            center: [lng, lat],
+            zoom: 15,
+            essential: true
+        });
+    }
+
+    /**
+     * Update map with filtered data
+     */
+    setFilteredData(transactions: import('../data/DataLoader').HDBTransaction[]): void {
+        if (!this.map) return;
+
+        // Convert to GeoJSON
+        const geojson: GeoJSON.FeatureCollection = {
+            type: 'FeatureCollection',
+            features: transactions.map(t => ({
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [t.longitude, t.latitude]
+                },
+                properties: {
+                    ...t,
+                    // Ensure numeric content for data-driven styling if needed
+                    resale_price: t.resale_price,
+                    price_psf: t.price_psf
+                }
+            }))
+        };
+
+        const source = this.map.getSource('transactions') as maplibregl.GeoJSONSource;
+        if (source) {
+            source.setData(geojson);
+        }
+    }
+
+    /**
      * Set callback for map movement (pan/zoom)
      */
     setOnMapMove(callback: () => void): void {
@@ -226,18 +278,63 @@ export class MapView {
             );
         }
 
+
+
+        // Add selection rectangle if active
+        if (this.selectionRect) {
+            layers.push(
+                new PolygonLayer({
+                    id: 'selection-rect',
+                    data: [this.selectionRect],
+                    pickable: false,
+                    stroked: true,
+                    filled: true,
+                    getFillColor: [59, 130, 246, 40],
+                    getLineColor: [59, 130, 246, 255],
+                    getLineWidth: 2,
+                    lineWidthMinPixels: 2,
+                    getPolygon: (d: any) => d.polygon,
+                })
+            );
+        }
+
         return layers;
     }
 
-    private selectionCircle: { position: [number, number], radius: number } | null = null;
 
     updateSelectionCircle(centerLat: number, centerLng: number, radiusMeters: number): void {
         this.selectionCircle = { position: [centerLng, centerLat], radius: radiusMeters };
+        // Clear rect when updating circle
+        this.selectionRect = null;
+        this.updateLayers();
+    }
+
+    updateSelectionRect(startLat: number, startLng: number, endLat: number, endLng: number): void {
+        const minLng = Math.min(startLng, endLng);
+        const maxLng = Math.max(startLng, endLng);
+        const minLat = Math.min(startLat, endLat);
+        const maxLat = Math.max(startLat, endLat);
+
+        this.selectionRect = {
+            polygon: [
+                [minLng, minLat],
+                [maxLng, minLat],
+                [maxLng, maxLat],
+                [minLng, maxLat]
+            ]
+        };
+        // Clear circle when updating rect
+        this.selectionCircle = null;
         this.updateLayers();
     }
 
     clearSelectionCircle(): void {
         this.selectionCircle = null;
+        this.updateLayers();
+    }
+
+    clearSelectionRect(): void {
+        this.selectionRect = null;
         this.updateLayers();
     }
 

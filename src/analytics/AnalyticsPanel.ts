@@ -7,7 +7,9 @@ import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
+
 import { FairValueAnalysis } from './FairValueAnalysis';
+import { PostalSearch } from '../tools/PostalSearch';
 
 Chart.register(...registerables, BoxPlotController, BoxAndWiskers);
 
@@ -23,6 +25,16 @@ export class AnalyticsPanel {
     private currentTransactions: HDBTransaction[] | null = null;
     private isSelectionModeActive = false;
     private selectedFeature: 'storey' | 'lease' | 'mrt' | 'flat_type' = 'storey';
+
+
+    // New State for Filters & Selection
+    private selectionMode: 'radial' | 'rect' = 'radial';
+    private globalFilters = {
+        date: 'all',
+        flatTypes: ['3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE'],
+        leaseMin: 0,
+        leaseMax: 99
+    };
 
     constructor(containerId: string, dataLoader: DataLoader, mapView: MapView) {
         const container = document.getElementById(containerId);
@@ -90,23 +102,84 @@ export class AnalyticsPanel {
         </div>
       
       <div class="controls">
-        <div class="control-group">
-          <label for="color-mode-select">View Mode</label>
+        <!-- Search & Selection -->
+        <div class="control-section">
+            <h3>📍 Location & Selection</h3>
+            <div class="control-group search-group">
+                <input type="text" id="postal-input" placeholder="Enter Postal Code" />
+                <button id="search-btn">🔍</button>
+            </div>
+            
+            <div class="control-group selection-mode-group">
+                <label>Selection Mode:</label>
+                <div class="toggle-switch">
+                    <button class="mode-btn active" data-mode="radial">Circle</button>
+                    <button class="mode-btn" data-mode="rect">Box</button>
+                </div>
+            </div>
+
+            <div class="control-group radius-group" id="radius-control">
+                <label for="radius-input">Radius:</label>
+                <div class="input-with-unit">
+                    <input type="number" id="radius-input" value="500" min="100" step="100" />
+                    <span class="unit">m</span>
+                </div>
+            </div>
+
+            <div class="control-group action-group">
+                <button id="select-area-btn" class="primary-btn">Drag to Select</button>
+                <button id="clear-selection-btn">Clear</button>
+            </div>
+        </div>
+
+        <!-- Global Filters -->
+        <div class="control-section collapsible-section">
+            <h3 class="section-toggle">🌪️ Global Filters <span class="toggle-icon">▼</span></h3>
+            <div class="section-content">
+                
+                <!-- Date Filter -->
+                <div class="filter-group">
+                    <label>Time Period</label>
+                    <select id="filter-date">
+                        <option value="all">All Time</option>
+                        <option value="6m">Last 6 Months</option>
+                        <option value="1y">Last 1 Year</option>
+                        <option value="3y">Last 3 Years</option>
+                        <option value="5y">Last 5 Years</option>
+                    </select>
+                </div>
+
+                <!-- Flat Type Filter -->
+                <div class="filter-group">
+                    <label>Flat Type</label>
+                    <div class="checkbox-grid" id="filter-flat-type">
+                        <label><input type="checkbox" value="3 ROOM" checked> 3 Rm</label>
+                        <label><input type="checkbox" value="4 ROOM" checked> 4 Rm</label>
+                        <label><input type="checkbox" value="5 ROOM" checked> 5 Rm</label>
+                        <label><input type="checkbox" value="EXECUTIVE" checked> Exec</label>
+                    </div>
+                </div>
+
+                <!-- Lease Filter -->
+                <div class="filter-group">
+                    <label>Remaining Lease (Years)</label>
+                    <div class="range-inputs">
+                        <input type="number" id="filter-lease-min" placeholder="Min" min="0" max="99" value="0">
+                        <span>-</span>
+                        <input type="number" id="filter-lease-max" placeholder="Max" min="0" max="99" value="99">
+                    </div>
+                </div>
+
+                <button id="apply-filters-btn" class="secondary-btn">Apply Filters</button>
+            </div>
+        </div>
+        
+        <div class="control-group view-mode-group">
+          <label for="color-mode-select">Color By:</label>
           <select id="color-mode-select">
             <option value="price_psf">Price per SqFt</option>
             <option value="price">Resale Price</option>
           </select>
-        </div>
-        
-        <div class="control-group">
-          <label for="radius-input">Radial Selection</label>
-          <input type="number" id="radius-input" placeholder="Radius (meters)" value="500" min="100" step="100" />
-          <button id="clear-selection-btn">Clear Selection</button>
-        </div>
-        
-        <div class="control-group">
-          <button id="select-area-btn" class="primary-btn">Select Area on Map</button>
-          <button id="analyze-btn" style="display:none">Analyze</button>
         </div>
       </div>
       
@@ -174,6 +247,7 @@ export class AnalyticsPanel {
             this.radialSelection.clearSelection();
             this.mapView.setSelectedTransactions(null);
             this.mapView.clearSelectionCircle();
+            this.mapView.clearSelectionRect();
             this.renderStats();
             this.clearChart();
         });
@@ -200,8 +274,186 @@ export class AnalyticsPanel {
         this.bindMapEvents();
         this.bindResizeEvents();
         this.bindTooltipEvents();
+
+        // New Binders
+        this.bindSearchEvents();
+        this.bindSelectionControls();
+        this.bindFilterEvents();
     }
 
+    private bindSearchEvents(): void {
+        const input = document.getElementById('postal-input') as HTMLInputElement;
+        const btn = document.getElementById('search-btn');
+
+        const performSearch = async () => {
+            const query = input.value.trim();
+            if (query.length < 3) return;
+
+            btn!.innerHTML = '⏳';
+            const result = await PostalSearch.search(query);
+            btn!.innerHTML = '🔍';
+
+            if (result) {
+                const lat = parseFloat(result.LATITUDE);
+                const lng = parseFloat(result.LONGITUDE);
+
+                // Fly to location
+                this.mapView.flyTo(lat, lng);
+
+                // If in radial mode, update selection circle
+                if (this.selectionMode === 'radial') {
+                    const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
+                    const radius = parseInt(radiusInput.value) || 500;
+
+                    this.mapView.updateSelectionCircle(lat, lng, radius);
+                    this.radialSelection.setSelection(lat, lng, radius);
+
+                    // Update stats
+                    const selected = this.radialSelection.getSelectedTransactions();
+                    this.updateSelectionState(selected);
+                }
+            } else {
+                alert('Location not found');
+            }
+        };
+
+        btn?.addEventListener('click', performSearch);
+        input?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+    }
+
+    private bindSelectionControls(): void {
+        // Selection Mode Toggle
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = (btn as HTMLElement).dataset.mode as 'radial' | 'rect';
+                this.selectionMode = mode;
+
+                // Update UI
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update visibility of controls
+                const radiusControl = document.getElementById('radius-control');
+                if (radiusControl) {
+                    radiusControl.style.display = mode === 'radial' ? 'flex' : 'none';
+                }
+
+                // Update Map Behavior
+                this.mapView.setSelectionType(mode);
+
+                // Reset selection mode if active
+                if (this.isSelectionModeActive) {
+                    this.setSelectionMode(false);
+                }
+            });
+        });
+
+        // Radius Input Update
+        const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
+        radiusInput?.addEventListener('change', () => {
+            const val = parseInt(radiusInput.value);
+            if (val > 0 && this.radialSelection.hasSelection()) {
+                const current = this.radialSelection.getCurrentCenter();
+                if (current) {
+                    this.mapView.updateSelectionCircle(current.lat, current.lng, val);
+                    this.radialSelection.setSelection(current.lat, current.lng, val);
+                    const selected = this.radialSelection.getSelectedTransactions();
+                    this.updateSelectionState(selected);
+                }
+            }
+        });
+    }
+
+    private bindFilterEvents(): void {
+        // Toggle Filter Section
+        const toggle = this.container.querySelector('.section-toggle');
+        toggle?.addEventListener('click', () => {
+            const content = this.container.querySelector('.section-content');
+            content?.classList.toggle('visible');
+            toggle.classList.toggle('expanded');
+        });
+
+        // Apply Filters
+        const applyBtn = document.getElementById('apply-filters-btn');
+        applyBtn?.addEventListener('click', () => {
+            this.applyGlobalFilters();
+        });
+    }
+
+    private applyGlobalFilters(): void {
+        // 1. Gather Filter Values
+        const dateSelect = document.getElementById('filter-date') as HTMLSelectElement;
+        const flatTypeInputs = document.querySelectorAll('#filter-flat-type input:checked');
+        const leaseMin = document.getElementById('filter-lease-min') as HTMLInputElement;
+        const leaseMax = document.getElementById('filter-lease-max') as HTMLInputElement;
+
+        this.globalFilters = {
+            date: dateSelect.value,
+            flatTypes: Array.from(flatTypeInputs).map(i => (i as HTMLInputElement).value),
+            leaseMin: parseInt(leaseMin.value) || 0,
+            leaseMax: parseInt(leaseMax.value) || 99
+        };
+
+        // 2. Filter Data
+        const allData = this.dataLoader.getAllData();
+        const now = new Date();
+
+        const filtered = allData.filter(t => {
+            // Flat Type
+            if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
+
+            // Lease
+            if (t.remaining_lease_years < this.globalFilters.leaseMin ||
+                t.remaining_lease_years > this.globalFilters.leaseMax) return false;
+
+            // Date
+            if (this.globalFilters.date !== 'all') {
+                const txDate = new Date(t.transaction_date); // field name check needed? DataLoader uses transaction_date
+                const diffTime = Math.abs(now.getTime() - txDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (this.globalFilters.date === '6m' && diffDays > 180) return false;
+                if (this.globalFilters.date === '1y' && diffDays > 365) return false;
+                if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
+                if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+            }
+
+            return true;
+        });
+
+        // 3. Update Map & Stats
+        this.mapView.setFilteredData(filtered);
+
+        // Clear current user selection as it might be invalid now
+        // Clear current user selection as it might be invalid now
+        this.radialSelection.clearSelection();
+        this.mapView.clearSelectionCircle();
+        this.mapView.clearSelectionRect();
+
+        // Update stats with filtered overview
+        this.renderStats(filtered);
+        this.renderChart(filtered);
+
+        // Update status text
+        const header = this.container.querySelector('.analytics-header h2');
+        if (header) header.textContent = `📊 Analytics (${filtered.length.toLocaleString()} records)`;
+    }
+
+    private updateSelectionState(selected: HDBTransaction[] | null): void {
+        this.currentTransactions = selected;
+        this.mapView.setSelectedTransactions(selected);
+        this.renderStats(selected);
+
+        if (selected) {
+            this.renderChart(selected);
+            if (this.activeTab === 'fairvalue') {
+                this.renderFairValue(selected);
+            }
+        }
+    }
     private bindTooltipEvents(): void {
         const tooltip = document.createElement('div');
         tooltip.className = 'js-fixed-tooltip';
@@ -211,13 +463,12 @@ export class AnalyticsPanel {
             tooltip.textContent = text;
             tooltip.style.display = 'block';
 
-            // Initial positioning
             const rect = (e.target as HTMLElement).getBoundingClientRect();
             let top = rect.top - tooltip.offsetHeight - 8;
             let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
 
             // Bounds checking
-            if (top < 10) top = rect.bottom + 8; // flip to bottom if too close to top
+            if (top < 10) top = rect.bottom + 8;
             if (left < 10) left = 10;
             if (left + tooltip.offsetWidth > window.innerWidth - 10) {
                 left = window.innerWidth - tooltip.offsetWidth - 10;
@@ -233,7 +484,6 @@ export class AnalyticsPanel {
             tooltip.style.display = 'none';
         };
 
-        // Delegate events for dynamic content
         this.container.addEventListener('mouseover', (e: Event) => {
             const target = e.target as HTMLElement;
             if (target.matches('[data-tooltip]')) {
@@ -259,7 +509,6 @@ export class AnalyticsPanel {
 
         const onMouseMove = (e: MouseEvent) => {
             const newWidth = startWidth + (e.clientX - startX);
-            // Constrain width
             if (newWidth >= 300 && newWidth <= 800) {
                 this.container.style.width = `${newWidth}px`;
             }
@@ -275,12 +524,10 @@ export class AnalyticsPanel {
         handle.addEventListener('mousedown', (e: MouseEvent) => {
             startX = e.clientX;
             startWidth = this.container.getBoundingClientRect().width;
-
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
-
             document.body.style.cursor = 'ew-resize';
-            document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+            document.body.style.userSelect = 'none';
             e.preventDefault();
         });
     }
@@ -304,25 +551,50 @@ export class AnalyticsPanel {
             }
         });
 
-        // 2. Desktop Drag Selection (Always bind, only active if Selection Mode set)
+        // 2. Desktop Drag Selection
         this.mapView.setOnDragSelection({
             onStart: (lat, lng) => {
                 this.startDragLat = lat;
                 this.startDragLng = lng;
-                this.mapView.updateSelectionCircle(lat, lng, 0);
+                if (this.selectionMode === 'radial') {
+                    this.mapView.updateSelectionCircle(lat, lng, 0);
+                }
+                // Rect not needed init visual? Maybe just empty.
             },
             onMove: (lat, lng) => {
                 if (this.startDragLat !== null && this.startDragLng !== null) {
-                    const radius = this.haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
-                    this.mapView.updateSelectionCircle(this.startDragLat, this.startDragLng, radius);
+                    if (this.selectionMode === 'radial') {
+                        const radius = this.haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
+                        this.mapView.updateSelectionCircle(this.startDragLat, this.startDragLng, radius);
+                    } else {
+                        // Rectangular
+                        this.mapView.updateSelectionRect(this.startDragLat, this.startDragLng, lat, lng);
+                    }
                 }
             },
             onEnd: (lat, lng) => {
                 if (this.startDragLat !== null && this.startDragLng !== null) {
-                    const radius = this.haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
+                    let selected: HDBTransaction[] | null = null;
 
-                    this.radialSelection.setSelection(this.startDragLat, this.startDragLng, radius);
-                    const selected = this.radialSelection.getSelectedTransactions();
+                    if (this.selectionMode === 'radial') {
+                        const radius = this.haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
+                        this.radialSelection.setSelection(this.startDragLat, this.startDragLng, radius);
+                        selected = this.radialSelection.getSelectedTransactions();
+
+                        const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
+                        if (radiusInput) radiusInput.value = Math.round(radius).toString();
+
+                        // We do NOT clear the selection circle, it persists.
+                    } else {
+                        // Rectangular
+                        const minLat = Math.min(this.startDragLat, lat);
+                        const maxLat = Math.max(this.startDragLat, lat);
+                        const minLng = Math.min(this.startDragLng, lng);
+                        const maxLng = Math.max(this.startDragLng, lng);
+
+                        selected = this.dataLoader.queryRectangle(minLat, minLng, maxLat, maxLng);
+                        this.mapView.updateSelectionRect(this.startDragLat, this.startDragLng, lat, lng);
+                    }
 
                     // Store for tab switching
                     this.currentTransactions = selected;
@@ -336,14 +608,12 @@ export class AnalyticsPanel {
                         this.renderFairValue(selected);
                     }
 
+                    // Disable the dragging interaction, but keep visuals
                     this.mapView.setSelectionMode(false);
                     this.setSelectionMode(false);
 
                     this.startDragLat = null;
                     this.startDragLng = null;
-
-                    const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
-                    if (radiusInput) radiusInput.value = Math.round(radius).toString();
                 }
             }
         });

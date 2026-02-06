@@ -58,4 +58,15 @@ export class RadialSelection {
             radius: this.radiusMeters,
         };
     }
+    // Helper aliases for AnalyticsPanel
+    hasSelection(): boolean {
+        return this.isActive;
+    }
+
+    getCurrentCenter(): { lat: number, lng: number } | null {
+        if (!this.isActive || this.centerLat === null || this.centerLng === null) {
+            return null;
+        }
+        return { lat: this.centerLat, lng: this.centerLng };
+    }
 }

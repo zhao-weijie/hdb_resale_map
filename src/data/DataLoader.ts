@@ -123,6 +123,28 @@ export class DataLoader {
     }
 
     /**
+     * Query data within a rectangular area (bounding box)
+     */
+    queryRectangle(minLat: number, minLng: number, maxLat: number, maxLng: number): HDBTransaction[] {
+        if (!this.spatialIndex) return [];
+
+        const bbox = {
+            minX: minLng,
+            minY: minLat,
+            maxX: maxLng,
+            maxY: maxLat,
+        };
+
+        const candidates = this.spatialIndex.search(bbox);
+
+        // RBush is precise for rectangles matching the axes, so we can return directly
+        // But RBush stores items based on their individual points, and search returns items that INTERSECT
+        // Since our items are points (minX=maxX, minY=maxY), intersection means they are inside the bbox.
+        // So we just map back to data.
+        return candidates.map((item) => this.data[item.index]);
+    }
+
+    /**
      * Calculate haversine distance between two points (in meters)
      */
     private haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
