@@ -22,6 +22,10 @@ export interface HDBTransaction {
     price_psf: number;
     latitude: number;
     longitude: number;
+    // New fields for fair value analysis
+    storey_midpoint: number;
+    mrt_distance_m: number;
+    price_index: number;
 }
 
 interface SpatialItem {
@@ -61,6 +65,10 @@ export class DataLoader {
                 price_psf: table.getChild('price_psf')?.get(i) ?? 0,
                 latitude: table.getChild('latitude')?.get(i) ?? 0,
                 longitude: table.getChild('longitude')?.get(i) ?? 0,
+                // New fields for fair value analysis
+                storey_midpoint: table.getChild('storey_midpoint')?.get(i) ?? 0,
+                mrt_distance_m: table.getChild('mrt_distance_m')?.get(i) ?? 0,
+                price_index: table.getChild('price_index')?.get(i) ?? 100,
             });
         }
 

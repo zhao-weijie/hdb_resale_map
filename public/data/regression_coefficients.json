@@ -1,0 +1,41 @@
+{
+  "intercept": 8.600116375751087,
+  "features": {
+    "storey_midpoint": 0.014237738125227764,
+    "remaining_lease_years": 0.004561832894875673,
+    "mrt_distance_km": -0.09800881018427071,
+    "floor_area_sqm": -0.0027455665479846417,
+    "flat_type_encoded": 0.030917565448095333
+  },
+  "flat_type_mapping": {
+    "0": "1 ROOM",
+    "1": "2 ROOM",
+    "2": "3 ROOM",
+    "3": "4 ROOM",
+    "4": "5 ROOM",
+    "5": "EXECUTIVE",
+    "6": "MULTI-GENERATION"
+  },
+  "r_squared": 0.33538247026538415,
+  "latest_price_index": 203.6,
+  "latest_quarter": "2025-Q4",
+  "n_samples": 224766,
+  "summary_stats": {
+    "storey_midpoint": {
+      "mean": 8.772163049571555,
+      "std": 5.945305873945419
+    },
+    "remaining_lease_years": {
+      "mean": 74.18993086142922,
+      "std": 14.213363114245643
+    },
+    "mrt_distance_km": {
+      "mean": 0.5675095754715704,
+      "std": 0.367338728805893
+    },
+    "floor_area_sqm": {
+      "mean": 96.75294884457615,
+      "std": 24.018069873920243
+    }
+  }
+}

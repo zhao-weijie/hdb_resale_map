@@ -10,16 +10,21 @@ from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Dict
 import pandas as pd
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 
 # Configuration
-DATA_DIR = Path(__file__).parent.parent / "data"
+SCRIPT_DIR = Path(__file__).resolve().parent
+DATA_DIR = SCRIPT_DIR / "data"  # scripts/data/ for raw data and geocode cache
+PUBLIC_DATA_DIR = SCRIPT_DIR.parent / "public" / "data"
 RAW_DATA_FILE = DATA_DIR / "hdb_resale_raw.csv"
 GEOCODE_CACHE = DATA_DIR / "addresses_geocoded.json"
-OUTPUT_ARROW = DATA_DIR / "hdb_data.arrow"
-OUTPUT_PARQUET = DATA_DIR / "hdb_data.parquet"  # Alternative format
+MRT_GEOJSON = PUBLIC_DATA_DIR / "LTAMRTStationExitGEOJSON.geojson"
+PRICE_INDEX_CSV = PUBLIC_DATA_DIR / "HDBResalePriceIndex1Q2009100Quarterly.csv"
+OUTPUT_ARROW = PUBLIC_DATA_DIR / "hdb_data.arrow"
+OUTPUT_PARQUET = PUBLIC_DATA_DIR / "hdb_data.parquet"  # Alternative format
 
 
 def load_data() -> Tuple[pd.DataFrame, Dict]:
@@ -51,6 +56,66 @@ def load_data() -> Tuple[pd.DataFrame, Dict]:
 def make_address_key(block: str, street_name: str) -> str:
     """Create consistent address key"""
     return f"{block}|{street_name}"
+
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate distance between two points in meters."""
+    R = 6371000  # Earth radius in meters
+    phi1, phi2 = np.radians(lat1), np.radians(lat2)
+    delta_phi = np.radians(lat2 - lat1)
+    delta_lambda = np.radians(lon2 - lon1)
+    
+    a = np.sin(delta_phi / 2) ** 2 + np.cos(phi1) * np.cos(phi2) * np.sin(delta_lambda / 2) ** 2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    return R * c
+
+
+def load_mrt_stations() -> list:
+    """Load MRT station exit coordinates from GeoJSON."""
+    with open(MRT_GEOJSON, 'r', encoding='utf-8') as f:
+        geojson = json.load(f)
+    
+    stations = []
+    for feature in geojson['features']:
+        coords = feature['geometry']['coordinates']
+        stations.append({
+            'name': feature['properties']['STATION_NA'],
+            'longitude': coords[0],
+            'latitude': coords[1]
+        })
+    return stations
+
+
+def calculate_mrt_distance(lat: float, lon: float, mrt_stations: list) -> float:
+    """Calculate distance to nearest MRT exit in meters."""
+    min_distance = float('inf')
+    for station in mrt_stations:
+        dist = haversine_distance(lat, lon, station['latitude'], station['longitude'])
+        if dist < min_distance:
+            min_distance = dist
+    return min_distance
+
+
+def load_price_index() -> dict:
+    """Load HDB Resale Price Index as quarter -> index mapping."""
+    df = pd.read_csv(PRICE_INDEX_CSV)
+    return {row['quarter']: row['index'] for _, row in df.iterrows()}
+
+
+def month_to_quarter(month: str) -> str:
+    """Convert YYYY-MM to YYYY-QX format."""
+    year, mon = month.split('-')
+    quarter = (int(mon) - 1) // 3 + 1
+    return f"{year}-Q{quarter}"
+
+
+def parse_storey_range(storey_range: str) -> int:
+    """Parse storey range to midpoint (e.g., '10 TO 12' -> 11)."""
+    try:
+        parts = storey_range.split(' TO ')
+        return (int(parts[0]) + int(parts[1])) // 2
+    except:
+        return 5  # Default fallback
 
 
 def calculate_remaining_lease(lease_commence_date: int, month: str) -> float:
@@ -116,9 +181,35 @@ def join_and_enrich_data(df: pd.DataFrame, geocode_cache: dict) -> pd.DataFrame:
     df['flat_type'] = df['flat_type'].astype('category')
     df['town'] = df['town'].astype('category')
     df['flat_model'] = df['flat_model'].astype('category')
+    # Parse storey midpoint before converting to category
+    df['storey_midpoint'] = df['storey_range'].apply(parse_storey_range)
     df['storey_range'] = df['storey_range'].astype('category')
     
-    print(f"  ✓ Calculated derived fields: price_psm, price_psf, remaining_lease_years")
+    # Calculate MRT distance per unique location (optimized)
+    print("  Calculating MRT distances (per unique location)...")
+    mrt_stations = load_mrt_stations()
+    unique_locations = df[['latitude', 'longitude']].drop_duplicates()
+    print(f"    Found {len(unique_locations)} unique locations")
+    
+    location_to_mrt_dist = {}
+    for _, row in unique_locations.iterrows():
+        key = (row['latitude'], row['longitude'])
+        location_to_mrt_dist[key] = calculate_mrt_distance(row['latitude'], row['longitude'], mrt_stations)
+    
+    df['mrt_distance_m'] = df.apply(
+        lambda row: location_to_mrt_dist[(row['latitude'], row['longitude'])],
+        axis=1
+    )
+    print(f"  ✓ MRT distances calculated")
+    
+    # Add price index for time adjustment
+    print("  Adding price index...")
+    price_index = load_price_index()
+    df['quarter'] = df['month'].apply(month_to_quarter)
+    df['price_index'] = df['quarter'].apply(lambda q: price_index.get(q, 100.0))
+    print(f"  ✓ Price index added")
+    
+    print(f"  ✓ Calculated derived fields: price_psm, price_psf, remaining_lease_years, storey_midpoint, mrt_distance_m, price_index")
     
     return df
 
@@ -146,7 +237,10 @@ def export_to_arrow(df: pd.DataFrame):
         'price_psm',
         'price_psf',
         'latitude',
-        'longitude'
+        'longitude',
+        'storey_midpoint',
+        'mrt_distance_m',
+        'price_index'
     ]
     
     export_df = df[columns_to_export].copy()

@@ -3,18 +3,26 @@
  */
 
 import { Chart, registerables } from 'chart.js';
+import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot';
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
+import { FairValueAnalysis } from './FairValueAnalysis';
 
-Chart.register(...registerables);
+Chart.register(...registerables, BoxPlotController, BoxAndWiskers);
 
 export class AnalyticsPanel {
     private container: HTMLElement;
     private dataLoader: DataLoader;
     private mapView: MapView;
     private radialSelection: RadialSelection;
+    private fairValueAnalysis: FairValueAnalysis;
     private chart: Chart | null = null;
+    private fairValueChart: Chart | null = null;
+    private activeTab: 'overview' | 'fairvalue' = 'overview';
+    private currentTransactions: HDBTransaction[] | null = null;
+    private isSelectionModeActive = false;
+    private selectedFeature: 'storey' | 'lease' | 'mrt' | 'flat_type' = 'storey';
 
     constructor(containerId: string, dataLoader: DataLoader, mapView: MapView) {
         const container = document.getElementById(containerId);
@@ -25,6 +33,49 @@ export class AnalyticsPanel {
         this.dataLoader = dataLoader;
         this.mapView = mapView;
         this.radialSelection = new RadialSelection(dataLoader);
+        this.fairValueAnalysis = new FairValueAnalysis();
+    }
+
+    async init(): Promise<void> {
+        await this.fairValueAnalysis.loadCoefficients();
+        this.showDataTreatmentToast();
+    }
+
+    private showDataTreatmentToast(): void {
+        // Only show once per user
+        if (localStorage.getItem('hdb_data_treatment_shown')) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'data-treatment-toast';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <span class="toast-icon">ⓘ</span>
+                <div class="toast-text">
+                    <strong>Data Note:</strong> Historical prices are adjusted using the HDB Resale Price Index to enable fair comparison across time periods.
+                </div>
+                <button class="toast-close" aria-label="Dismiss">×</button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        // Close handler
+        toast.querySelector('.toast-close')?.addEventListener('click', () => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+            localStorage.setItem('hdb_data_treatment_shown', 'true');
+        });
+
+        // Auto-dismiss after 15 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+                localStorage.setItem('hdb_data_treatment_shown', 'true');
+            }
+        }, 15000);
     }
 
     render(): void {
@@ -32,6 +83,7 @@ export class AnalyticsPanel {
       <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Panel">
         <span>›</span>
       </button>
+      <div class="resize-handle" title="Drag to resize"></div>
       <div class="panel-content">
         <div class="analytics-header">
             <h2>📊 Analytics</h2>
@@ -54,20 +106,58 @@ export class AnalyticsPanel {
         
         <div class="control-group">
           <button id="select-area-btn" class="primary-btn">Select Area on Map</button>
-          <button id="analyze-btn" style="display:none">Analyze</button> <!-- Hidden, kept for logic compat -->
+          <button id="analyze-btn" style="display:none">Analyze</button>
         </div>
       </div>
       
-      <div class="stats">
-        <div id="stats-content"></div>
+      <!-- Tab Navigation -->
+      <div class="tab-container">
+        <button class="tab-button active" data-tab="overview">Overview</button>
+        <button class="tab-button" data-tab="fairvalue">Fair Value</button>
       </div>
       
-      <div class="chart-container">
-        <canvas id="trend-chart"></canvas>
+      <!-- Overview Tab -->
+      <div class="tab-content active" id="tab-overview">
+        <div class="stats">
+          <div id="stats-content"></div>
+        </div>
+        <div class="chart-container">
+          <canvas id="trend-chart"></canvas>
+        </div>
       </div>
+      
+      <!-- Fair Value Tab -->
+      <div class="tab-content" id="tab-fairvalue">
+        <div class="fair-value-content">
+          <div id="fv-distribution">
+            <h3>Price Distribution (Time-Adjusted)
+              <span class="info-tooltip" data-tooltip="Prices are adjusted to current market values using the HDB Resale Price Index, allowing fair comparison across different time periods.">ⓘ</span>
+            </h3>
+            <div class="fv-stats" id="fv-stats"></div>
+            <div class="fv-chart-controls">
+              <label for="fv-feature-select">Group by:</label>
+              <select id="fv-feature-select">
+                <option value="storey">Storey Range</option>
+                <option value="lease">Lease Remaining</option>
+                <option value="mrt">MRT Distance</option>
+                <option value="flat_type">Flat Type</option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <canvas id="fv-histogram"></canvas>
+            </div>
+          </div>
+          <div id="fv-factors">
+            <h3>Factor Impact Analysis</h3>
+            <div id="fv-factors-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     `;
 
         this.attachEventListeners();
+        this.attachTabListeners();
         this.renderStats();
     }
 
@@ -103,16 +193,96 @@ export class AnalyticsPanel {
         // Select Area Button
         const selectAreaBtn = document.getElementById('select-area-btn');
         selectAreaBtn?.addEventListener('click', () => {
-            if (this.radialSelection.isSelectionActive() && selectAreaBtn.textContent === "Cancel Selection") {
-                // Cancel mode
-                this.setSelectionMode(false);
-            } else {
-                // Enter selection mode
-                this.setSelectionMode(true);
-            }
+            // Toggle selection mode based on tracked state
+            this.setSelectionMode(!this.isSelectionModeActive);
         });
 
         this.bindMapEvents();
+        this.bindResizeEvents();
+        this.bindTooltipEvents();
+    }
+
+    private bindTooltipEvents(): void {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'js-fixed-tooltip';
+        document.body.appendChild(tooltip);
+
+        const showTooltip = (e: MouseEvent, text: string) => {
+            tooltip.textContent = text;
+            tooltip.style.display = 'block';
+
+            // Initial positioning
+            const rect = (e.target as HTMLElement).getBoundingClientRect();
+            let top = rect.top - tooltip.offsetHeight - 8;
+            let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+
+            // Bounds checking
+            if (top < 10) top = rect.bottom + 8; // flip to bottom if too close to top
+            if (left < 10) left = 10;
+            if (left + tooltip.offsetWidth > window.innerWidth - 10) {
+                left = window.innerWidth - tooltip.offsetWidth - 10;
+            }
+
+            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${left}px`;
+            tooltip.classList.add('visible');
+        };
+
+        const hideTooltip = () => {
+            tooltip.classList.remove('visible');
+            tooltip.style.display = 'none';
+        };
+
+        // Delegate events for dynamic content
+        this.container.addEventListener('mouseover', (e: Event) => {
+            const target = e.target as HTMLElement;
+            if (target.matches('[data-tooltip]')) {
+                const text = target.getAttribute('data-tooltip');
+                if (text) showTooltip(e as MouseEvent, text);
+            }
+        });
+
+        this.container.addEventListener('mouseout', (e: Event) => {
+            const target = e.target as HTMLElement;
+            if (target.matches('[data-tooltip]')) {
+                hideTooltip();
+            }
+        });
+    }
+
+    private bindResizeEvents(): void {
+        const handle = this.container.querySelector('.resize-handle') as HTMLElement;
+        if (!handle) return;
+
+        let startX: number;
+        let startWidth: number;
+
+        const onMouseMove = (e: MouseEvent) => {
+            const newWidth = startWidth + (e.clientX - startX);
+            // Constrain width
+            if (newWidth >= 300 && newWidth <= 800) {
+                this.container.style.width = `${newWidth}px`;
+            }
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        handle.addEventListener('mousedown', (e: MouseEvent) => {
+            startX = e.clientX;
+            startWidth = this.container.getBoundingClientRect().width;
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+            e.preventDefault();
+        });
     }
 
     private startDragLat: number | null = null;
@@ -154,9 +324,17 @@ export class AnalyticsPanel {
                     this.radialSelection.setSelection(this.startDragLat, this.startDragLng, radius);
                     const selected = this.radialSelection.getSelectedTransactions();
 
+                    // Store for tab switching
+                    this.currentTransactions = selected;
+
                     this.mapView.setSelectedTransactions(selected);
                     this.renderStats(selected);
                     this.renderChart(selected ? selected : []);
+
+                    // Also render fair value if that tab is active
+                    if (this.activeTab === 'fairvalue' && selected) {
+                        this.renderFairValue(selected);
+                    }
 
                     this.mapView.setSelectionMode(false);
                     this.setSelectionMode(false);
@@ -196,6 +374,7 @@ export class AnalyticsPanel {
     }
 
     private setSelectionMode(active: boolean): void {
+        this.isSelectionModeActive = active;
         this.mapView.setSelectionMode(active);
 
         const btn = document.getElementById('select-area-btn');
@@ -279,15 +458,30 @@ export class AnalyticsPanel {
         }
 
         this.chart = new Chart(canvas, {
-            type: 'line',
+            type: 'boxplot',
             data: {
                 labels: monthlyData.map(d => d.month),
                 datasets: [{
-                    label: 'Avg Price PSF',
-                    data: monthlyData.map(d => d.avgPsf),
+                    label: 'Price PSF',
+                    data: monthlyData.map(d => ({
+                        min: d.min,
+                        q1: d.q1,
+                        median: d.median,
+                        q3: d.q3,
+                        max: d.max,
+                        mean: d.mean,
+                        outliers: d.outliers,
+                    })),
+                    backgroundColor: 'rgba(59, 130, 246, 0.3)',
                     borderColor: 'rgb(59, 130, 246)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4,
+                    borderWidth: 1,
+                    outlierBackgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    outlierBorderColor: 'rgb(59, 130, 246)',
+                    outlierRadius: 3,
+                    medianColor: 'rgb(37, 99, 235)',
+                    meanBackgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    meanBorderColor: 'rgb(16, 185, 129)',
+                    meanRadius: 4,
                 }],
             },
             options: {
@@ -299,16 +493,41 @@ export class AnalyticsPanel {
                     },
                     title: {
                         display: true,
-                        text: 'Price Trend Over Time',
+                        text: 'Price Distribution Over Time (PSF)',
+                    },
+                    tooltip: {
+                        boxPadding: 4,
+                        callbacks: {
+                            title: (items: any[]) => {
+                                const item = items[0];
+                                return item ? `Month: ${item.label}` : '';
+                            },
+                            label: (context: any) => {
+                                const d = context.raw;
+                                if (!d) return '';
+                                return [
+                                    `Median: $${Math.round(d.median)}`,
+                                    `Mean: $${Math.round(d.mean)}`,
+                                    `Q1: $${Math.round(d.q1)}  Q3: $${Math.round(d.q3)}`,
+                                    `Min: $${Math.round(d.min)}  Max: $${Math.round(d.max)}`,
+                                    d.outliers && d.outliers.length > 0 ? `Outliers: ${d.outliers.length}` : ''
+                                ].filter(s => s !== '');
+                            }
+                        },
                     },
                 },
                 scales: {
                     y: {
                         beginAtZero: false,
+                        grace: '5%',
+                        title: { display: true, text: 'Price PSF ($)' },
+                    },
+                    x: {
+                        title: { display: true, text: 'Month' },
                     },
                 },
             },
-        });
+        } as any);
     }
 
     private clearChart(): void {
@@ -318,7 +537,16 @@ export class AnalyticsPanel {
         }
     }
 
-    private aggregateByMonth(transactions: HDBTransaction[]): Array<{ month: string; avgPsf: number }> {
+    private aggregateByMonth(transactions: HDBTransaction[]): Array<{
+        month: string;
+        min: number;
+        q1: number;
+        median: number;
+        mean: number;
+        q3: number;
+        max: number;
+        outliers: number[];
+    }> {
         const monthMap = new Map<string, number[]>();
 
         transactions.forEach(t => {
@@ -329,10 +557,30 @@ export class AnalyticsPanel {
         });
 
         const result = Array.from(monthMap.entries())
-            .map(([month, prices]) => ({
-                month,
-                avgPsf: prices.reduce((sum, p) => sum + p, 0) / prices.length,
-            }))
+            .map(([month, prices]) => {
+                const sorted = prices.slice().sort((a, b) => a - b);
+                const n = sorted.length;
+                const q1 = sorted[Math.floor(n * 0.25)];
+                const q3 = sorted[Math.floor(n * 0.75)];
+                const iqr = q3 - q1;
+                const lowerFence = q1 - 1.5 * iqr;
+                const upperFence = q3 + 1.5 * iqr;
+
+                // Separate outliers from whisker range
+                const outliers = sorted.filter(p => p < lowerFence || p > upperFence);
+                const inRange = sorted.filter(p => p >= lowerFence && p <= upperFence);
+
+                return {
+                    month,
+                    min: inRange.length > 0 ? inRange[0] : sorted[0],
+                    q1,
+                    median: sorted[Math.floor(n * 0.5)],
+                    mean: sorted.reduce((sum, p) => sum + p, 0) / n,
+                    q3,
+                    max: inRange.length > 0 ? inRange[inRange.length - 1] : sorted[n - 1],
+                    outliers,
+                };
+            })
             .sort((a, b) => a.month.localeCompare(b.month));
 
         return result;
@@ -352,5 +600,330 @@ export class AnalyticsPanel {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return R * c;
+    }
+
+    private attachTabListeners(): void {
+        const tabButtons = this.container.querySelectorAll('.tab-button');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = (btn as HTMLElement).dataset.tab;
+                if (!tabId) return;
+
+                // Update active tab button
+                tabButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update active tab content
+                this.container.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                const tabContent = this.container.querySelector(`#tab-${tabId}`);
+                tabContent?.classList.add('active');
+
+                this.activeTab = tabId as 'overview' | 'fairvalue';
+
+                // Re-render fair value if switching to that tab
+                if (tabId === 'fairvalue' && this.currentTransactions) {
+                    this.renderFairValue(this.currentTransactions);
+                }
+            });
+        });
+
+        // Feature dropdown listener
+        const featureSelect = document.getElementById('fv-feature-select') as HTMLSelectElement;
+        featureSelect?.addEventListener('change', () => {
+            this.selectedFeature = featureSelect.value as any;
+            if (this.currentTransactions) {
+                this.renderFairValueChart(this.currentTransactions);
+            }
+        });
+    }
+
+    private renderFairValue(transactions: HDBTransaction[]): void {
+        if (!this.fairValueAnalysis.isReady()) {
+            const fvStatsEl = document.getElementById('fv-stats');
+            if (fvStatsEl) fvStatsEl.innerHTML = '<p>Loading analysis data...</p>';
+            return;
+        }
+
+        // Render distribution stats
+        const distribution = this.fairValueAnalysis.getPriceDistribution(transactions);
+        const fvStatsEl = document.getElementById('fv-stats');
+        if (fvStatsEl) {
+            fvStatsEl.innerHTML = `
+                <div class="fv-stat-grid">
+                    <div class="fv-stat">
+                        <span class="fv-stat-label">Median PSF</span>
+                        <span class="fv-stat-value">$${Math.round(distribution.median).toLocaleString()}</span>
+                    </div>
+                    <div class="fv-stat">
+                        <span class="fv-stat-label">25th - 75th %</span>
+                        <span class="fv-stat-value">$${Math.round(distribution.q1).toLocaleString()} - $${Math.round(distribution.q3).toLocaleString()}</span>
+                    </div>
+                    <div class="fv-stat">
+                        <span class="fv-stat-label">Range</span>
+                        <span class="fv-stat-value">$${Math.round(distribution.min).toLocaleString()} - $${Math.round(distribution.max).toLocaleString()}</span>
+                    </div>
+                    <div class="fv-stat">
+                        <span class="fv-stat-label">Transactions</span>
+                        <span class="fv-stat-value">${transactions.length.toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render box plot chart
+        this.renderFairValueChart(transactions);
+
+        // Render factor impact analysis
+        this.renderFactorImpact(transactions);
+    }
+
+    private renderFairValueChart(transactions: HDBTransaction[]): void {
+        const canvas = document.getElementById('fv-histogram') as HTMLCanvasElement;
+        if (!canvas) return;
+
+        // Group transactions by selected feature
+        const groupedData = this.aggregateByFeature(transactions, this.selectedFeature);
+
+        if (this.fairValueChart) {
+            this.fairValueChart.destroy();
+        }
+
+        const featureLabels: Record<string, string> = {
+            storey: 'Storey Range',
+            lease: 'Lease Remaining (Years)',
+            mrt: 'MRT Distance (m)',
+            flat_type: 'Flat Type',
+        };
+
+        this.fairValueChart = new Chart(canvas, {
+            type: 'boxplot',
+            data: {
+                labels: groupedData.map(d => d.label),
+                datasets: [{
+                    label: 'Price PSF',
+                    data: groupedData.map(d => ({
+                        min: d.min,
+                        q1: d.q1,
+                        median: d.median,
+                        q3: d.q3,
+                        max: d.max,
+                        mean: d.mean,
+                        outliers: d.outliers,
+                    })),
+                    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1,
+                    outlierBackgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    outlierBorderColor: 'rgb(59, 130, 246)',
+                    outlierRadius: 3,
+                    medianColor: 'rgb(37, 99, 235)',
+                    meanBackgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    meanBorderColor: 'rgb(16, 185, 129)',
+                    meanRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: `Price PSF by ${featureLabels[this.selectedFeature]} ⓘ`,
+                    },
+                    tooltip: {
+                        boxPadding: 4,
+                        callbacks: {
+                            title: (items: any[]) => {
+                                const item = items[0];
+                                return item ? `${featureLabels[this.selectedFeature]}: ${item.label}` : '';
+                            },
+                            label: (context: any) => {
+                                const d = context.raw;
+                                if (!d) return '';
+                                return [
+                                    `Median: $${Math.round(d.median)}`,
+                                    `Mean: $${Math.round(d.mean)}`,
+                                    `Q1: $${Math.round(d.q1)}  Q3: $${Math.round(d.q3)}`,
+                                    `Min: $${Math.round(d.min)}  Max: $${Math.round(d.max)}`,
+                                    `Count: ${groupedData[context.dataIndex].count}`,
+                                    d.outliers && d.outliers.length > 0 ? `Outliers: ${d.outliers.length}` : ''
+                                ].filter(s => s !== '');
+                            }
+                        },
+                    },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grace: '5%',
+                        title: { display: true, text: 'Price PSF ($)' },
+                    },
+                    x: {
+                        title: { display: true, text: featureLabels[this.selectedFeature] },
+                    },
+                },
+            },
+        } as any);
+    }
+
+    private aggregateByFeature(transactions: HDBTransaction[], feature: string): Array<{
+        label: string;
+        min: number;
+        q1: number;
+        median: number;
+        mean: number;
+        q3: number;
+        max: number;
+        count: number;
+        outliers: number[];
+    }> {
+        const groups = new Map<string, number[]>();
+
+        transactions.forEach(t => {
+            let key: string;
+            switch (feature) {
+                case 'storey':
+                    const storey = t.storey_midpoint;
+                    if (storey <= 3) key = '1-3';
+                    else if (storey <= 6) key = '4-6';
+                    else if (storey <= 9) key = '7-9';
+                    else if (storey <= 12) key = '10-12';
+                    else if (storey <= 15) key = '13-15';
+                    else if (storey <= 20) key = '16-20';
+                    else key = '21+';
+                    break;
+                case 'lease':
+                    const lease = t.remaining_lease_years;
+                    if (lease < 50) key = '<50';
+                    else if (lease < 60) key = '50-59';
+                    else if (lease < 70) key = '60-69';
+                    else if (lease < 80) key = '70-79';
+                    else if (lease < 90) key = '80-89';
+                    else key = '90+';
+                    break;
+                case 'mrt':
+                    const mrt = t.mrt_distance_m;
+                    if (mrt < 300) key = '<300m';
+                    else if (mrt < 500) key = '300-500m';
+                    else if (mrt < 750) key = '500-750m';
+                    else if (mrt < 1000) key = '750m-1km';
+                    else key = '>1km';
+                    break;
+                case 'flat_type':
+                default:
+                    key = t.flat_type;
+                    break;
+            }
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+            groups.get(key)!.push(this.fairValueAnalysis.getAdjustedPricePsf(t));
+        });
+
+        const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+            if (feature === 'storey') {
+                const order = ['1-3', '4-6', '7-9', '10-12', '13-15', '16-20', '21+'];
+                return order.indexOf(a) - order.indexOf(b);
+            } else if (feature === 'lease') {
+                const order = ['<50', '50-59', '60-69', '70-79', '80-89', '90+'];
+                return order.indexOf(a) - order.indexOf(b);
+            } else if (feature === 'mrt') {
+                const order = ['<300m', '300-500m', '500-750m', '750m-1km', '>1km'];
+                return order.indexOf(a) - order.indexOf(b);
+            } else {
+                return a.localeCompare(b);
+            }
+        });
+
+        return sortedKeys.map(key => {
+            const prices = groups.get(key)!.sort((a, b) => a - b);
+            const n = prices.length;
+            const q1 = prices[Math.floor(n * 0.25)];
+            const q3 = prices[Math.floor(n * 0.75)];
+            const iqr = q3 - q1;
+            const lowerFence = q1 - 1.5 * iqr;
+            const upperFence = q3 + 1.5 * iqr;
+
+            const outliers = prices.filter(p => p < lowerFence || p > upperFence);
+            const inRange = prices.filter(p => p >= lowerFence && p <= upperFence);
+
+            return {
+                label: key,
+                min: inRange.length > 0 ? inRange[0] : prices[0],
+                q1,
+                median: prices[Math.floor(n * 0.5)],
+                mean: prices.reduce((sum, p) => sum + p, 0) / n,
+                q3,
+                max: inRange.length > 0 ? inRange[inRange.length - 1] : prices[n - 1],
+                count: n,
+                outliers,
+            };
+        });
+    }
+
+    private renderFactorImpact(transactions: HDBTransaction[]): void {
+        const container = document.getElementById('fv-factors-content');
+        if (!container) return;
+
+        if (transactions.length === 0) {
+            container.innerHTML = '<p>Select an area to see factor analysis.</p>';
+            return;
+        }
+
+        // Calculate average factor impacts across selections
+        const coef = this.fairValueAnalysis.getCoefficients();
+        if (!coef) {
+            container.innerHTML = '<p>Loading model coefficients...</p>';
+            return;
+        }
+
+        // Calculate averages for the selection
+        const avgStorey = transactions.reduce((sum, t) => sum + t.storey_midpoint, 0) / transactions.length;
+        const avgLease = transactions.reduce((sum, t) => sum + t.remaining_lease_years, 0) / transactions.length;
+        const avgMrt = transactions.reduce((sum, t) => sum + t.mrt_distance_m, 0) / transactions.length / 1000;
+        const avgArea = transactions.reduce((sum, t) => sum + t.floor_area_sqm, 0) / transactions.length;
+
+        container.innerHTML = `
+            <table class="factor-table">
+                <thead>
+                    <tr>
+                        <th>Factor</th>
+                        <th>Selection Avg</th>
+                        <th>Dataset Avg</th>
+                        <th>Impact per Unit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Storey</td>
+                        <td>${avgStorey.toFixed(1)}</td>
+                        <td>${coef.summary_stats.storey_midpoint.mean.toFixed(1)}</td>
+                        <td class="positive">+${((Math.exp(coef.features.storey_midpoint) - 1) * 100).toFixed(2)}% / floor</td>
+                    </tr>
+                    <tr>
+                        <td>Lease Remaining</td>
+                        <td>${avgLease.toFixed(1)} yrs</td>
+                        <td>${coef.summary_stats.remaining_lease_years.mean.toFixed(1)} yrs</td>
+                        <td class="positive">+${((Math.exp(coef.features.remaining_lease_years) - 1) * 100).toFixed(2)}% / year</td>
+                    </tr>
+                    <tr>
+                        <td>MRT Distance</td>
+                        <td>${(avgMrt * 1000).toFixed(0)}m</td>
+                        <td>${(coef.summary_stats.mrt_distance_km.mean * 1000).toFixed(0)}m</td>
+                        <td class="negative">${((Math.exp(coef.features.mrt_distance_km) - 1) * 100).toFixed(2)}% / km</td>
+                    </tr>
+                    <tr>
+                        <td>Floor Area</td>
+                        <td>${avgArea.toFixed(1)} sqm</td>
+                        <td>${coef.summary_stats.floor_area_sqm.mean.toFixed(1)} sqm</td>
+                        <td class="negative">${((Math.exp(coef.features.floor_area_sqm) - 1) * 100).toFixed(2)}% / sqm</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="model-note">Model R² = ${(coef.r_squared * 100).toFixed(1)}% (based on ${coef.n_samples.toLocaleString()} transactions)</p>
+        `;
     }
 }

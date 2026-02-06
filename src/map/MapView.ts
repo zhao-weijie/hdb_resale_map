@@ -153,47 +153,57 @@ export class MapView {
 
     private createLayer() {
         const allData = this.dataLoader.getAllData();
-        const dataToRender = this.selectedTransactions ?? allData;
 
         const layers: any[] = [];
 
-        // Stack overflow fix included
+        // Always color by the selected mode
         const getValue = this.colorMode === 'price'
             ? (d: HDBTransaction) => d.resale_price
             : (d: HDBTransaction) => d.price_psf;
 
         let minValue = Infinity;
         let maxValue = -Infinity;
-        for (const d of dataToRender) {
+        for (const d of allData) {
             const value = getValue(d);
             if (value < minValue) minValue = value;
             if (value > maxValue) maxValue = value;
         }
 
+        // When there's a selection, show unselected data as faded
+        const selectedSet = this.selectedTransactions
+            ? new Set(this.selectedTransactions.map(t => `${t.latitude}-${t.longitude}-${t.resale_price}`))
+            : null;
+
         // Unified visualization for Desktop & Mobile
-        // Heatmap proved problematic on mobile (color saturation), so we use Scatterplot everywhere
         layers.push(new ScatterplotLayer({
             id: 'scatterplot-layer',
-            data: dataToRender,
+            data: allData,
             getPosition: (d: HDBTransaction) => [d.longitude, d.latitude],
-            getRadius: this.isMobile ? 65 : 50, // Slightly larger on mobile for visibility
+            getRadius: this.isMobile ? 65 : 50,
             getFillColor: (d: HDBTransaction) => {
                 const value = getValue(d);
                 const normalized = (value - minValue) / (maxValue - minValue);
 
+                let rgba: [number, number, number, number];
                 if (normalized < 0.5) {
                     const t = normalized * 2;
-                    return [0, Math.floor(191 * t + 64), Math.floor(255 - 191 * t)];
+                    rgba = [0, Math.floor(191 * t + 64), Math.floor(255 - 191 * t), 255];
                 } else {
                     const t = (normalized - 0.5) * 2;
-                    return [Math.floor(255 * t), Math.floor(255 - 191 * t), 0];
+                    rgba = [Math.floor(255 * t), Math.floor(255 - 191 * t), 0, 255];
                 }
+
+                // Fade out unselected points when there's a selection
+                if (selectedSet && !selectedSet.has(`${d.latitude}-${d.longitude}-${d.resale_price}`)) {
+                    rgba[3] = 60; // Make unselected very transparent
+                }
+                return rgba;
             },
-            opacity: this.selectedTransactions ? 0.8 : 0.6,
+            opacity: 1, // Use RGBA alpha instead
             pickable: true,
             radiusMinPixels: this.isMobile ? 3 : 2,
             radiusMaxPixels: 30,
-            onHover: () => { }, // No tooltip for now
+            onHover: () => { },
         }));
 
         // Add selection circle if active

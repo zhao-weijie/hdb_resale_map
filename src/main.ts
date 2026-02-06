@@ -38,6 +38,7 @@ async function initApp() {
         console.log('📈 Initializing analytics panel...');
         const analyticsPanel = new AnalyticsPanel('analytics-panel', dataLoader, mapView);
         analyticsPanel.render();
+        await analyticsPanel.init(); // Load fair value analysis coefficients
         console.log('✓ Analytics panel initialized');
 
         console.log('✅ Application ready!');
