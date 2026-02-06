@@ -92,142 +92,167 @@ export class AnalyticsPanel {
 
     render(): void {
         this.container.innerHTML = `
-      <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Panel">
-        <span>›</span>
-      </button>
       <div class="resize-handle" title="Drag to resize"></div>
+      
       <div class="panel-content">
+        <!-- Header -->
         <div class="analytics-header">
-            <h2>📊 Analytics</h2>
+            <h2><i data-lucide="bar-chart-2"></i> Analytics <span style="font-size: 14px; font-weight: normal; color: var(--color-text-muted); margin-left: auto;" id="record-count"></span></h2>
         </div>
       
-      <div class="controls">
-        <!-- Search & Selection -->
-        <div class="control-section">
-            <h3>📍 Location & Selection</h3>
-            <div class="control-group search-group">
-                <input type="text" id="postal-input" placeholder="Enter Postal Code" />
-                <button id="search-btn">🔍</button>
+        <!-- Card 1: Location -->
+        <div class="card">
+            <h3 class="card-header"><i data-lucide="map-pin"></i> Location & Selection</h3>
+            <div class="card-body">
+                <!-- Input Group: Search + Radius -->
+                <div class="input-row">
+                    <div class="input-wrapper">
+                        <button id="search-btn" class="input-icon-btn" title="Search">
+                            <i data-lucide="search"></i>
+                        </button>
+                        <input type="text" id="postal-input" placeholder="Postal Code (Enter to search)" />
+                    </div>
+                    <div class="input-wrapper suffix" data-suffix="m" style="flex: 0 0 100px;">
+                        <input type="number" id="radius-input" value="500" min="100" step="100" />
+                    </div>
+                </div>
+
+                <!-- Selection Mode -->
+                <div style="margin-top: 12px;">
+                    <div class="segmented-control">
+                        <button class="mode-btn active" data-mode="radial" style="flex: 1">Circle Selection</button>
+                        <button class="mode-btn" data-mode="rect" style="flex: 1">Box Selection</button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="btn-row">
+                    <button id="select-area-btn" class="btn-primary">
+                        <i data-lucide="mouse-pointer-2"></i> Select Area
+                    </button>
+                    <button id="clear-selection-btn" class="btn-ghost" style="flex: 0 0 auto;">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Global Filters (Collapsible) -->
+        <div class="card collapsed" id="filters-card">
+            <div class="card-header" id="filters-toggle">
+                <h3><i data-lucide="filter"></i> Global Filters <i data-lucide="chevron-down" class="chevron"></i></h3>
+            </div>
+            <div class="card-body">
+                <div class="filter-grid">
+                    <!-- Date -->
+                    <div class="filter-item full-width">
+                        <label>Time Period</label>
+                        <select id="filter-date">
+                            <option value="all">All Time</option>
+                            <option value="6m">Last 6 Months</option>
+                            <option value="1y">Last 1 Year</option>
+                            <option value="3y">Last 3 Years</option>
+                            <option value="5y">Last 5 Years</option>
+                        </select>
+                    </div>
+
+                    <!-- Flat Type -->
+                    <div class="filter-item full-width">
+                        <label>Flat Type</label>
+                        <div class="checkbox-grid" id="filter-flat-type" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <label><input type="checkbox" value="3 ROOM" checked> 3 Rm</label>
+                            <label><input type="checkbox" value="4 ROOM" checked> 4 Rm</label>
+                            <label><input type="checkbox" value="5 ROOM" checked> 5 Rm</label>
+                            <label><input type="checkbox" value="EXECUTIVE" checked> Exec</label>
+                        </div>
+                    </div>
+
+                    <!-- Lease -->
+                    <div class="filter-item full-width">
+                        <label>Lease Remaining (Years)</label>
+                        <div class="input-row">
+                            <input type="number" id="filter-lease-min" placeholder="Min" min="0" max="99" value="0">
+                            <input type="number" id="filter-lease-max" placeholder="Max" min="0" max="99" value="99">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-row">
+                    <button id="apply-filters-btn" class="btn-primary">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Color Mode -->
+        <div class="card">
+             <div class="input-wrapper">
+                 <label style="margin-bottom: 4px; display:block;">Color Map By</label>
+                 <select id="color-mode-select">
+                    <option value="price_psf">Price per SqFt</option>
+                    <option value="price">Resale Price</option>
+                 </select>
+             </div>
+        </div>
+      
+        <!-- Card 4: Stats & Charts -->
+        <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="overview">Overview</button>
+                <button class="tab-btn" data-tab="fairvalue">Fair Value Analysis</button>
             </div>
             
-            <div class="control-group selection-mode-group">
-                <label>Selection Mode:</label>
-                <div class="toggle-switch">
-                    <button class="mode-btn active" data-mode="radial">Circle</button>
-                    <button class="mode-btn" data-mode="rect">Box</button>
+            <div class="tab-content active" id="tab-overview">
+                <div id="stats-content"></div>
+                <div class="chart-container">
+                    <canvas id="trend-chart"></canvas>
                 </div>
             </div>
-
-            <div class="control-group radius-group" id="radius-control">
-                <label for="radius-input">Radius:</label>
-                <div class="input-with-unit">
-                    <input type="number" id="radius-input" value="500" min="100" step="100" />
-                    <span class="unit">m</span>
-                </div>
-            </div>
-
-            <div class="control-group action-group">
-                <button id="select-area-btn" class="primary-btn">Drag to Select</button>
-                <button id="clear-selection-btn">Clear</button>
-            </div>
-        </div>
-
-        <!-- Global Filters -->
-        <div class="control-section collapsible-section">
-            <h3 class="section-toggle">🌪️ Global Filters <span class="toggle-icon">▼</span></h3>
-            <div class="section-content">
-                
-                <!-- Date Filter -->
-                <div class="filter-group">
-                    <label>Time Period</label>
-                    <select id="filter-date">
-                        <option value="all">All Time</option>
-                        <option value="6m">Last 6 Months</option>
-                        <option value="1y">Last 1 Year</option>
-                        <option value="3y">Last 3 Years</option>
-                        <option value="5y">Last 5 Years</option>
-                    </select>
-                </div>
-
-                <!-- Flat Type Filter -->
-                <div class="filter-group">
-                    <label>Flat Type</label>
-                    <div class="checkbox-grid" id="filter-flat-type">
-                        <label><input type="checkbox" value="3 ROOM" checked> 3 Rm</label>
-                        <label><input type="checkbox" value="4 ROOM" checked> 4 Rm</label>
-                        <label><input type="checkbox" value="5 ROOM" checked> 5 Rm</label>
-                        <label><input type="checkbox" value="EXECUTIVE" checked> Exec</label>
+            
+            <div class="tab-content" id="tab-fairvalue">
+                <div class="fair-value-content">
+                    <div id="fv-distribution">
+                         <h3 style="font-size: 13px;">Price Distribution 
+                            <span class="tooltip-trigger" data-tooltip="Prices adjusted via HDB Resale Price Index">
+                                <i data-lucide="info"></i>
+                            </span>
+                         </h3>
+                         <div class="fv-stats" id="fv-stats"></div>
+                         
+                         <div class="input-wrapper" style="margin: 12px 0;">
+                            <select id="fv-feature-select">
+                                <option value="storey">Group by Storey Range</option>
+                                <option value="lease">Group by Lease Remaining</option>
+                                <option value="mrt">Group by MRT Distance</option>
+                                <option value="flat_type">Group by Flat Type</option>
+                            </select>
+                         </div>
+                         
+                         <div class="chart-container">
+                            <canvas id="fv-histogram"></canvas>
+                         </div>
                     </div>
+                     <div id="fv-factors">
+                        <h3>Factor Impact</h3>
+                        <div id="fv-factors-content"></div>
+                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Lease Filter -->
-                <div class="filter-group">
-                    <label>Remaining Lease (Years)</label>
-                    <div class="range-inputs">
-                        <input type="number" id="filter-lease-min" placeholder="Min" min="0" max="99" value="0">
-                        <span>-</span>
-                        <input type="number" id="filter-lease-max" placeholder="Max" min="0" max="99" value="99">
-                    </div>
-                </div>
+        <!-- Panel Toggle (Absolute) -->
+        <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Panel">
+            <i data-lucide="chevron-left"></i>
+        </button>
 
-                <button id="apply-filters-btn" class="secondary-btn">Apply Filters</button>
-            </div>
-        </div>
-        
-        <div class="control-group view-mode-group">
-          <label for="color-mode-select">Color By:</label>
-          <select id="color-mode-select">
-            <option value="price_psf">Price per SqFt</option>
-            <option value="price">Resale Price</option>
-          </select>
-        </div>
       </div>
-      
-      <!-- Tab Navigation -->
-      <div class="tab-container">
-        <button class="tab-button active" data-tab="overview">Overview</button>
-        <button class="tab-button" data-tab="fairvalue">Fair Value</button>
-      </div>
-      
-      <!-- Overview Tab -->
-      <div class="tab-content active" id="tab-overview">
-        <div class="stats">
-          <div id="stats-content"></div>
-        </div>
-        <div class="chart-container">
-          <canvas id="trend-chart"></canvas>
-        </div>
-      </div>
-      
-      <!-- Fair Value Tab -->
-      <div class="tab-content" id="tab-fairvalue">
-        <div class="fair-value-content">
-          <div id="fv-distribution">
-            <h3>Price Distribution (Time-Adjusted)
-              <span class="info-tooltip" data-tooltip="Prices are adjusted to current market values using the HDB Resale Price Index, allowing fair comparison across different time periods.">ⓘ</span>
-            </h3>
-            <div class="fv-stats" id="fv-stats"></div>
-            <div class="fv-chart-controls">
-              <label for="fv-feature-select">Group by:</label>
-              <select id="fv-feature-select">
-                <option value="storey">Storey Range</option>
-                <option value="lease">Lease Remaining</option>
-                <option value="mrt">MRT Distance</option>
-                <option value="flat_type">Flat Type</option>
-              </select>
-            </div>
-            <div class="chart-container">
-              <canvas id="fv-histogram"></canvas>
-            </div>
-          </div>
-          <div id="fv-factors">
-            <h3>Factor Impact Analysis</h3>
-            <div id="fv-factors-content"></div>
-          </div>
-        </div>
-      </div>
-    </div>
     `;
+
+        // Initialize Lucide Icons
+        // @ts-ignore
+        if (window.lucide) {
+            // @ts-ignore
+            window.lucide.createIcons();
+        }
 
         this.attachEventListeners();
         this.attachTabListeners();
@@ -321,6 +346,16 @@ export class AnalyticsPanel {
         input?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch();
         });
+
+        // Radius Input Visibility
+        this.updateRadiusInputVisibility();
+    }
+
+    private updateRadiusInputVisibility() {
+        const radiusInputWrapper = document.getElementById('radius-input')?.closest('.input-wrapper');
+        if (radiusInputWrapper) {
+            (radiusInputWrapper as HTMLElement).style.display = this.selectionMode === 'radial' ? 'block' : 'none';
+        }
     }
 
     private bindSelectionControls(): void {
@@ -336,10 +371,7 @@ export class AnalyticsPanel {
                 btn.classList.add('active');
 
                 // Update visibility of controls
-                const radiusControl = document.getElementById('radius-control');
-                if (radiusControl) {
-                    radiusControl.style.display = mode === 'radial' ? 'flex' : 'none';
-                }
+                this.updateRadiusInputVisibility();
 
                 // Update Map Behavior
                 this.mapView.setSelectionType(mode);
@@ -369,11 +401,10 @@ export class AnalyticsPanel {
 
     private bindFilterEvents(): void {
         // Toggle Filter Section
-        const toggle = this.container.querySelector('.section-toggle');
+        const toggle = document.getElementById('filters-toggle');
         toggle?.addEventListener('click', () => {
-            const content = this.container.querySelector('.section-content');
-            content?.classList.toggle('visible');
-            toggle.classList.toggle('expanded');
+            const card = document.getElementById('filters-card');
+            card?.classList.toggle('collapsed');
         });
 
         // Apply Filters
@@ -438,8 +469,8 @@ export class AnalyticsPanel {
         this.renderChart(filtered);
 
         // Update status text
-        const header = this.container.querySelector('.analytics-header h2');
-        if (header) header.textContent = `📊 Analytics (${filtered.length.toLocaleString()} records)`;
+        const countSpan = document.getElementById('record-count');
+        if (countSpan) countSpan.textContent = `(${filtered.length.toLocaleString()} records)`;
     }
 
     private updateSelectionState(selected: HDBTransaction[] | null): void {
@@ -486,15 +517,16 @@ export class AnalyticsPanel {
 
         this.container.addEventListener('mouseover', (e: Event) => {
             const target = e.target as HTMLElement;
-            if (target.matches('[data-tooltip]')) {
-                const text = target.getAttribute('data-tooltip');
+            const tooltipTarget = target.closest('[data-tooltip]');
+            if (tooltipTarget) {
+                const text = tooltipTarget.getAttribute('data-tooltip');
                 if (text) showTooltip(e as MouseEvent, text);
             }
         });
 
         this.container.addEventListener('mouseout', (e: Event) => {
             const target = e.target as HTMLElement;
-            if (target.matches('[data-tooltip]')) {
+            if (target.closest('[data-tooltip]')) {
                 hideTooltip();
             }
         });
@@ -697,22 +729,24 @@ export class AnalyticsPanel {
         }
 
         statsContent.innerHTML = `
-      <div class="stat-item">
-        <span class="stat-label">Transactions</span>
-        <span class="stat-value">${data.length.toLocaleString()}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Avg Price</span>
-        <span class="stat-value">$${Math.floor(avgPrice).toLocaleString()}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Avg PSF</span>
-        <span class="stat-value">$${Math.floor(avgPsf)}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Price Range</span>
-        <span class="stat-value">$${Math.floor(minPrice / 1000)}k - $${Math.floor(maxPrice / 1000)}k</span>
-      </div>
+        <table class="stats-table">
+            <tr>
+                <td class="stats-label">Transactions</td>
+                <td class="stats-value">${data.length.toLocaleString()}</td>
+            </tr>
+            <tr>
+                <td class="stats-label">Avg Price</td>
+                <td class="stats-value">$${Math.floor(avgPrice).toLocaleString()}</td>
+            </tr>
+            <tr>
+                <td class="stats-label">Avg PSF</td>
+                <td class="stats-value">$${Math.floor(avgPsf)}</td>
+            </tr>
+            <tr>
+                <td class="stats-label">Price Range</td>
+                <td class="stats-value">$${Math.floor(minPrice / 1000)}k - $${Math.floor(maxPrice / 1000)}k</td>
+            </tr>
+        </table>
     `;
     }
 
@@ -873,7 +907,7 @@ export class AnalyticsPanel {
     }
 
     private attachTabListeners(): void {
-        const tabButtons = this.container.querySelectorAll('.tab-button');
+        const tabButtons = this.container.querySelectorAll('.tab-btn');
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabId = (btn as HTMLElement).dataset.tab;
@@ -921,25 +955,27 @@ export class AnalyticsPanel {
         const fvStatsEl = document.getElementById('fv-stats');
         if (fvStatsEl) {
             fvStatsEl.innerHTML = `
-                <div class="fv-stat-grid">
-                    <div class="fv-stat">
-                        <span class="fv-stat-label">Median PSF</span>
-                        <span class="fv-stat-value">$${Math.round(distribution.median).toLocaleString()}</span>
-                    </div>
-                    <div class="fv-stat">
-                        <span class="fv-stat-label">25th - 75th %</span>
-                        <span class="fv-stat-value">$${Math.round(distribution.q1).toLocaleString()} - $${Math.round(distribution.q3).toLocaleString()}</span>
-                    </div>
-                    <div class="fv-stat">
-                        <span class="fv-stat-label">Range</span>
-                        <span class="fv-stat-value">$${Math.round(distribution.min).toLocaleString()} - $${Math.round(distribution.max).toLocaleString()}</span>
-                    </div>
-                    <div class="fv-stat">
-                        <span class="fv-stat-label">Transactions</span>
-                        <span class="fv-stat-value">${transactions.length.toLocaleString()}</span>
-                    </div>
-                </div>
+                <table class="stats-table">
+                    <tr>
+                        <td class="stats-label">Median PSF</td>
+                        <td class="stats-value">$${Math.round(distribution.median).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td class="stats-label">25th - 75th %</td>
+                        <td class="stats-value">$${Math.round(distribution.q1).toLocaleString()} - $${Math.round(distribution.q3).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td class="stats-label">Range</td>
+                        <td class="stats-value">$${Math.round(distribution.min).toLocaleString()} - $${Math.round(distribution.max).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td class="stats-label">Transactions</td>
+                        <td class="stats-value">${transactions.length.toLocaleString()}</td>
+                    </tr>
+                </table>
             `;
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
         }
 
         // Render box plot chart
