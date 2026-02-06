@@ -25,7 +25,7 @@ async function initApp() {
         // Load data
         console.log('📊 Loading data...');
         const dataLoader = new DataLoader();
-        await dataLoader.load('/data/hdb_data.arrow');
+        await dataLoader.load('data/hdb_data.arrow');
         console.log(`✓ Loaded ${dataLoader.getRecordCount()} transactions`);
 
         // Initialize map
