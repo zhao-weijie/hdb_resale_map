@@ -160,10 +160,12 @@ export class AnalyticsPanel {
                     <div class="filter-item full-width">
                         <label>Flat Type</label>
                         <div class="checkbox-grid" id="filter-flat-type" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <label><input type="checkbox" value="2 ROOM" checked> 2 Rm</label>
                             <label><input type="checkbox" value="3 ROOM" checked> 3 Rm</label>
                             <label><input type="checkbox" value="4 ROOM" checked> 4 Rm</label>
                             <label><input type="checkbox" value="5 ROOM" checked> 5 Rm</label>
                             <label><input type="checkbox" value="EXECUTIVE" checked> Exec</label>
+                            <label><input type="checkbox" value="MULTI-GENERATION" checked> Multi-Gen</label>
                         </div>
                     </div>
 
@@ -205,6 +207,12 @@ export class AnalyticsPanel {
                 <div id="stats-content"></div>
                 <div class="chart-container">
                     <canvas id="trend-chart"></canvas>
+                    <div id="trend-chart-placeholder" class="chart-placeholder hidden">
+                        <div class="placeholder-content">
+                            <i data-lucide="bar-chart-2"></i>
+                            <p>Select an area on the map<br>to view price trends</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -229,10 +237,22 @@ export class AnalyticsPanel {
                          
                          <div class="chart-container">
                             <canvas id="fv-histogram"></canvas>
+                             <div id="fv-chart-placeholder" class="chart-placeholder hidden">
+                                <div class="placeholder-content">
+                                    <i data-lucide="bar-chart-2"></i>
+                                    <p>Select an area to view<br>fair value analysis</p>
+                                </div>
+                            </div>
                          </div>
                     </div>
                      <div id="fv-factors">
-                        <h3>Factor Impact</h3>
+                        <div class="separator-line"></div>
+                        <h3 style="margin-top: 16px;">
+                            Factor Impact 
+                            <span class="tooltip-trigger" data-tooltip="How different features affect price in this area compared to the national average">
+                                <i data-lucide="help-circle"></i>
+                            </span>
+                        </h3>
                         <div id="fv-factors-content"></div>
                      </div>
                 </div>
@@ -314,9 +334,17 @@ export class AnalyticsPanel {
             const query = input.value.trim();
             if (query.length < 3) return;
 
-            btn!.innerHTML = '⏳';
+            // Show loading
+            btn!.innerHTML = '<i data-lucide="loader" class="animate-spin"></i>';
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+
             const result = await PostalSearch.search(query);
-            btn!.innerHTML = '🔍';
+
+            // Restore search icon
+            btn!.innerHTML = '<i data-lucide="search"></i>';
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
 
             if (result) {
                 const lat = parseFloat(result.LATITUDE);
@@ -349,6 +377,14 @@ export class AnalyticsPanel {
 
         // Radius Input Visibility
         this.updateRadiusInputVisibility();
+
+        // Trigger default initial search
+        if (!this.currentTransactions) {
+            input.value = "085101";
+            const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
+            if (radiusInput) radiusInput.value = "888";
+            performSearch();
+        }
     }
 
     private updateRadiusInputVisibility() {
@@ -752,7 +788,18 @@ export class AnalyticsPanel {
 
     private renderChart(transactions: HDBTransaction[]): void {
         const canvas = document.getElementById('trend-chart') as HTMLCanvasElement;
-        if (!canvas) return;
+        const placeholder = document.getElementById('trend-chart-placeholder');
+        if (!canvas || !placeholder) return;
+
+        if (transactions.length === 0) {
+            canvas.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            if (this.chart) this.chart.destroy();
+            return;
+        }
+
+        canvas.classList.remove('hidden');
+        placeholder.classList.add('hidden');
 
         // Prepare time-series data
         const monthlyData = this.aggregateByMonth(transactions);
@@ -987,7 +1034,18 @@ export class AnalyticsPanel {
 
     private renderFairValueChart(transactions: HDBTransaction[]): void {
         const canvas = document.getElementById('fv-histogram') as HTMLCanvasElement;
-        if (!canvas) return;
+        const placeholder = document.getElementById('fv-chart-placeholder');
+        if (!canvas || !placeholder) return;
+
+        if (transactions.length === 0) {
+            canvas.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            if (this.fairValueChart) this.fairValueChart.destroy();
+            return;
+        }
+
+        canvas.classList.remove('hidden');
+        placeholder.classList.add('hidden');
 
         // Group transactions by selected feature
         const groupedData = this.aggregateByFeature(transactions, this.selectedFeature);
@@ -1187,10 +1245,11 @@ export class AnalyticsPanel {
         }
 
         // Calculate averages for the selection
-        const avgStorey = transactions.reduce((sum, t) => sum + t.storey_midpoint, 0) / transactions.length;
-        const avgLease = transactions.reduce((sum, t) => sum + t.remaining_lease_years, 0) / transactions.length;
-        const avgMrt = transactions.reduce((sum, t) => sum + t.mrt_distance_m, 0) / transactions.length / 1000;
-        const avgArea = transactions.reduce((sum, t) => sum + t.floor_area_sqm, 0) / transactions.length;
+        // Calculate averages for the selection
+        const avgStorey = transactions.reduce((sum, t) => sum + Number(t.storey_midpoint), 0) / transactions.length;
+        const avgLease = transactions.reduce((sum, t) => sum + Number(t.remaining_lease_years), 0) / transactions.length;
+        const avgMrt = transactions.reduce((sum, t) => sum + Number(t.mrt_distance_m), 0) / transactions.length / 1000;
+        const avgArea = transactions.reduce((sum, t) => sum + Number(t.floor_area_sqm), 0) / transactions.length;
 
         container.innerHTML = `
             <table class="factor-table">
