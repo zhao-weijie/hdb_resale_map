@@ -1,0 +1,263 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow: hidden;
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    position: relative;
+}
+
+#map-container {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+}
+
+#analytics-panel {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    width: 380px;
+    max-height: 90vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* For collapsible logic */
+    display: flex;
+    flex-direction: column;
+}
+
+#analytics-panel.collapsed {
+    transform: translateX(calc(-100% + 30px));
+    /* Move left, keeping button slightly distinct? Or just hidden fully except button? */
+}
+
+.panel-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.panel-toggle {
+    position: absolute;
+    right: -16px;
+    top: 20px;
+    width: 32px;
+    height: 32px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    font-size: 18px;
+    color: #4b5563;
+    transition: transform 0.3s;
+    transform: rotate(180deg);
+    /* Point Left (‹) by default to indicate collapsing left */
+}
+
+#analytics-panel.collapsed .panel-toggle {
+    transform: rotate(0deg);
+    /* Point Right (›) to indicate expanding right */
+}
+
+#analytics-panel.collapsed .panel-content {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+#mobile-banner {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(59, 130, 246, 0.95);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    text-align: center;
+    z-index: 2000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    #analytics-panel {
+        /* display: none; Removed to show on mobile */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        max-height: 50vh;
+        border-radius: 20px 20px 0 0;
+        transform: translateY(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2000;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    #analytics-panel.collapsed {
+        /* Collapsed state for bottom sheet: slide down */
+        transform: translateY(calc(100% - 60px));
+        /* Keep header visible? */
+    }
+
+    /* Adjust toggle for vertical movement */
+    .panel-toggle {
+        top: -16px;
+        /* Stick out of top center? Or keep it side? */
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%) rotate(-90deg);
+        /* Point Up */
+        border-radius: 12px 12px 0 0;
+        width: 48px;
+        height: 24px;
+        z-index: 2001;
+    }
+
+    #analytics-panel.collapsed .panel-toggle {
+        transform: translateX(-50%) rotate(90deg);
+        /* Point Down */
+    }
+
+    /* Hide redundant controls on mobile to save space */
+    .controls .control-group:not(:first-child) {
+        display: none;
+        /* Hide selections, only keep view mode? */
+    }
+
+    .chart-container {
+        height: 200px;
+        /* Smaller chart */
+    }
+}
+
+/* Force cursor when selecting area */
+.selection-active,
+.selection-active canvas,
+.selection-active .maplibregl-canvas-container {
+    cursor: crosshair !important;
+}
+
+/* Deck.gl canvas styling */
+canvas {
+    outline: none;
+}
+
+/* Analytics Panel Styling */
+.analytics-header h2 {
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.controls {
+    margin-bottom: 20px;
+}
+
+.control-group {
+    margin-bottom: 16px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.control-group select,
+.control-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.control-group select:focus,
+.control-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.control-group button {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.control-group button:hover {
+    background: #f3f4f6;
+}
+
+.primary-btn {
+    background: #3b82f6 !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 500;
+}
+
+.primary-btn:hover {
+    background: #2563eb !important;
+}
+
+.stats {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}

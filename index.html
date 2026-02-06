@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Singapore HDB Resale Analytics - Interactive map visualization showing resale transaction trends from 2017-present">
+  <title>HDB Resale Analytics</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+</head>
+<body>
+  <div id="app">
+    <div id="map-container"></div>
+    <div id="analytics-panel"></div>
+    <div id="mobile-banner" class="mobile-only" style="display: none;">
+      <p>📱 For detailed analysis, please visit on desktop</p>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
