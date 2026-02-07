@@ -59,31 +59,6 @@ export class FiltersCard {
                             <input type="number" id="filter-lease-max" placeholder="Max" min="0" max="99" value="99">
                         </div>
                     </div>
-
-                    <!-- MOP Expiry (New) -->
-                    <div class="filter-item full-width" style="border-top: 1px solid var(--color-border); padding-top: 16px; margin-top: 8px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <label style="margin:0; font-weight: 500;">Show Upcoming MOP Expiries</label>
-                            <input type="checkbox" id="display-mop-toggle" style="width: 20px; height: 20px;">
-                        </div>
-                        <div id="mop-date-section" style="display: none; margin-top: 8px;">
-                             <label style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 6px; display: block;">Expiry Date Range</label>
-                             <div class="input-row" style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                <input type="date" id="mop-date-start" style="flex: 1;">
-                                <input type="date" id="mop-date-end" style="flex: 1;">
-                            </div>
-
-                            <label style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 6px; display: block;">Project Type</label>
-                             <div class="input-row" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                ${['Prime', 'Plus', 'Standard', 'Mature', 'Non-Mature', 'Unknown'].map(type => `
-                                    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
-                                        <input type="checkbox" class="mop-type-filter" value="${type}" checked>
-                                        ${type}
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="btn-row">
@@ -95,52 +70,6 @@ export class FiltersCard {
     }
 
     bindEvents(onFiltersApplied: (filtered: HDBTransaction[]) => void): void {
-        // MOP Filter Logic
-        const mopToggle = document.getElementById('display-mop-toggle') as HTMLInputElement;
-        const mopSection = document.getElementById('mop-date-section');
-        const mopStart = document.getElementById('mop-date-start') as HTMLInputElement;
-        const mopEnd = document.getElementById('mop-date-end') as HTMLInputElement;
-
-        if (mopToggle && mopStart && mopEnd) {
-            // Init state
-            mopToggle.checked = appState.get('displayMopExpiries');
-            if (mopSection) mopSection.style.display = mopToggle.checked ? 'block' : 'none';
-
-            const range = appState.get('mopExpiryDateRange');
-            mopStart.value = range[0];
-            mopEnd.value = range[1];
-
-            // Bind events
-            mopToggle.addEventListener('change', () => {
-                appState.set('displayMopExpiries', mopToggle.checked);
-                if (mopSection) mopSection.style.display = mopToggle.checked ? 'block' : 'none';
-            });
-
-            const updateDateRange = () => {
-                if (mopStart.value && mopEnd.value) {
-                    appState.set('mopExpiryDateRange', [mopStart.value, mopEnd.value]);
-                }
-            };
-
-            mopStart.addEventListener('change', updateDateRange);
-            mopEnd.addEventListener('change', updateDateRange);
-
-            // Project Type Filter
-            const typeCheckboxes = document.querySelectorAll('.mop-type-filter') as NodeListOf<HTMLInputElement>;
-            const updateProjectTypes = () => {
-                const selectedTypes = Array.from(typeCheckboxes)
-                    .filter(cb => cb.checked)
-                    .map(cb => cb.value);
-                appState.set('mopProjectTypes', selectedTypes);
-            };
-
-            typeCheckboxes.forEach(cb => {
-                // Init state
-                cb.checked = appState.get('mopProjectTypes').includes(cb.value);
-                // Bind event
-                cb.addEventListener('change', updateProjectTypes);
-            });
-        }
 
         // Toggle Filter Section
         const toggle = document.getElementById('filters-toggle');

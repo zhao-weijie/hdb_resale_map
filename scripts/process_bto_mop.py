@@ -121,6 +121,9 @@ def main():
         launch_date_str = row.get("Launch\u00a0date", "")
         est_comp_str = row.get("Estimated\ncompletion\ndate (note)", "")
         brochure_link = row.get("Brochure Link", "")
+        if brochure_link and brochure_link.startswith("/"):
+            brochure_link = f"https://www.housingmap.sg{brochure_link}"
+            
         units = row.get("Units", "")
         proj_type = row.get("Type", "")
 

@@ -11,6 +11,7 @@ import { appState } from '../state/AppState';
 // Import component classes
 import { LocationCard } from '../components/LocationCard';
 import { FiltersCard } from '../components/FiltersCard';
+import { MopFiltersCard } from '../components/MopFiltersCard';
 import { OverviewTab } from '../components/OverviewTab';
 import { FairValueTab } from '../components/FairValueTab';
 
@@ -25,6 +26,7 @@ export class AnalyticsPanel {
     // Component instances
     private locationCard: LocationCard;
     private filtersCard: FiltersCard;
+    private mopFiltersCard: MopFiltersCard;
     private overviewTab: OverviewTab;
     private fairValueTab: FairValueTab;
 
@@ -48,6 +50,7 @@ export class AnalyticsPanel {
         // Initialize components
         this.locationCard = new LocationCard(mapView, this.radialSelection);
         this.filtersCard = new FiltersCard(dataLoader, mapView);
+        this.mopFiltersCard = new MopFiltersCard();
         this.overviewTab = new OverviewTab();
         this.fairValueTab = new FairValueTab(this.fairValueAnalysis);
     }
@@ -119,6 +122,9 @@ export class AnalyticsPanel {
         <!-- Card 2: Global Filters (Component) -->
         ${this.filtersCard.render()}
 
+        <!-- Card 2b: MOP Filters -->
+        ${this.mopFiltersCard.render()}
+
         <!-- Card 3: Color Mode -->
         <div class="card">
              <div class="input-wrapper">
@@ -177,6 +183,7 @@ export class AnalyticsPanel {
         // Bind component events
         this.locationCard.bindEvents((selected) => this.updateSelectionState(selected));
         this.filtersCard.bindEvents((filtered) => this.onFiltersApplied(filtered));
+        this.mopFiltersCard.bindEvents();
         this.fairValueTab.bindEvents();
 
         // Bind remaining panel events

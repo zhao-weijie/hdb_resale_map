@@ -348,17 +348,7 @@ export class MapView {
                     pickable: true,
                     stroked: true,
                     filled: true,
-                    getFillColor: (f: any) => {
-                        const type = f.properties.PROJECT_TYPE;
-                        switch (type) {
-                            case 'Prime': return [168, 85, 247, 140]; // Purple
-                            case 'Plus': return [236, 72, 153, 140]; // Pink
-                            case 'Standard': return [34, 197, 94, 140]; // Green
-                            case 'Mature': return [59, 130, 246, 140]; // Blue
-                            case 'Non-Mature': return [249, 115, 22, 140]; // Orange
-                            default: return [156, 163, 175, 140]; // Gray/Unknown
-                        }
-                    },
+                    getFillColor: [192, 38, 211, 160], // Bright Purple (Fuchsia-600)
                     getLineColor: [255, 255, 255, 200],
                     getLineWidth: 2,
                     lineWidthMinPixels: 1,
