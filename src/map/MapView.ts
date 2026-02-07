@@ -206,9 +206,10 @@ export class MapView {
             ? (d: HDBTransaction) => d.resale_price
             : (d: HDBTransaction) => d.price_psf;
 
+        // Calculate min/max from filtered data for better contrast
         let minValue = Infinity;
         let maxValue = -Infinity;
-        for (const d of fullData) {
+        for (const d of dataToRender) {
             const value = getValue(d);
             if (value < minValue) minValue = value;
             if (value > maxValue) maxValue = value;
@@ -229,13 +230,44 @@ export class MapView {
                 const value = getValue(d);
                 const normalized = (value - minValue) / (maxValue - minValue);
 
+                // Viridis-like color-blind friendly scale: purple → blue → teal → green → yellow
                 let rgba: [number, number, number, number];
-                if (normalized < 0.5) {
-                    const t = normalized * 2;
-                    rgba = [0, Math.floor(191 * t + 64), Math.floor(255 - 191 * t), 255];
+                if (normalized < 0.25) {
+                    // Purple to Blue: (68,1,84) -> (59,82,139)
+                    const t = normalized * 4;
+                    rgba = [
+                        Math.floor(68 + (59 - 68) * t),
+                        Math.floor(1 + (82 - 1) * t),
+                        Math.floor(84 + (139 - 84) * t),
+                        255
+                    ];
+                } else if (normalized < 0.5) {
+                    // Blue to Teal: (59,82,139) -> (33,145,140)
+                    const t = (normalized - 0.25) * 4;
+                    rgba = [
+                        Math.floor(59 + (33 - 59) * t),
+                        Math.floor(82 + (145 - 82) * t),
+                        Math.floor(139 + (140 - 139) * t),
+                        255
+                    ];
+                } else if (normalized < 0.75) {
+                    // Teal to Green: (33,145,140) -> (94,201,98)
+                    const t = (normalized - 0.5) * 4;
+                    rgba = [
+                        Math.floor(33 + (94 - 33) * t),
+                        Math.floor(145 + (201 - 145) * t),
+                        Math.floor(140 + (98 - 140) * t),
+                        255
+                    ];
                 } else {
-                    const t = (normalized - 0.5) * 2;
-                    rgba = [Math.floor(255 * t), Math.floor(255 - 191 * t), 0, 255];
+                    // Green to Yellow: (94,201,98) -> (253,231,37)
+                    const t = (normalized - 0.75) * 4;
+                    rgba = [
+                        Math.floor(94 + (253 - 94) * t),
+                        Math.floor(201 + (231 - 201) * t),
+                        Math.floor(98 + (37 - 98) * t),
+                        255
+                    ];
                 }
 
                 // Fade out unselected points when there's a selection
