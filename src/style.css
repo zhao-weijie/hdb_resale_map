@@ -1,6 +1,6 @@
 /* Global Design Tokens */
 :root {
-    /* Brand Colors */
+    /* Brand Colors - kept blue for actions */
     --color-primary: #3b82f6;
     /* Blue 500 */
     --color-primary-hover: #2563eb;
@@ -8,17 +8,19 @@
     --color-primary-bg: #eff6ff;
     /* Blue 50 */
 
-    /* Neutral Colors */
-    --color-bg-app: #f3f4f6;
-    /* Gray 100 */
-    --color-bg-panel: rgba(255, 255, 255, 0.95);
-    --color-bg-card: #ffffff;
-    --color-border: #e5e7eb;
-    /* Gray 200 */
-    --color-text-main: #1f2937;
-    /* Gray 800 */
-    --color-text-muted: #6b7280;
-    /* Gray 500 */
+    /* Neutral Colors - warm earthy palette */
+    --color-bg-app: #FFEBD0;
+    /* Blanched almond - page background */
+    --color-bg-panel: rgba(255, 241, 224, 0.95);
+    /* Linen with transparency */
+    --color-bg-card: #FFF8EF;
+    /* Floral white */
+    --color-border: #AA9C8B;
+    /* Grullo */
+    --color-text-main: #554E45;
+    /* Dark liver */
+    --color-text-muted: #AA9C8B;
+    /* Grullo */
 
     /* Semantic Colors */
     --color-success: #10b981;
@@ -100,14 +102,14 @@ body {
     top: 24px;
     width: 48px;
     height: 48px;
-    background: white;
+    background: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-card);
     z-index: 1001;
     color: var(--color-text-muted);
     transition: all 0.2s;
@@ -230,6 +232,8 @@ select {
     border-radius: var(--radius-sm);
     font-size: 13px;
     font-family: var(--font-sans);
+    background: var(--color-bg-card);
+    color: var(--color-text-main);
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -237,7 +241,26 @@ input:focus,
 select:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
 }
 
 /* --- Buttons --- */
@@ -816,5 +839,24 @@ button {
 #loading-overlay p {
     color: var(--color-text-muted);
     font-size: 14px;
-    font-weight: 500;
+}
+
+/* Map Control Buttons (Maplibre overrides) */
+.maplibregl-ctrl-group {
+    background: var(--color-bg-card) !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+.maplibregl-ctrl-group button {
+    background-color: transparent !important;
+    color: var(--color-text-main) !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+    background-color: var(--color-bg-app) !important;
+}
+
+.maplibregl-ctrl-group button+button {
+    border-top: 1px solid var(--color-border) !important;
 }
