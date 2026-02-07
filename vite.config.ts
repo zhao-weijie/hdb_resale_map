@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
 
 export default defineConfig({
@@ -14,4 +15,8 @@ export default defineConfig({
         },
     },
     publicDir: 'public',
+    test: {
+        globals: true,
+        environment: 'node',
+    },
 });
