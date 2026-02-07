@@ -55,9 +55,34 @@ async function initApp() {
         console.log('✓ Analytics panel initialized');
 
         console.log('✅ Application ready!');
+
+        // Hide loading overlay
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 500);
+        }
+
     } catch (error) {
         console.error('❌ Failed to initialize application:', error);
-        alert('Failed to load HDB data. Please check the console for details.');
+
+        // Show error in loading overlay
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <i data-lucide="alert-circle" style="color: var(--color-danger); width: 48px; height: 48px; margin-bottom: 16px;"></i>
+                    <h3 style="margin-bottom: 8px;">Failed to load application</h3>
+                    <p style="color: var(--color-text-muted);">Please check your connection and try again.</p>
+                </div>
+            `;
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+        } else {
+            alert('Failed to load HDB data. Please check the console for details.');
+        }
     }
 }
 
