@@ -10,6 +10,10 @@ import { RadialSelection } from '../tools/RadialSelection';
 
 import { FairValueAnalysis } from './FairValueAnalysis';
 import { PostalSearch } from '../tools/PostalSearch';
+import { haversineDistance } from '../utils/geo';
+import { applyFilters, type GlobalFilters } from '../utils/filters';
+import { appState } from '../state/AppState';
+
 
 Chart.register(...registerables, BoxPlotController, BoxAndWiskers);
 
@@ -28,13 +32,7 @@ export class AnalyticsPanel {
     private geocodeCache: Record<string, { postal?: string; address?: string }> = {};
 
     // New State for Filters & Selection
-    private selectionMode: 'radial' | 'rect' = 'radial';
-    private globalFilters = {
-        date: 'all',
-        flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
-        leaseMin: 0,
-        leaseMax: 99
-    };
+    // (now managed via appState)
 
     constructor(containerId: string, dataLoader: DataLoader, mapView: MapView) {
         const container = document.getElementById(containerId);
@@ -374,7 +372,7 @@ export class AnalyticsPanel {
                 this.mapView.flyTo(lat, lng);
 
                 // If in radial mode, update selection circle
-                if (this.selectionMode === 'radial') {
+                if (appState.get('selectionMode') === 'radial') {
                     const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
                     const radius = parseInt(radiusInput.value) || 500;
 
@@ -416,7 +414,7 @@ export class AnalyticsPanel {
     private updateRadiusInputVisibility() {
         const radiusInputWrapper = document.getElementById('radius-input')?.closest('.input-wrapper');
         if (radiusInputWrapper) {
-            (radiusInputWrapper as HTMLElement).style.display = this.selectionMode === 'radial' ? 'block' : 'none';
+            (radiusInputWrapper as HTMLElement).style.display = appState.get('selectionMode') === 'radial' ? 'block' : 'none';
         }
     }
 
@@ -426,7 +424,7 @@ export class AnalyticsPanel {
         modeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const mode = (btn as HTMLElement).dataset.mode as 'radial' | 'rect';
-                this.selectionMode = mode;
+                appState.set('selectionMode', mode);
 
                 // Update UI
                 modeBtns.forEach(b => b.classList.remove('active'));
@@ -483,12 +481,12 @@ export class AnalyticsPanel {
         const leaseMin = document.getElementById('filter-lease-min') as HTMLInputElement;
         const leaseMax = document.getElementById('filter-lease-max') as HTMLInputElement;
 
-        this.globalFilters = {
+        appState.set('globalFilters', {
             date: dateSelect.value,
             flatTypes: Array.from(flatTypeInputs).map(i => (i as HTMLInputElement).value),
             leaseMin: parseInt(leaseMin.value) || 0,
             leaseMax: parseInt(leaseMax.value) || 99
-        };
+        });
 
         // 2. Filter Data
         const allData = this.dataLoader.getAllData();
@@ -496,22 +494,22 @@ export class AnalyticsPanel {
 
         const filtered = allData.filter(t => {
             // Flat Type
-            if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
+            if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
 
             // Lease
-            if (t.remaining_lease_years < this.globalFilters.leaseMin ||
-                t.remaining_lease_years > this.globalFilters.leaseMax) return false;
+            if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
+                t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
 
             // Date
-            if (this.globalFilters.date !== 'all') {
+            if (appState.get('globalFilters').date !== 'all') {
                 const txDate = new Date(t.transaction_date); // field name check needed? DataLoader uses transaction_date
                 const diffTime = Math.abs(now.getTime() - txDate.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                if (this.globalFilters.date === '6m' && diffDays > 180) return false;
-                if (this.globalFilters.date === '1y' && diffDays > 365) return false;
-                if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
-                if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+                if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
+                if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
+                if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
+                if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
             }
 
             return true;
@@ -558,17 +556,17 @@ export class AnalyticsPanel {
     private applyFiltersToTransactions(transactions: HDBTransaction[]): HDBTransaction[] {
         const now = new Date();
         return transactions.filter(t => {
-            if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
-            if (t.remaining_lease_years < this.globalFilters.leaseMin ||
-                t.remaining_lease_years > this.globalFilters.leaseMax) return false;
-            if (this.globalFilters.date !== 'all') {
+            if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
+            if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
+                t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
+            if (appState.get('globalFilters').date !== 'all') {
                 const txDate = new Date(t.transaction_date);
                 const diffTime = Math.abs(now.getTime() - txDate.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (this.globalFilters.date === '6m' && diffDays > 180) return false;
-                if (this.globalFilters.date === '1y' && diffDays > 365) return false;
-                if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
-                if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+                if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
+                if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
+                if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
+                if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
             }
             return true;
         });
@@ -582,17 +580,17 @@ export class AnalyticsPanel {
         const now = new Date(); // Use current time for relative dates
 
         return allData.filter(t => {
-            if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
-            if (t.remaining_lease_years < this.globalFilters.leaseMin ||
-                t.remaining_lease_years > this.globalFilters.leaseMax) return false;
-            if (this.globalFilters.date !== 'all') {
+            if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
+            if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
+                t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
+            if (appState.get('globalFilters').date !== 'all') {
                 const txDate = new Date(t.transaction_date);
                 const diffTime = Math.abs(now.getTime() - txDate.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (this.globalFilters.date === '6m' && diffDays > 180) return false;
-                if (this.globalFilters.date === '1y' && diffDays > 365) return false;
-                if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
-                if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+                if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
+                if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
+                if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
+                if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
             }
             return true;
         });
@@ -736,19 +734,19 @@ export class AnalyticsPanel {
                 if (t.block !== clicked.block || t.street_name !== clicked.street_name) return false;
 
                 // Global Filters
-                if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
-                if (t.remaining_lease_years < this.globalFilters.leaseMin ||
-                    t.remaining_lease_years > this.globalFilters.leaseMax) return false;
-                if (this.globalFilters.date !== 'all') {
+                if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
+                if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
+                    t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
+                if (appState.get('globalFilters').date !== 'all') {
                     // Start Copy-Paste from getGlobalFilteredData
                     const now = new Date();
                     const txDate = new Date(t.transaction_date);
                     const diffTime = Math.abs(now.getTime() - txDate.getTime());
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    if (this.globalFilters.date === '6m' && diffDays > 180) return false;
-                    if (this.globalFilters.date === '1y' && diffDays > 365) return false;
-                    if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
-                    if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+                    if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
+                    if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
+                    if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
+                    if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
                     // End Copy-Paste
                 }
 
@@ -834,15 +832,15 @@ export class AnalyticsPanel {
             onStart: (lat, lng) => {
                 this.startDragLat = lat;
                 this.startDragLng = lng;
-                if (this.selectionMode === 'radial') {
+                if (appState.get('selectionMode') === 'radial') {
                     this.mapView.updateSelectionCircle(lat, lng, 0);
                 }
                 // Rect not needed init visual? Maybe just empty.
             },
             onMove: (lat, lng) => {
                 if (this.startDragLat !== null && this.startDragLng !== null) {
-                    if (this.selectionMode === 'radial') {
-                        const radius = this.haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
+                    if (appState.get('selectionMode') === 'radial') {
+                        const radius = haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
                         this.mapView.updateSelectionCircle(this.startDragLat, this.startDragLng, radius);
                     } else {
                         // Rectangular
@@ -854,8 +852,8 @@ export class AnalyticsPanel {
                 if (this.startDragLat !== null && this.startDragLng !== null) {
                     let selected: HDBTransaction[] | null = null;
 
-                    if (this.selectionMode === 'radial') {
-                        const radius = this.haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
+                    if (appState.get('selectionMode') === 'radial') {
+                        const radius = haversineDistance(this.startDragLat, this.startDragLng, lat, lng);
                         this.radialSelection.setSelection(this.startDragLat, this.startDragLng, radius);
                         selected = this.radialSelection.getSelectedTransactions();
 
@@ -1140,22 +1138,6 @@ export class AnalyticsPanel {
             .sort((a, b) => a.month.localeCompare(b.month));
 
         return result;
-    }
-
-    // Helper for distance calc
-    private haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-        const R = 6371e3; // metres
-        const φ1 = lat1 * Math.PI / 180;
-        const φ2 = lat2 * Math.PI / 180;
-        const Δφ = (lat2 - lat1) * Math.PI / 180;
-        const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return R * c;
     }
 
     private attachTabListeners(): void {
@@ -1499,3 +1481,4 @@ export class AnalyticsPanel {
         `;
     }
 }
+

@@ -4,6 +4,8 @@ import { ScatterplotLayer, PolygonLayer } from '@deck.gl/layers';
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import maplibregl from 'maplibre-gl';
+import { appState } from '../state/AppState';
+
 
 export type ColorMode = 'price' | 'price_psf';
 
@@ -16,9 +18,6 @@ export class MapView {
     private selectionRect: any = null;
 
     private isMobile: boolean;
-    private colorMode: ColorMode = 'price_psf';
-    private selectedTransactions: HDBTransaction[] | null = null;
-    private filteredData: HDBTransaction[] | null = null;
     private onPointClickCallback: ((lat: number, lng: number) => void) | null = null;
 
     constructor(containerId: string, dataLoader: DataLoader, isMobile: boolean) {
@@ -178,7 +177,7 @@ export class MapView {
      * Update map with filtered data
      */
     setFilteredData(transactions: import('../data/DataLoader').HDBTransaction[]): void {
-        this.filteredData = transactions;
+        appState.set('filteredTransactions', transactions);
         this.updateLayers();
     }
 
@@ -196,13 +195,15 @@ export class MapView {
 
     private createLayer() {
         const fullData = this.dataLoader.getAllData();
-        const dataToRender = this.filteredData || fullData;
+        const dataToRender = appState.get('filteredTransactions').length > 0
+            ? appState.get('filteredTransactions')
+            : fullData;
 
         const layers: any[] = [];
 
 
         // Always color by the selected mode
-        const getValue = this.colorMode === 'price'
+        const getValue = appState.get('colorMode') === 'price'
             ? (d: HDBTransaction) => d.resale_price
             : (d: HDBTransaction) => d.price_psf;
 
@@ -216,8 +217,9 @@ export class MapView {
         }
 
         // When there's a selection, show unselected data as faded
-        const selectedSet = this.selectedTransactions
-            ? new Set(this.selectedTransactions.map(t => `${t.latitude}-${t.longitude}-${t.resale_price}`))
+        const selectedTransactions = appState.get('selectedTransactions');
+        const selectedSet = selectedTransactions
+            ? new Set(selectedTransactions.map(t => `${t.latitude}-${t.longitude}-${t.resale_price}`))
             : null;
 
         // Unified visualization for Desktop & Mobile
@@ -382,12 +384,12 @@ export class MapView {
     }
 
     setColorMode(mode: ColorMode): void {
-        this.colorMode = mode;
+        appState.set('colorMode', mode);
         this.updateLayers();
     }
 
     setSelectedTransactions(transactions: HDBTransaction[] | null): void {
-        this.selectedTransactions = transactions;
+        appState.set('selectedTransactions', transactions);
         this.updateLayers();
     }
 
@@ -430,6 +432,6 @@ export class MapView {
     private lastPopupTime: number = 0;
 
     getColorMode(): ColorMode {
-        return this.colorMode;
+        return appState.get('colorMode');
     }
 }
