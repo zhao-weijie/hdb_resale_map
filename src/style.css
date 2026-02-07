@@ -623,7 +623,8 @@ button {
 
 /* Map Popover */
 .maplibregl-popup {
-    z-index: 3000;
+    z-index: 100 !important;
+    /* Ensure it is below analytics (2000) */
 }
 
 .maplibregl-popup-content {
@@ -642,14 +643,22 @@ button {
     font-size: 16px;
     color: var(--color-text-muted);
     padding: 8px;
-    top: 4px;
-    right: 4px;
+    /* Larger hit area */
+    top: 0;
+    right: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 2;
+    /* Above content */
 }
 
 .popover-header {
     margin-bottom: 8px;
     border-bottom: 1px solid var(--color-border);
     padding-bottom: 8px;
+    padding-right: 20px;
+    /* Make space for close button */
 }
 
 .popover-title {

@@ -55,6 +55,13 @@ export class MapView {
             customAttribution: 'Map data © <a href="https://www.onemap.gov.sg/" target="_blank">OneMap</a>'
         }));
 
+        // Custom click handler for closing popups
+        this.map.on('click', () => {
+            if (this.activePopup && Date.now() - this.lastPopupTime > 200) {
+                this.activePopup.remove();
+                this.activePopup = null;
+            }
+        });
         this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
 
         // 2. Initialize Deck.gl Overlay
@@ -376,20 +383,19 @@ export class MapView {
 
         this.activePopup = new maplibregl.Popup({
             closeButton: true,
-            closeOnClick: false, // We handle closing manually to avoid conflicts
+            closeOnClick: false, // Keep false to prevent race conditions
             maxWidth: '320px',
-            className: 'hdb-popup' // Add class for potential styling
+            className: 'hdb-popup'
         })
             .setLngLat([lng, lat])
             .setHTML(htmlContent)
             .addTo(this.map);
 
-        // Add a one-time click listener to map to close popup when clicking elsewhere
-        // We use 'once' but we might need to be careful not to trigger it immediately
-        // if the click event propagates.
-        // Actually, let's rely on the close button for now, or a delayed listener?
-        // Let's try just closeOnClick: false for stability first.
+        this.lastPopupTime = Date.now();
     }
+
+    // Add this property to the class
+    private lastPopupTime: number = 0;
 
     getColorMode(): ColorMode {
         return this.colorMode;
