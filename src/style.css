@@ -446,6 +446,28 @@ button {
     display: none;
 }
 
+/* Mobile Banner Styling - Absolute position to prevent flex disruption */
+#mobile-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--color-bg-panel);
+    padding: 12px;
+    z-index: 2000;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+#mobile-banner p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-main);
+}
+
 @media (max-width: 768px) {
     #analytics-panel {
         width: 100%;
