@@ -27,7 +27,8 @@ ONEMAP_TOKEN_URL = "https://www.onemap.gov.sg/api/auth/post/getToken"
 ONEMAP_SEARCH_URL = "https://www.onemap.gov.sg/api/common/elastic/search"
 RATE_LIMIT_DELAY = 0.2035  # 210ms between requests (~285 req/min, under 290/min limit as of Oct 2025)
 OUTPUT_DIR = Path(__file__).parent.parent / "data"
-CACHE_FILE = OUTPUT_DIR / "addresses_geocoded.json"
+# Use public/data as the single source of truth for geocoded addresses
+CACHE_FILE = Path(__file__).parent.parent / "public" / "data" / "addresses_geocoded.json"
 RAW_DATA_FILE = OUTPUT_DIR / "hdb_resale_raw.csv"
 TOKEN_CACHE_FILE = Path(__file__).parent / ".onemap_token.json"
 
@@ -173,7 +174,7 @@ def load_geocode_cache() -> Dict[str, Dict]:
 
 def save_geocode_cache(cache: Dict[str, Dict]):
     """Save geocoding cache to disk"""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(cache, f, indent=2, ensure_ascii=False)
     print(f"✓ Saved geocode cache to {CACHE_FILE}")
@@ -184,14 +185,58 @@ def make_address_key(block: str, street_name: str) -> str:
     return f"{block}|{street_name}"
 
 
+def validate_postal_code(block: str, postal: str) -> bool:
+    """
+    Validates if the postal code matches the block number based on the heuristic:
+    - Standard (1-3 digits): 0 + Block Number (e.g., Block 6 -> ...006?, 39 -> 039, 464 -> 0464)
+    - With Letter (e.g., 12A): X + Block Number (X is a digit)
+    - 4-Digit Block: Ends with Block Number
+    """
+    if not postal: 
+        return False
+    
+    postal = str(postal).strip()
+    block = str(block).strip()
+    
+    # Normalize postal: must be 6 digits
+    if not postal.isdigit() or len(postal) != 6:
+        return False
+        
+    # Extract digit part of block
+    block_digits = "".join(filter(str.isdigit, block))
+    
+    if block.isdigit():
+        if len(block) == 4:
+            # 4-Digit Block: Block Number
+            return postal.endswith(block)
+        else:
+            # Standard (1-3 digits): 0 + Block Number
+            # Example: Block 6 -> Ends with 06 (actually usually 006 but let's be safe with heuristic)
+            # Example: Block 39 -> Ends with 039
+            # Example: Block 464 -> Ends with 0464
+            target_ending = "0" + block
+            return postal.endswith(target_ending)
+    else:
+        # With Letter (e.g., 12A)
+        # Rule: X + Block Number (where X is a digit)
+        if not block_digits:
+            return False
+            
+        suffix_len = 1 + len(block_digits)
+        if len(postal) < suffix_len:
+            return False
+            
+        params = postal[-suffix_len:]
+        # Check if the last part is BlockDigits
+        if params.endswith(block_digits):
+            return True
+            
+        return False
+
+
 def geocode_address(block: str, street_name: str, token: Optional[str] = None) -> Dict:
     """
     Geocode a single address using OneMap API
-    
-    Args:
-        block: HDB block number
-        street_name: Street name
-        token: Optional OneMap API authentication token
     
     Returns:
         Dict with lat, lng, or None if not found
@@ -215,18 +260,7 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
         
         results = data.get("results", [])
         
-        if results:
-            # Take the first result
-            result = results[0]
-            return {
-                "block": block,
-                "street_name": street_name,
-                "latitude": float(result["LATITUDE"]),
-                "longitude": float(result["LONGITUDE"]),
-                "postal": result.get("POSTAL", ""),
-                "address": result.get("ADDRESS", "")
-            }
-        else:
+        if not results:
             return {
                 "block": block,
                 "street_name": street_name,
@@ -234,6 +268,30 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
                 "longitude": None,
                 "error": "No results found"
             }
+            
+        # Validate results using heuristic
+        valid_result = None
+        
+        # 1. Try to find a result that matches the postal code heuristic
+        for result in results:
+            postal = result.get("POSTAL", "")
+            if validate_postal_code(block, postal):
+                valid_result = result
+                break
+        
+        # 2. If no valid matching result found, default to the first one (best effort)
+        #    but maybe we can log this case if needed.
+        if not valid_result:
+            valid_result = results[0]
+            
+        return {
+            "block": block,
+            "street_name": street_name,
+            "latitude": float(valid_result["LATITUDE"]),
+            "longitude": float(valid_result["LONGITUDE"]),
+            "postal": valid_result.get("POSTAL", ""),
+            "address": valid_result.get("ADDRESS", "")
+        }
             
     except Exception as e:
         return {
@@ -245,12 +303,36 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
         }
 
 
+def verify_cache(cache: Dict[str, Dict]):
+    """
+    Verify existing cached entries against the heuristic.
+    Removes entries that fail validation so they can be re-geocoded.
+    """
+    print("\nVerifying cached addresses against heuristic...")
+    invalid_keys = []
+    
+    for key, data in cache.items():
+        if data.get("latitude") is None:
+            continue
+            
+        block = data.get("block")
+        postal = data.get("postal")
+        
+        if not validate_postal_code(block, postal):
+            # print(f"  Invalid cache entry: {key} (Postal: {postal}) - Marking for re-geocoding")
+            invalid_keys.append(key)
+            
+    if invalid_keys:
+        print(f"Found {len(invalid_keys)} invalid entries in cache. Removing them...")
+        for key in invalid_keys:
+            del cache[key]
+    else:
+        print("✓ All cached entries passed validation")
+
+
 def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
     """
     Geocode all addresses with caching and rate limiting
-    
-    Returns:
-        Dictionary mapping address key to geocode result
     """
     print("\nGeocoding addresses...")
     
@@ -259,16 +341,19 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
     
     cache = load_geocode_cache()
     
+    # Verify existing cache first
+    verify_cache(cache)
+    
     to_geocode = [
         addr for addr in addresses 
         if make_address_key(addr[0], addr[1]) not in cache
     ]
     
     if not to_geocode:
-        print("✓ All addresses already cached!")
+        print("✓ All addresses already cached and verified!")
         return cache
     
-    print(f"  {len(to_geocode)} new addresses to geocode")
+    print(f"  {len(to_geocode)} addresses to geocode (new or re-verify)")
     print(f"  Estimated time: ~{len(to_geocode) * RATE_LIMIT_DELAY / 60:.1f} minutes")
     
     for i, (block, street_name) in enumerate(to_geocode, 1):
