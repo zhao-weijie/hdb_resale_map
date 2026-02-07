@@ -53,7 +53,7 @@ export class MapView {
             customAttribution: 'Map data © <a href="https://www.onemap.gov.sg/" target="_blank">OneMap</a>'
         }));
 
-        this.map.addControl(new maplibregl.NavigationControl());
+        this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
 
         // 2. Initialize Deck.gl Overlay
         this.deckOverlay = new MapboxOverlay({

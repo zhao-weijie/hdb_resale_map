@@ -31,7 +31,7 @@ export class AnalyticsPanel {
     private selectionMode: 'radial' | 'rect' = 'radial';
     private globalFilters = {
         date: 'all',
-        flatTypes: ['3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE'],
+        flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
         leaseMin: 0,
         leaseMax: 99
     };
@@ -293,8 +293,15 @@ export class AnalyticsPanel {
             this.mapView.setSelectedTransactions(null);
             this.mapView.clearSelectionCircle();
             this.mapView.clearSelectionRect();
-            this.renderStats();
-            this.clearChart();
+
+            // Clear Postal Input BUT KEEP Radius
+            const postalInput = document.getElementById('postal-input') as HTMLInputElement;
+            if (postalInput) postalInput.value = '';
+
+            // Update stats to show global data
+            this.updateSelectionState(null);
+
+            // Explicitly clear chart? No, updateSelectionState handles it (shows global)
         });
 
         // Analyze button
@@ -378,10 +385,16 @@ export class AnalyticsPanel {
         // Radius Input Visibility
         this.updateRadiusInputVisibility();
 
-        // Trigger default initial search
-        if (!this.currentTransactions) {
+        // Adding ENTER support for radius input
+        const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
+        radiusInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch(); // Reuse same search function
+        });
+
+        // Trigger default initial search ONLY on DESKTOP
+        const isMobile = window.innerWidth < 768;
+        if (!this.currentTransactions && !isMobile) {
             input.value = "085101";
-            const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
             if (radiusInput) radiusInput.value = "888";
             performSearch();
         }
@@ -512,14 +525,59 @@ export class AnalyticsPanel {
     private updateSelectionState(selected: HDBTransaction[] | null): void {
         this.currentTransactions = selected;
         this.mapView.setSelectedTransactions(selected);
-        this.renderStats(selected);
 
-        if (selected) {
-            this.renderChart(selected);
-            if (this.activeTab === 'fairvalue') {
-                this.renderFairValue(selected);
-            }
+        // If selection is null, fall back to filtered global data (or all data if no filters)
+        // BUT wait, dataLoader.getAllData() is raw. 
+        // We need the data currently shown on map (filtered by global filters).
+        // Let's re-apply filters to get current base set? Or cache it.
+        // Better: When applying global filters, store that result. 
+
+        // For now, let's re-run filter logic or assume map has it? 
+        // Simpler: Just re-render with what we have.
+        // If selected is NULL, we want to show the GLOBAL stats.
+
+        let dataToRender = selected;
+        if (!dataToRender) {
+            // If no specific selection, use the currently active global dataset
+            // We need to know what that is. 
+            // Let's call applyGlobalFilters() to get it, or better, store it.
+            // Re-filtering is cheap enough for now (200k records linear scan is <50ms usually).
+            // Actually, let's just re-use the logic from applyGlobalFilters but split it out?
+            // Or easier: Just call this.getEffectiveData()
+            dataToRender = this.getGlobalFilteredData();
         }
+
+        this.renderStats(dataToRender);
+        this.renderChart(dataToRender);
+
+        // Always render fair value if active (it handles empty/full data internally now)
+        if (this.activeTab === 'fairvalue') {
+            this.renderFairValue(dataToRender);
+        }
+    }
+
+    private getGlobalFilteredData(): HDBTransaction[] {
+        // Re-implement filter logic here or ensure we have it cached.
+        // To avoid code duplication, I will refactor applyGlobalFilters to store result.
+        // For this patch, I'll just re-run the filter logic helper.
+        const allData = this.dataLoader.getAllData();
+        const now = new Date(); // Use current time for relative dates
+
+        return allData.filter(t => {
+            if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
+            if (t.remaining_lease_years < this.globalFilters.leaseMin ||
+                t.remaining_lease_years > this.globalFilters.leaseMax) return false;
+            if (this.globalFilters.date !== 'all') {
+                const txDate = new Date(t.transaction_date);
+                const diffTime = Math.abs(now.getTime() - txDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (this.globalFilters.date === '6m' && diffDays > 180) return false;
+                if (this.globalFilters.date === '1y' && diffDays > 365) return false;
+                if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
+                if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+            }
+            return true;
+        });
     }
     private bindTooltipEvents(): void {
         const tooltip = document.createElement('div');
@@ -974,8 +1032,10 @@ export class AnalyticsPanel {
                 this.activeTab = tabId as 'overview' | 'fairvalue';
 
                 // Re-render fair value if switching to that tab
-                if (tabId === 'fairvalue' && this.currentTransactions) {
-                    this.renderFairValue(this.currentTransactions);
+                if (tabId === 'fairvalue') {
+                    // Use current selection OR global filtered data
+                    const data = this.currentTransactions || this.getGlobalFilteredData();
+                    this.renderFairValue(data);
                 }
             });
         });

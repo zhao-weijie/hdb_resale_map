@@ -14,10 +14,22 @@ async function initApp() {
     console.log('🚀 Initializing HDB Resale Analytics...');
 
     // Show mobile banner if on mobile
+    // Show mobile banner if on mobile
     if (isMobile) {
         const banner = document.getElementById('mobile-banner');
         if (banner) {
-            banner.style.display = 'block';
+            banner.style.display = 'flex'; // Changed to flex for layout
+
+            // Close logic
+            const closeBtn = document.createElement('button');
+            closeBtn.id = 'mobile-banner-close';
+            closeBtn.innerHTML = '<i data-lucide="x"></i>';
+            closeBtn.onclick = () => {
+                banner.style.display = 'none';
+            };
+            banner.appendChild(closeBtn);
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
         }
     }
 

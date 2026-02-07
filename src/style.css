@@ -453,19 +453,39 @@ button {
     left: 0;
     width: 100%;
     background-color: var(--color-bg-panel);
-    padding: 12px;
+    padding: 12px 16px;
     z-index: 2000;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     border-bottom: 1px solid var(--color-border);
     backdrop-filter: blur(8px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    /* Ensure padding doesn't overflow width */
 }
 
 #mobile-banner p {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--color-text-main);
+    flex: 1;
+    text-align: left;
+    margin-right: 12px;
+    /* Spacing from close button */
+}
+
+#mobile-banner-close {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
 }
 
 @media (max-width: 768px) {
@@ -484,6 +504,13 @@ button {
         /* Reset transform */
         border: none;
         border-top: 1px solid var(--color-border);
+    }
+
+    /* Hide selection tools on mobile */
+    .segmented-control,
+    #select-area-btn,
+    .mode-btn {
+        display: none !important;
     }
 
     #analytics-panel.collapsed {
