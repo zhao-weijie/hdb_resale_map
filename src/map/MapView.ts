@@ -18,6 +18,8 @@ export class MapView {
     private isMobile: boolean;
     private colorMode: ColorMode = 'price_psf';
     private selectedTransactions: HDBTransaction[] | null = null;
+    private filteredData: HDBTransaction[] | null = null;
+    private onPointClickCallback: ((lat: number, lng: number) => void) | null = null;
 
     constructor(containerId: string, dataLoader: DataLoader, isMobile: boolean) {
         const container = document.getElementById(containerId);
@@ -169,30 +171,8 @@ export class MapView {
      * Update map with filtered data
      */
     setFilteredData(transactions: import('../data/DataLoader').HDBTransaction[]): void {
-        if (!this.map) return;
-
-        // Convert to GeoJSON
-        const geojson: GeoJSON.FeatureCollection = {
-            type: 'FeatureCollection',
-            features: transactions.map(t => ({
-                type: 'Feature',
-                geometry: {
-                    type: 'Point',
-                    coordinates: [t.longitude, t.latitude]
-                },
-                properties: {
-                    ...t,
-                    // Ensure numeric content for data-driven styling if needed
-                    resale_price: t.resale_price,
-                    price_psf: t.price_psf
-                }
-            }))
-        };
-
-        const source = this.map.getSource('transactions') as maplibregl.GeoJSONSource;
-        if (source) {
-            source.setData(geojson);
-        }
+        this.filteredData = transactions;
+        this.updateLayers();
     }
 
     /**
@@ -203,10 +183,16 @@ export class MapView {
         this.map?.on('moveend', callback); // Ensure final state is captured
     }
 
+    setOnPointClick(callback: (lat: number, lng: number) => void): void {
+        this.onPointClickCallback = callback;
+    }
+
     private createLayer() {
-        const allData = this.dataLoader.getAllData();
+        const fullData = this.dataLoader.getAllData();
+        const dataToRender = this.filteredData || fullData;
 
         const layers: any[] = [];
+
 
         // Always color by the selected mode
         const getValue = this.colorMode === 'price'
@@ -215,7 +201,7 @@ export class MapView {
 
         let minValue = Infinity;
         let maxValue = -Infinity;
-        for (const d of allData) {
+        for (const d of fullData) {
             const value = getValue(d);
             if (value < minValue) minValue = value;
             if (value > maxValue) maxValue = value;
@@ -229,7 +215,7 @@ export class MapView {
         // Unified visualization for Desktop & Mobile
         layers.push(new ScatterplotLayer({
             id: 'scatterplot-layer',
-            data: allData,
+            data: dataToRender,
             getPosition: (d: HDBTransaction) => [d.longitude, d.latitude],
             getRadius: this.isMobile ? 65 : 50,
             getFillColor: (d: HDBTransaction) => {
@@ -255,7 +241,25 @@ export class MapView {
             pickable: true,
             radiusMinPixels: this.isMobile ? 3 : 2,
             radiusMaxPixels: 30,
-            onHover: () => { },
+            onHover: (info: any) => {
+                if (this.containerElement) {
+                    this.containerElement.style.cursor = info.object ? 'pointer' : '';
+                }
+            },
+            onClick: (info: any) => {
+                if (info && info.object) {
+                    if (this.onPointClickCallback) {
+                        // Check selection mode state
+                        const selectionActive = this.containerElement.classList.contains('selection-active');
+
+                        if (!selectionActive) {
+                            const d = info.object as HDBTransaction;
+                            this.onPointClickCallback(d.latitude, d.longitude);
+                            return true; // Stop propagation to map
+                        }
+                    }
+                }
+            }
         }));
 
         // Add selection circle if active
@@ -354,6 +358,37 @@ export class MapView {
                 layers: [this.createLayer()],
             });
         }
+    }
+
+    private activePopup: maplibregl.Popup | null = null;
+
+    showPopup(lat: number, lng: number, htmlContent: string): void {
+        console.log('MapView.showPopup called:', lat, lng);
+        if (!this.map) {
+            console.warn('MapView.showPopup: Map not initialized');
+            return;
+        }
+
+        // Close existing popup if any
+        if (this.activePopup) {
+            this.activePopup.remove();
+        }
+
+        this.activePopup = new maplibregl.Popup({
+            closeButton: true,
+            closeOnClick: false, // We handle closing manually to avoid conflicts
+            maxWidth: '320px',
+            className: 'hdb-popup' // Add class for potential styling
+        })
+            .setLngLat([lng, lat])
+            .setHTML(htmlContent)
+            .addTo(this.map);
+
+        // Add a one-time click listener to map to close popup when clicking elsewhere
+        // We use 'once' but we might need to be careful not to trigger it immediately
+        // if the click event propagates.
+        // Actually, let's rely on the close button for now, or a delayed listener?
+        // Let's try just closeOnClick: false for stability first.
     }
 
     getColorMode(): ColorMode {

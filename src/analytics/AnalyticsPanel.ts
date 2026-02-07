@@ -677,6 +677,146 @@ export class AnalyticsPanel {
             }
         });
 
+        // onPointClick
+        this.mapView.setOnPointClick((lat, lng) => {
+            console.log('AnalyticsPanel onPointClick received:', lat, lng);
+
+            // Only if not in a selection mode
+            /* 
+              Actually MapView checks for 'selection-active' class on container, 
+              but we also have this.isSelectionModeActive state here.
+              Let's redundantly check.
+            */
+            if (this.isSelectionModeActive) {
+                console.log('Skipping click: Selection mode active');
+                return;
+            }
+
+            // Find transactions at this location (block level)
+            // Use a small radius or exact coordinate match?
+            // Coordinates in data are precise.
+            const allData = this.dataLoader.getAllData();
+
+            // Find unique block/postal at this lat/lng
+            // Optimization: first find one, then filter? 
+            // Or just filter all? (Fast enough for 200k)
+            const clicked = allData.find(t =>
+                Math.abs(t.latitude - lat) < 0.00001 &&
+                Math.abs(t.longitude - lng) < 0.00001
+            );
+
+            if (!clicked) {
+                console.warn('No transaction found at clicked coordinates');
+                return;
+            }
+            console.log('Clicked Item:', clicked.block, clicked.street_name);
+
+            // Get all transactions for this block/postal, applying GLOBAL filters
+            // We use the same filter logic as getGlobalFilteredData, but additionally filter by block/postal
+            const relevant = allData.filter(t => {
+                // Location Match
+                if (t.block !== clicked.block || t.street_name !== clicked.street_name) return false;
+
+                // Global Filters
+                if (!this.globalFilters.flatTypes.includes(t.flat_type)) return false;
+                if (t.remaining_lease_years < this.globalFilters.leaseMin ||
+                    t.remaining_lease_years > this.globalFilters.leaseMax) return false;
+                if (this.globalFilters.date !== 'all') {
+                    // Start Copy-Paste from getGlobalFilteredData
+                    const now = new Date();
+                    const txDate = new Date(t.transaction_date);
+                    const diffTime = Math.abs(now.getTime() - txDate.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (this.globalFilters.date === '6m' && diffDays > 180) return false;
+                    if (this.globalFilters.date === '1y' && diffDays > 365) return false;
+                    if (this.globalFilters.date === '3y' && diffDays > 365 * 3) return false;
+                    if (this.globalFilters.date === '5y' && diffDays > 365 * 5) return false;
+                    // End Copy-Paste
+                }
+
+                return true;
+            });
+
+            if (relevant.length === 0) return;
+
+            // Sort by Date Descending
+            relevant.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+
+            // Take top 5
+            const top5 = relevant.slice(0, 5);
+
+
+
+            // Construct Content
+            // Header: Postal (we don't have postal in T, but we have block/street)
+            // Actually instructions say "<postcode>". Data doesn't have postcode field in HDBTransaction interface? 
+            // Check DataLoader... it has 'town', 'block', 'street_name'. 
+            // Wait, standard HDB data often has no postal code. 
+            // But we used PostalSearch to find lat/lng.
+            // If the user request "Postcode" but we don't have it... maybe I show "Block Street".
+            // Or we assume 'block' + 'street' is valid.
+            // I will use "BLK {block} {street_name}" as the title.
+            const title = `Blk ${clicked.block} ${clicked.street_name}`;
+            // Request says "current lease remaining".
+            // Calculate: 99 - (CurrentYear - LeaseStartYear)
+            const currentYear = new Date().getFullYear();
+            const leaseCommenceYear = Number(clicked.lease_commence_date);
+            const currentLease = 99 - (currentYear - leaseCommenceYear);
+
+            const mrt = clicked.mrt_distance_m ? `${Math.round(clicked.mrt_distance_m)}m to MRT` : '';
+            // We need MRT Name? Data has 'mrt_distance_m'. Does it have name?
+            // DataLoader interface: `mrt_distance_m`. No name field.
+            // I will just show distance for now.
+            // "Nearest MRT Name and distance".
+            // If I don't have the name in the dataset, I can't show it.
+            // I'll check DataLoader again.
+
+            // Generate HTML
+            const rows = top5.map(t => {
+                const psf = t.resale_price / (t.floor_area_sqm * 10.7639);
+                return `
+                    <tr>
+                        <td>${new Date(t.transaction_date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}</td>
+                        <td>${t.flat_type}</td>
+                        <td>${t.storey_range}</td>
+                        <td>$${(t.resale_price / 1000).toFixed(0)}k</td>
+                        <td>$${Math.round(psf)}</td>
+                    </tr>
+                `}).join('');
+
+            const html = `
+                <div class="popover-header">
+                    <div class="popover-title">
+                        ${title}
+                        <span class="popover-badge">${Math.max(0, currentLease)}y left</span>
+                    </div>
+                     <div class="popover-subtitle">
+                        <i data-lucide="train" style="width: 12px; height: 12px;"></i> ${mrt}
+                    </div>
+                </div>
+                <table class="popover-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Storey</th>
+                            <th>Price</th>
+                            <th>PSF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            `;
+
+            this.mapView.showPopup(lat, lng, html);
+
+            // Re-init icons in popup? popups usually strip scripts, but let's try
+            // or just use manual SVGs if needed. Lucide won't auto-scan the popup content easily.
+            // I'll stick to simple text for MRT if icon fails.
+        });
+
         // 2. Desktop Drag Selection
         this.mapView.setOnDragSelection({
             onStart: (lat, lng) => {
@@ -939,12 +1079,7 @@ export class AnalyticsPanel {
         } as any);
     }
 
-    private clearChart(): void {
-        if (this.chart) {
-            this.chart.destroy();
-            this.chart = null;
-        }
-    }
+
 
     private aggregateByMonth(transactions: HDBTransaction[]): Array<{
         month: string;

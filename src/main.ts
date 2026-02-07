@@ -3,6 +3,7 @@
  */
 
 import './style.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { DataLoader } from './data/DataLoader';
 import { MapView } from './map/MapView';
 import { AnalyticsPanel } from './analytics/AnalyticsPanel';
