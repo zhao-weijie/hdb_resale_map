@@ -36,8 +36,7 @@ def parse_date(date_str):
                 q, year = match.groups()
                 # End of quarter months: Q1->Mar, Q2->Jun, Q3->Sep, Q4->Dec
                 month = int(q) * 3 
-                # Last day of month... simplifying to 1st of next month - 1 day or just use 28th
-                # Let's use end of month logic roughly
+                # Last day of month
                 if month in [3, 12]: day = 31
                 elif month in [6, 9]: day = 30
                 else: day = 28
@@ -74,7 +73,6 @@ def get_best_match(name, candidates):
         score = SequenceMatcher(None, norm_name, norm_cand).ratio()
         
         # Boost score if one is substring of another
-        # BUT only if they are reasonably long to avoid "West" matching "West Rock"
         if len(norm_name) > 10 and (norm_name in norm_cand or norm_cand in norm_name):
              score = max(score, 0.9) 
             
@@ -83,6 +81,17 @@ def get_best_match(name, candidates):
             best_match = cand
             
     return best_match, best_score
+
+def get_project_type(type_str):
+    """Normalize project type."""
+    if not type_str: return "Unknown"
+    t = str(type_str).lower()
+    if "prime" in t: return "Prime"
+    if "plus" in t: return "Plus"
+    if "mature" in t: return "Mature"
+    if "non-mature" in t: return "Non-Mature"
+    if "standard" in t: return "Standard"
+    return "Unknown"
 
 def main():
     print("Processing BTO data and calculating MOP...")
@@ -95,10 +104,9 @@ def main():
     with open(RAW_BTO_FILE, 'r', encoding='utf-8') as f:
         raw_data = json.load(f)
         
-    print(f"Loaded {len(raw_data)} scraped records.")
-    
-    # Clean and Process Scraped Data
-    bto_projects = []
+    # Process Scraped Data into a Lookup Dictionary
+    # Key: Normalized Name, Value: Data Dict
+    bto_lookup = {}
     
     for row in raw_data:
         if "_raw" in row and len(row) == 1:
@@ -113,9 +121,10 @@ def main():
         launch_date_str = row.get("Launch\u00a0date", "")
         est_comp_str = row.get("Estimated\ncompletion\ndate (note)", "")
         brochure_link = row.get("Brochure Link", "")
+        units = row.get("Units", "")
+        proj_type = row.get("Type", "")
 
         comp_date = parse_date(est_comp_str)
-        
         if not comp_date:
             est_str = str(est_comp_str).lower()
             if "month" in est_str:
@@ -127,19 +136,18 @@ def main():
                         comp_date = launch_date + timedelta(days=int(months * 30.44))
 
         if comp_date:
-            mop_date = comp_date + timedelta(days=365*5) # 5 Years MOP
-            
-            bto_projects.append({
+            norm_name = normalize_name(project_name)
+            bto_lookup[norm_name] = {
                 "name": project_name,
                 "completion_date": comp_date,
-                "mop_date": mop_date,
                 "brochure_link": brochure_link,
-                "town": row.get("Town name", "")
-            })
+                "units": units,
+                "type": get_project_type(proj_type)
+            }
+            
+    print(f"Prepared lookup for {len(bto_lookup)} scraped projects.")
 
-    print(f"Parsed {len(bto_projects)} projects with valid dates.")
-    
-    # 2. Load GeoJSON
+    # 2. Load GeoJSON (Source of Truth)
     if not GEOJSON_FILE.exists():
         print(f"Error: {GEOJSON_FILE} not found.")
         return
@@ -148,52 +156,77 @@ def main():
         geojson = json.load(f)
         
     features = geojson.get("features", [])
-    print(f"Loaded {len(features)} GeoJSON features.")
+    print(f"Processing {len(features)} GeoJSON features.")
     
-    # 3. Match and Merge
-    matched_count = 0
-    feature_names = [f["properties"].get("NAME", "") for f in features]
-    
+    # 3. Enrich Features
     output_features = []
-    unmatched_projects = []
+    enriched_count = 0
+    scraped_names = list(bto_lookup.keys()) # Normalized names for matching
     
-    for project in bto_projects:
-        match_name, score = get_best_match(project["name"], feature_names)
+    for feature in features:
+        props = feature["properties"]
+        geo_name = props.get("NAME", "")
         
-        # Stricter threshold
-        if match_name and score > 0.85:
-            # print(f"Matched: '{project['name']}' <-> '{match_name}' (Score: {score:.2f})")
+        # Initialize Base Props
+        new_props = props.copy()
+        
+        # 1. Try Match
+        match_norm_name, score = get_best_match(geo_name, scraped_names)
+        
+        mop_date = None
+        est_completion = None
+        
+        if match_norm_name and score > 0.85:
+            # HIT
+            bto_data = bto_lookup[match_norm_name]
             
-            # Find the feature
-            feature = next(f for f in features if f["properties"].get("NAME") == match_name)
+            new_props["PROJECT_NAME"] = bto_data["name"] # Use scraped name (usually cleaner?) or maybe GeoJSON name?
+            new_props["BTO_NAME_SCRAPED"] = bto_data["name"]
             
-            # Create new feature with enriched props
-            new_props = feature["properties"].copy()
-            new_props["PROJECT_NAME"] = project["name"]
-            new_props["MOP_EXPIRY_DATE"] = project["mop_date"].strftime("%Y-%m-%d")
+            # Enrich Fields
+            new_props["TOTAL_UNITS"] = bto_data["units"]
+            new_props["PROJECT_TYPE"] = bto_data["type"]
+            new_props["BROCHURE_LINK"] = bto_data["brochure_link"]
             
-            # Format Quarter for display
-            q = (project["mop_date"].month - 1) // 3 + 1
-            new_props["MOP_EXPIRY_Q"] = f"Q{q} {project['mop_date'].year}"
+            # Dates
+            est_completion = bto_data["completion_date"]
+            enriched_count += 1
             
-            new_props["EST_COMPLETION"] = project["completion_date"].strftime("%Y-%m-%d")
-            new_props["BROCHURE_LINK"] = project["brochure_link"]
-            new_props["TOWN"] = project["town"]
-            
-            new_feature = {
-                "type": "Feature",
-                "geometry": feature["geometry"],
-                "properties": new_props
-            }
-            output_features.append(new_feature)
-            matched_count += 1
         else:
-            unmatched_projects.append(project["name"])
-    
-    print(f"Matched {matched_count} projects to GeoJSON polygons.")
-    print(f"Unmatched {len(unmatched_projects)} projects.")
-    if unmatched_projects:
-        print(f"Sample unmatched: {unmatched_projects[:5]}")
+            # MISS - Fallback
+            new_props["PROJECT_NAME"] = geo_name
+            new_props["BTO_NAME_SCRAPED"] = None
+            new_props["TOTAL_UNITS"] = None
+            new_props["PROJECT_TYPE"] = "Unknown"
+            new_props["BROCHURE_LINK"] = None
+            
+            # Try parse GeoJSON date: "ESTMT_CNSTRN_CMPLTN" -> "4Q 2018"
+            geo_date_str = props.get("ESTMT_CNSTRN_CMPLTN", "")
+            est_completion = parse_date(geo_date_str)
+
+        # Calculate MOP
+        # Initialize defaults to avoid undefined issues in JSON
+        new_props["EST_COMPLETION"] = None
+        new_props["MOP_EXPIRY_DATE"] = None
+        new_props["MOP_EXPIRY_Q"] = "Unknown"
+
+        if est_completion:
+            mop_date = est_completion + timedelta(days=365*5)
+            new_props["EST_COMPLETION"] = est_completion.strftime("%Y-%m-%d")
+            new_props["MOP_EXPIRY_DATE"] = mop_date.strftime("%Y-%m-%d")
+             # Format Quarter for display
+            q = (mop_date.month - 1) // 3 + 1
+            new_props["MOP_EXPIRY_Q"] = f"Q{q} {mop_date.year}"
+
+        # Construct Feature
+        new_feature = {
+            "type": "Feature",
+            "geometry": feature["geometry"],
+            "properties": new_props
+        }
+        output_features.append(new_feature)
+
+    print(f"Enriched {enriched_count} / {len(features)} features with scraped data.")
     
     # 4. Save Output
     output_geojson = {

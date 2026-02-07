@@ -94,6 +94,7 @@ export class MapView {
         // Subscribe to MOP state changes
         appState.subscribe('displayMopExpiries', () => this.updateLayers());
         appState.subscribe('mopExpiryDateRange', () => this.updateLayers());
+        appState.subscribe('mopProjectTypes', () => this.updateLayers());
 
         console.log("✓ Map initialized with OneMap basemap");
     }
@@ -324,12 +325,19 @@ export class MapView {
         // MOP Expiry Layer
         if (this.mopData && appState.get('displayMopExpiries')) {
             const dateRange = appState.get('mopExpiryDateRange');
-            // Filter features based on date range
+            const projectTypes = appState.get('mopProjectTypes');
+
+            // Filter features based on date range and project type
             const filteredFeatures = {
                 type: "FeatureCollection",
                 features: this.mopData.features.filter((f: any) => {
                     const expiry = f.properties.MOP_EXPIRY_DATE;
-                    return expiry >= dateRange[0] && expiry <= dateRange[1];
+                    const type = f.properties.PROJECT_TYPE || 'Unknown';
+
+                    const inDateRange = expiry >= dateRange[0] && expiry <= dateRange[1];
+                    const inType = projectTypes.includes(type);
+
+                    return inDateRange && inType;
                 })
             };
 
@@ -340,20 +348,40 @@ export class MapView {
                     pickable: true,
                     stroked: true,
                     filled: true,
-                    getFillColor: [255, 140, 0, 100], // Dark Orange transparent
-                    getLineColor: [255, 69, 0, 255], // Red-Orange solid
+                    getFillColor: (f: any) => {
+                        const type = f.properties.PROJECT_TYPE;
+                        switch (type) {
+                            case 'Prime': return [168, 85, 247, 140]; // Purple
+                            case 'Plus': return [236, 72, 153, 140]; // Pink
+                            case 'Standard': return [34, 197, 94, 140]; // Green
+                            case 'Mature': return [59, 130, 246, 140]; // Blue
+                            case 'Non-Mature': return [249, 115, 22, 140]; // Orange
+                            default: return [156, 163, 175, 140]; // Gray/Unknown
+                        }
+                    },
+                    getLineColor: [255, 255, 255, 200],
                     getLineWidth: 2,
                     lineWidthMinPixels: 1,
                     onClick: (info: any) => {
                         if (info && info.object) {
                             const props = info.object.properties;
                             const html = `
-                                <div style="padding: 8px; min-width: 200px;">
-                                    <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${props.PROJECT_NAME}</h3>
-                                    <div style="margin-bottom: 4px;"><strong>MOP Expiry:</strong> ${props.MOP_EXPIRY_Q}</div>
-                                    <div style="margin-bottom: 4px; font-size: 12px; color: #666;">(${props.MOP_EXPIRY_DATE})</div>
-                                    <div style="margin-bottom: 8px;"><strong>Town:</strong> ${props.TOWN}</div>
-                                    ${props.BROCHURE_LINK ? `<a href="${props.BROCHURE_LINK}" target="_blank" style="color: #3b82f6; text-decoration: none;">View Brochure</a>` : ''}
+                                <div style="padding: 10px; min-width: 220px;">
+                                    <h3 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">${props.PROJECT_NAME}</h3>
+                                    <div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+                                        ${props.BTO_NAME_SCRAPED ? `<span style="color: #059669;">✓ Verified: ${props.BTO_NAME_SCRAPED}</span>` : '<span style="color: #d97706;">⚠ Unverified Source</span>'}
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin-bottom: 12px;">
+                                        <strong>Type:</strong> <div>${props.PROJECT_TYPE || 'Unknown'}</div>
+                                        <strong>Units:</strong> <div>${props.TOTAL_UNITS || 'N/A'}</div>
+                                        <strong>MOP Expiry:</strong> <div>${props.MOP_EXPIRY_Q}</div>
+                                        <div style="grid-column: 2; font-size: 11px; color: #888;">${props.MOP_EXPIRY_DATE}</div>
+                                    </div>
+
+                                    <div style="border-top: 1px solid #eee; padding-top: 8px;">
+                                        ${props.BROCHURE_LINK ? `<a href="${props.BROCHURE_LINK}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500;">View Brochure →</a>` : '<span style="color: #999; font-style: italic;">No Brochure</span>'}
+                                    </div>
                                 </div>
                             `;
                             this.showPopup(info.coordinate[1], info.coordinate[0], html);

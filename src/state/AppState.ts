@@ -26,6 +26,7 @@ export interface AppState {
     // MOP Expiry Feature
     displayMopExpiries: boolean;
     mopExpiryDateRange: [string, string];
+    mopProjectTypes: string[];
 }
 
 type StateKey = keyof AppState;
@@ -61,6 +62,7 @@ export class StateStore {
                 new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             ],
+            mopProjectTypes: ['Prime', 'Plus', 'Standard', 'Mature', 'Non-Mature', 'Unknown']
         };
     }
 
