@@ -510,6 +510,10 @@ export class AnalyticsPanel {
                         selected = this.dataLoader.queryRectangle(minLat, minLng, maxLat, maxLng);
                     }
 
+                    // Clear postal input since user drew a selection manually
+                    const postalInput = document.getElementById('postal-input') as HTMLInputElement;
+                    if (postalInput) postalInput.value = '';
+
                     this.updateSelectionState(selected);
                     this.locationCard.setSelectionMode(false);
                 }

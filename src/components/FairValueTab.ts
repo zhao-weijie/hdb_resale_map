@@ -133,8 +133,6 @@ export class FairValueTab {
         // Group transactions by selected feature
         const distribution = this.aggregateByFeature(data, this.selectedFeature);
 
-        if (this.chart) this.chart.destroy();
-
         const featureLabels: Record<string, string> = {
             storey: 'Storey Range',
             lease: 'Lease Remaining (Years)',
@@ -142,71 +140,83 @@ export class FairValueTab {
             flat_type: 'Flat Type',
         };
 
-        this.chart = new Chart(canvas, {
-            type: 'boxplot',
-            data: {
-                labels: distribution.map(d => d.label),
-                datasets: [{
-                    label: 'Price PSF',
-                    data: distribution.map(d => ({
-                        min: d.min,
-                        q1: d.q1,
-                        median: d.median,
-                        q3: d.q3,
-                        max: d.max,
-                        mean: d.mean,
-                        outliers: d.outliers
-                    })),
-                    backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                    borderColor: 'rgb(59, 130, 246)',
-                    borderWidth: 1,
-                    outlierBackgroundColor: 'rgba(59, 130, 246, 0.6)',
-                    outlierBorderColor: 'rgb(59, 130, 246)',
-                    outlierRadius: 3,
-                    medianColor: 'rgb(37, 99, 235)',
-                    meanBackgroundColor: 'rgba(16, 185, 129, 0.6)',
-                    meanBorderColor: 'rgb(16, 185, 129)',
-                    meanRadius: 4,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: `Price Distribution by ${featureLabels[this.selectedFeature]}`
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context: any) => {
-                                const d = context.raw;
-                                if (!d) return '';
-                                return [
-                                    `Median: $${Math.round(d.median)}`,
-                                    `Mean: $${Math.round(d.mean)}`,
-                                    `Q1: $${Math.round(d.q1)}  Q3: $${Math.round(d.q3)}`,
-                                    `Min: $${Math.round(d.min)}  Max: $${Math.round(d.max)}`,
-                                    `Count: ${distribution[context.dataIndex].count}`,
-                                    d.outliers && d.outliers.length > 0 ? `Outliers: ${d.outliers.length}` : ''
-                                ].filter(s => s !== '');
+        const boxPlotData = distribution.map(d => ({
+            min: d.min,
+            q1: d.q1,
+            median: d.median,
+            q3: d.q3,
+            max: d.max,
+            mean: d.mean,
+            outliers: d.outliers
+        }));
+
+        // Update existing chart in-place if possible, otherwise create new
+        if (this.chart) {
+            this.chart.data.labels = distribution.map(d => d.label);
+            this.chart.data.datasets[0].data = boxPlotData as any;
+            // Update title and x-axis label for feature change
+            (this.chart.options.plugins as any).title.text = `Price Distribution by ${featureLabels[this.selectedFeature]}`;
+            (this.chart.options.scales as any).x.title.text = featureLabels[this.selectedFeature];
+            this.chart.update('none'); // 'none' mode skips animations for faster updates
+        } else {
+            this.chart = new Chart(canvas, {
+                type: 'boxplot',
+                data: {
+                    labels: distribution.map(d => d.label),
+                    datasets: [{
+                        label: 'Price PSF',
+                        data: boxPlotData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1,
+                        outlierBackgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        outlierBorderColor: 'rgb(59, 130, 246)',
+                        outlierRadius: 3,
+                        medianColor: 'rgb(37, 99, 235)',
+                        meanBackgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        meanBorderColor: 'rgb(16, 185, 129)',
+                        meanRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: `Price Distribution by ${featureLabels[this.selectedFeature]}`
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context: any) => {
+                                    const d = context.raw;
+                                    if (!d) return '';
+                                    return [
+                                        `Median: $${Math.round(d.median)}`,
+                                        `Mean: $${Math.round(d.mean)}`,
+                                        `Q1: $${Math.round(d.q1)}  Q3: $${Math.round(d.q3)}`,
+                                        `Min: $${Math.round(d.min)}  Max: $${Math.round(d.max)}`,
+                                        `Count: ${distribution[context.dataIndex].count}`,
+                                        d.outliers && d.outliers.length > 0 ? `Outliers: ${d.outliers.length}` : ''
+                                    ].filter(s => s !== '');
+                                }
                             }
                         }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        grace: '5%',
-                        title: { display: true, text: 'Price PSF ($)' }
                     },
-                    x: {
-                        title: { display: true, text: featureLabels[this.selectedFeature] }
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grace: '5%',
+                            title: { display: true, text: 'Price PSF ($)' }
+                        },
+                        x: {
+                            title: { display: true, text: featureLabels[this.selectedFeature] }
+                        }
                     }
                 }
-            }
-        } as any);
+            } as any);
+        }
     }
 
     private aggregateByFeature(transactions: HDBTransaction[], feature: string): Array<{
