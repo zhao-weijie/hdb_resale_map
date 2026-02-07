@@ -42,8 +42,6 @@ export class OverviewTab {
         const prices = data.map(t => t.price_psf).sort((a, b) => a - b);
         const n = prices.length;
         const median = prices[Math.floor(n / 2)];
-        const q1 = prices[Math.floor(n * 0.25)];
-        const q3 = prices[Math.floor(n * 0.75)];
         const avgPrice = data.reduce((sum, t) => sum + t.resale_price, 0) / data.length;
         const avgPSF = data.reduce((sum, t) => sum + t.price_psf, 0) / data.length;
 
@@ -189,14 +187,6 @@ export class OverviewTab {
         }
     }
 
-    private calculateMedian(values: number[]): number {
-        if (values.length === 0) return 0;
-        const sorted = [...values].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        return sorted.length % 2 === 0
-            ? (sorted[mid - 1] + sorted[mid]) / 2
-            : sorted[mid];
-    }
 
     destroy(): void {
         if (this.chart) {

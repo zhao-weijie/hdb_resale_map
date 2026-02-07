@@ -13,6 +13,7 @@ export class FairValueTab {
     private fairValueAnalysis: FairValueAnalysis;
     private chart: Chart | null = null;
     private selectedFeature: 'storey' | 'lease' | 'mrt' | 'flat_type' = 'storey';
+    private currentData: HDBTransaction[] = [];
 
     constructor(fairValueAnalysis: FairValueAnalysis) {
         this.fairValueAnalysis = fairValueAnalysis;
@@ -58,14 +59,14 @@ export class FairValueTab {
         const featureSelect = document.getElementById('fv-feature-select') as HTMLSelectElement;
         featureSelect?.addEventListener('change', () => {
             this.selectedFeature = featureSelect.value as any;
-            const currentData = (globalThis as any).__currentFairValueData;
-            if (currentData) {
-                this.renderFairValue(currentData);
+            if (this.currentData.length > 0) {
+                this.renderFairValueChart(this.currentData);
             }
         });
     }
 
     renderFairValue(data: HDBTransaction[]): void {
+        this.currentData = data;
         this.renderFairValueStats(data);
         this.renderFairValueChart(data);
         // NOTE: Factor Impact removed - was showing incorrect/misleading data
@@ -314,37 +315,6 @@ export class FairValueTab {
         });
     }
 
-    private renderFactors(data: HDBTransaction[]): void {
-        const factorsDiv = document.getElementById('fv-factors-content');
-        if (!factorsDiv) return;
-
-        if (!data || data.length === 0) {
-            factorsDiv.innerHTML = '';
-            return;
-        }
-
-        // Calculate average characteristics
-        const avgStorey = data.reduce((sum, t) => sum + Number(t.storey_midpoint), 0) / data.length;
-        const avgLease = data.reduce((sum, t) => sum + Number(t.remaining_lease_years), 0) / data.length;
-        const avgMrtDist = data.reduce((sum, t) => sum + Number(t.mrt_distance_m), 0) / data.length / 1000;
-
-        factorsDiv.innerHTML = `
-            <div class="factor-list">
-                <div class="factor-item">
-                    <span>Avg Storey:</span>
-                    <strong>${avgStorey.toFixed(1)}</strong>
-                </div>
-                <div class="factor-item">
-                    <span>Avg Lease:</span>
-                    <strong>${avgLease.toFixed(1)} yrs</strong>
-                </div>
-                <div class="factor-item">
-                    <span>Avg MRT Dist:</span>
-                    <strong>${(avgMrtDist * 1000).toFixed(0)}m</strong>
-                </div>
-            </div>
-        `;
-    }
 
     destroy(): void {
         if (this.chart) {

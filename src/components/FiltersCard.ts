@@ -7,16 +7,13 @@ import type { MapView } from '../map/MapView';
 import { appState } from '../state/AppState';
 
 export class FiltersCard {
-    private container: HTMLElement;
     private dataLoader: DataLoader;
     private mapView: MapView;
 
     constructor(
-        container: HTMLElement,
         dataLoader: DataLoader,
         mapView: MapView
     ) {
-        this.container = container;
         this.dataLoader = dataLoader;
         this.mapView = mapView;
     }

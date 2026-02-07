@@ -2,27 +2,21 @@
  * LocationCard - Handles location search, selection mode, and area selection
  */
 
-import type { DataLoader, HDBTransaction } from '../data/DataLoader';
+import type { HDBTransaction } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
 import { PostalSearch } from '../tools/PostalSearch';
 import { appState } from '../state/AppState';
 
 export class LocationCard {
-    private container: HTMLElement;
-    private dataLoader: DataLoader;
     private mapView: MapView;
     private radialSelection: RadialSelection;
     private isSelectionModeActive = false;
 
     constructor(
-        container: HTMLElement,
-        dataLoader: DataLoader,
         mapView: MapView,
         radialSelection: RadialSelection
     ) {
-        this.container = container;
-        this.dataLoader = dataLoader;
         this.mapView = mapView;
         this.radialSelection = radialSelection;
     }

@@ -46,8 +46,8 @@ export class AnalyticsPanel {
         this.fairValueAnalysis = new FairValueAnalysis();
 
         // Initialize components
-        this.locationCard = new LocationCard(container, dataLoader, mapView, this.radialSelection);
-        this.filtersCard = new FiltersCard(container, dataLoader, mapView);
+        this.locationCard = new LocationCard(mapView, this.radialSelection);
+        this.filtersCard = new FiltersCard(dataLoader, mapView);
         this.overviewTab = new OverviewTab();
         this.fairValueTab = new FairValueTab(this.fairValueAnalysis);
     }
