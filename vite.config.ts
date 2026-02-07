@@ -12,6 +12,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': resolve(__dirname, './src'),
+            'child_process': resolve(__dirname, './src/shims/child_process.ts'),
         },
     },
     publicDir: 'public',

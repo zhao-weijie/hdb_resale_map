@@ -22,6 +22,10 @@ export interface AppState {
     // Selection geometry
     selectionCenter: { lat: number; lng: number } | null;
     selectionRadius: number;
+
+    // MOP Expiry Feature
+    displayMopExpiries: boolean;
+    mopExpiryDateRange: [string, string];
 }
 
 type StateKey = keyof AppState;
@@ -49,6 +53,14 @@ export class StateStore {
             colorMode: 'price_psf',
             selectionCenter: null,
             selectionRadius: 500,
+
+            // MOP Expiry Feature
+            displayMopExpiries: false,
+            // Default: 2 months back to 12 months future
+            mopExpiryDateRange: [
+                new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            ],
         };
     }
 

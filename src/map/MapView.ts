@@ -1,5 +1,5 @@
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { ScatterplotLayer, PolygonLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, PolygonLayer, GeoJsonLayer } from '@deck.gl/layers';
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
@@ -16,6 +16,7 @@ export class MapView {
     private containerElement: HTMLElement;
     private selectionCircle: any = null;
     private selectionRect: any = null;
+    private mopData: any = null; // Store MOP GeoJSON data
 
     private isMobile: boolean;
     private onPointClickCallback: ((lat: number, lng: number) => void) | null = null;
@@ -33,6 +34,19 @@ export class MapView {
     async initialize(): Promise<void> {
         // Singapore center coordinates
         const SINGAPORE_CENTER = { longitude: 103.8198, latitude: 1.3521 };
+
+        // Fetch MOP Data
+        try {
+            const response = await fetch('data/upcoming_mop.geojson');
+            if (response.ok) {
+                this.mopData = await response.json();
+                console.log("✓ MOP Data loaded");
+            } else {
+                console.warn("Failed to load MOP data");
+            }
+        } catch (e) {
+            console.warn("Error loading MOP data", e);
+        }
 
         // 1. Initialize MapLibre directly (owns the context)
         this.map = new maplibregl.Map({
@@ -76,6 +90,10 @@ export class MapView {
         await new Promise<void>((resolve) => {
             this.map?.on('load', () => resolve());
         });
+
+        // Subscribe to MOP state changes
+        appState.subscribe('displayMopExpiries', () => this.updateLayers());
+        appState.subscribe('mopExpiryDateRange', () => this.updateLayers());
 
         console.log("✓ Map initialized with OneMap basemap");
     }
@@ -302,6 +320,49 @@ export class MapView {
                 }
             }
         }));
+
+        // MOP Expiry Layer
+        if (this.mopData && appState.get('displayMopExpiries')) {
+            const dateRange = appState.get('mopExpiryDateRange');
+            // Filter features based on date range
+            const filteredFeatures = {
+                type: "FeatureCollection",
+                features: this.mopData.features.filter((f: any) => {
+                    const expiry = f.properties.MOP_EXPIRY_DATE;
+                    return expiry >= dateRange[0] && expiry <= dateRange[1];
+                })
+            };
+
+            layers.push(
+                new GeoJsonLayer({
+                    id: 'mop-expiry-layer',
+                    data: filteredFeatures as any,
+                    pickable: true,
+                    stroked: true,
+                    filled: true,
+                    getFillColor: [255, 140, 0, 100], // Dark Orange transparent
+                    getLineColor: [255, 69, 0, 255], // Red-Orange solid
+                    getLineWidth: 2,
+                    lineWidthMinPixels: 1,
+                    onClick: (info: any) => {
+                        if (info && info.object) {
+                            const props = info.object.properties;
+                            const html = `
+                                <div style="padding: 8px; min-width: 200px;">
+                                    <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${props.PROJECT_NAME}</h3>
+                                    <div style="margin-bottom: 4px;"><strong>MOP Expiry:</strong> ${props.MOP_EXPIRY_Q}</div>
+                                    <div style="margin-bottom: 4px; font-size: 12px; color: #666;">(${props.MOP_EXPIRY_DATE})</div>
+                                    <div style="margin-bottom: 8px;"><strong>Town:</strong> ${props.TOWN}</div>
+                                    ${props.BROCHURE_LINK ? `<a href="${props.BROCHURE_LINK}" target="_blank" style="color: #3b82f6; text-decoration: none;">View Brochure</a>` : ''}
+                                </div>
+                            `;
+                            this.showPopup(info.coordinate[1], info.coordinate[0], html);
+                            return true;
+                        }
+                    }
+                })
+            );
+        }
 
         // Add selection circle if active
         if (this.selectionCircle) {
