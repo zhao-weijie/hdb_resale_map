@@ -239,6 +239,7 @@ label {
 input[type="text"],
 input[type="number"],
 input[type="date"],
+input[type="month"],
 select {
     width: 100%;
     padding: 8px 12px;
@@ -251,9 +252,10 @@ select {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input[type="date"] {
+input[type="date"],
+input[type="month"] {
     padding-right: 4px !important;
-    /* Dates need less right padding to breathe */
+    /* Dates/months need less right padding to breathe */
 }
 
 input:focus,
@@ -263,8 +265,9 @@ select:focus {
     box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
-/* Hide native date picker icon visually but keep it clickable to open the picker */
-input[type="date"]::-webkit-calendar-picker-indicator {
+/* Hide native date/month picker icon visually but keep it clickable to open the picker */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
     position: absolute;
     top: 0;
     left: 0;
@@ -275,7 +278,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     background: transparent;
 }
 
-input[type="date"] {
+input[type="date"],
+input[type="month"] {
     min-width: 0;
     width: 100%;
 }

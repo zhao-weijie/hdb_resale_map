@@ -28,14 +28,11 @@ export class FiltersCard {
                 <div class="filter-grid">
                     <!-- Date -->
                     <div class="filter-item full-width">
-                        <label>Time Period</label>
-                        <select id="filter-date">
-                            <option value="all">All Time</option>
-                            <option value="6m">Last 6 Months</option>
-                            <option value="1y">Last 1 Year</option>
-                            <option value="3y">Last 3 Years</option>
-                            <option value="5y">Last 5 Years</option>
-                        </select>
+                        <label>From Month</label>
+                        <div class="input-wrapper">
+                            <i data-lucide="calendar"></i>
+                            <input type="month" id="filter-date" value="2024-01">
+                        </div>
                     </div>
 
                     <!-- Flat Type -->
@@ -101,7 +98,6 @@ export class FiltersCard {
 
         // 2. Filter Data
         const allData = this.dataLoader.getAllData();
-        const now = new Date();
 
         const filtered = allData.filter(t => {
             // Flat Type
@@ -111,16 +107,12 @@ export class FiltersCard {
             if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
                 t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
 
-            // Date
-            if (appState.get('globalFilters').date !== 'all') {
+            // Date - filter from selected month onward
+            if (appState.get('globalFilters').date) {
+                const selectedMonth = appState.get('globalFilters').date; // Format: YYYY-MM
                 const txDate = new Date(t.transaction_date);
-                const diffTime = Math.abs(now.getTime() - txDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
-                if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
-                if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
-                if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
+                const txYearMonth = txDate.getFullYear() + '-' + String(txDate.getMonth() + 1).padStart(2, '0');
+                if (txYearMonth < selectedMonth) return false;
             }
 
             return true;
