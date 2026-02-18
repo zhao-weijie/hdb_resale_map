@@ -65,7 +65,7 @@ export class ColorScaleBar {
     private gradientEl: HTMLElement | null = null;
     private canvasEl: HTMLCanvasElement | null = null;
     private overlayEl: HTMLElement | null = null;
-    private labelEl: HTMLElement | null = null;
+    //private labelEl: HTMLElement | null = null;
 
     private colorScale: ColorScale = 'viridis';
     private colorMode: 'price' | 'price_psf' = 'price_psf';
@@ -93,14 +93,14 @@ export class ColorScaleBar {
         this.overlayEl.className = 'color-scale-overlay';
 
         // ── Small label beneath the bar showing current scale name ────────
-        this.labelEl = document.createElement('div');
+        /*this.labelEl = document.createElement('div');
         this.labelEl.className = 'color-scale-label';
-        this.labelEl.textContent = 'Viridis';
+        this.labelEl.textContent = 'Viridis';*/
 
         this.gradientEl.appendChild(this.canvasEl);
         this.gradientEl.appendChild(this.overlayEl);
         this.outerEl.appendChild(this.gradientEl);
-        this.outerEl.appendChild(this.labelEl);
+        //this.outerEl.appendChild(this.labelEl);
 
         // ── Click: toggle color scale ─────────────────────────────────────
         this.gradientEl.addEventListener('click', () => {
@@ -116,9 +116,9 @@ export class ColorScaleBar {
         // ── State subscriptions ───────────────────────────────────────────
         appState.subscribe('colorScale', (scale) => {
             this.colorScale = scale;
-            this.labelEl!.textContent =
+        /*    this.labelEl!.textContent =
                 scale === 'viridis' ? 'Viridis' : 'Turbo';
-            this.renderGradient();
+        */    this.renderGradient();
         });
 
         appState.subscribe('colorMode', (mode) => {
@@ -132,8 +132,8 @@ export class ColorScaleBar {
         // ── Sync initial values ───────────────────────────────────────────
         this.colorScale = appState.get('colorScale');
         this.colorMode = appState.get('colorMode');
-        this.labelEl.textContent =
-            this.colorScale === 'viridis' ? 'Viridis' : 'Turbo';
+        /*this.labelEl.textContent =
+            this.colorScale === 'viridis' ? 'Viridis' : 'Turbo';*/
 
         // ── ResizeObserver: redraw canvas when bar height changes ─────────
         if (typeof ResizeObserver !== 'undefined') {
