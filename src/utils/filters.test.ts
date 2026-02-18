@@ -39,7 +39,8 @@ describe('applyFilters', () => {
             flatTypes: ['4 ROOM', '5 ROOM'],
             date: 'all',
             leaseMin: 0,
-            leaseMax: 99
+            leaseMax: 99,
+            floorMin: 1
         };
         const result = applyFilters(mockTransactions, filters);
         expect(result.every(t => ['4 ROOM', '5 ROOM'].includes(t.flat_type))).toBe(true);
@@ -51,7 +52,8 @@ describe('applyFilters', () => {
             flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
             date: 'all',
             leaseMin: 70,
-            leaseMax: 99
+            leaseMax: 99,
+            floorMin: 1
         };
         const result = applyFilters(mockTransactions, filters);
         expect(result.every(t => t.remaining_lease_years >= 70)).toBe(true);
@@ -63,7 +65,8 @@ describe('applyFilters', () => {
             flatTypes: ['MULTI-GENERATION'],
             date: 'all',
             leaseMin: 0,
-            leaseMax: 99
+            leaseMax: 99,
+            floorMin: 1
         };
         const result = applyFilters(mockTransactions, filters);
         expect(result).toEqual([]);
@@ -74,7 +77,8 @@ describe('applyFilters', () => {
             flatTypes: ['4 ROOM', '5 ROOM', 'EXECUTIVE'],
             date: 'all',
             leaseMin: 80,
-            leaseMax: 99
+            leaseMax: 99,
+            floorMin: 1
         };
         const result = applyFilters(mockTransactions, filters);
         // Should only include 5 ROOM (90 years) and EXECUTIVE (85 years)
@@ -87,7 +91,8 @@ describe('applyFilters', () => {
             flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
             date: 'all',
             leaseMin: 0,
-            leaseMax: 99
+            leaseMax: 99,
+            floorMin: 1
         };
         const result = applyFilters(mockTransactions, filters);
         expect(result.length).toBe(mockTransactions.length);
