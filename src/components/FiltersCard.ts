@@ -56,6 +56,12 @@ export class FiltersCard {
                             <input type="number" id="filter-lease-max" placeholder="Max" min="0" max="99" value="99">
                         </div>
                     </div>
+
+                    <!-- Floor -->
+                    <div class="filter-item full-width">
+                        <label>Min Floor</label>
+                        <input type="number" id="filter-floor-min" placeholder="e.g. 10" min="1" value="1">
+                    </div>
                 </div>
                 
                 <div class="btn-row">
@@ -88,12 +94,14 @@ export class FiltersCard {
         const flatTypeInputs = document.querySelectorAll('#filter-flat-type input:checked');
         const leaseMin = document.getElementById('filter-lease-min') as HTMLInputElement;
         const leaseMax = document.getElementById('filter-lease-max') as HTMLInputElement;
+        const floorMin = document.getElementById('filter-floor-min') as HTMLInputElement;
 
         appState.set('globalFilters', {
             date: dateSelect.value,
             flatTypes: Array.from(flatTypeInputs).map(i => (i as HTMLInputElement).value),
             leaseMin: parseInt(leaseMin.value) || 0,
-            leaseMax: parseInt(leaseMax.value) || 99
+            leaseMax: parseInt(leaseMax.value) || 99,
+            floorMin: parseInt(floorMin.value) || 1
         });
 
         // 2. Filter Data
@@ -113,6 +121,12 @@ export class FiltersCard {
                 const txDate = new Date(t.transaction_date);
                 const txYearMonth = txDate.getFullYear() + '-' + String(txDate.getMonth() + 1).padStart(2, '0');
                 if (txYearMonth < selectedMonth) return false;
+            }
+
+            // Floor - compare minimum floor against upper bound of storey range
+            if (appState.get('globalFilters').floorMin > 1) {
+                const upperBound = parseInt(t.storey_range.split(' TO ')[1]);
+                if (upperBound < appState.get('globalFilters').floorMin) return false;
             }
 
             return true;

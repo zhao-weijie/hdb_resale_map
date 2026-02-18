@@ -5,6 +5,7 @@ import { ScatterplotLayer, PolygonLayer, GeoJsonLayer } from '@deck.gl/layers';
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import maplibregl from 'maplibre-gl';
 import { appState } from '../state/AppState';
+import { buildColorLookup, type ColorScale } from '../components/ColorScaleBar';
 
 
 export type ColorMode = 'price' | 'price_psf';
@@ -20,6 +21,7 @@ export class MapView {
 
     private isMobile: boolean;
     private onPointClickCallback: ((lat: number, lng: number) => void) | null = null;
+    private colorLookup: [number, number, number][] = buildColorLookup('viridis');
 
     constructor(containerId: string, dataLoader: DataLoader, isMobile: boolean) {
         const container = document.getElementById(containerId);
@@ -95,6 +97,12 @@ export class MapView {
         appState.subscribe('displayMopExpiries', () => this.updateLayers());
         appState.subscribe('mopExpiryDateRange', () => this.updateLayers());
         appState.subscribe('mopProjectTypes', () => this.updateLayers());
+
+        // Rebuild color lookup table when the scale changes
+        appState.subscribe('colorScale', (scale: ColorScale) => {
+            this.colorLookup = buildColorLookup(scale);
+            this.updateLayers();
+        });
 
         console.log("✓ Map initialized with OneMap basemap");
     }
@@ -250,52 +258,12 @@ export class MapView {
             getFillColor: (d: HDBTransaction) => {
                 const value = getValue(d);
                 const normalized = (value - minValue) / (maxValue - minValue);
-
-                // Viridis-like color-blind friendly scale: purple → blue → teal → green → yellow
-                let rgba: [number, number, number, number];
-                if (normalized < 0.25) {
-                    // Purple to Blue: (68,1,84) -> (59,82,139)
-                    const t = normalized * 4;
-                    rgba = [
-                        Math.floor(68 + (59 - 68) * t),
-                        Math.floor(1 + (82 - 1) * t),
-                        Math.floor(84 + (139 - 84) * t),
-                        255
-                    ];
-                } else if (normalized < 0.5) {
-                    // Blue to Teal: (59,82,139) -> (33,145,140)
-                    const t = (normalized - 0.25) * 4;
-                    rgba = [
-                        Math.floor(59 + (33 - 59) * t),
-                        Math.floor(82 + (145 - 82) * t),
-                        Math.floor(139 + (140 - 139) * t),
-                        255
-                    ];
-                } else if (normalized < 0.75) {
-                    // Teal to Green: (33,145,140) -> (94,201,98)
-                    const t = (normalized - 0.5) * 4;
-                    rgba = [
-                        Math.floor(33 + (94 - 33) * t),
-                        Math.floor(145 + (201 - 145) * t),
-                        Math.floor(140 + (98 - 140) * t),
-                        255
-                    ];
-                } else {
-                    // Green to Yellow: (94,201,98) -> (253,231,37)
-                    const t = (normalized - 0.75) * 4;
-                    rgba = [
-                        Math.floor(94 + (253 - 94) * t),
-                        Math.floor(201 + (231 - 201) * t),
-                        Math.floor(98 + (37 - 98) * t),
-                        255
-                    ];
-                }
-
-                // Fade out unselected points when there's a selection
-                if (selectedSet && !selectedSet.has(`${d.latitude}-${d.longitude}-${d.resale_price}`)) {
-                    rgba[3] = 60; // Make unselected very transparent
-                }
-                return rgba;
+                const idx = Math.floor(Math.max(0, Math.min(0.9999, normalized)) * 255);
+                const [r, g, b] = this.colorLookup[idx];
+                const alpha = selectedSet && !selectedSet.has(`${d.latitude}-${d.longitude}-${d.resale_price}`)
+                    ? 60  // Fade out unselected points when there's a selection
+                    : 255;
+                return [r, g, b, alpha] as [number, number, number, number];
             },
             opacity: 1, // Use RGBA alpha instead
             pickable: true,
@@ -512,5 +480,9 @@ export class MapView {
 
     getColorMode(): ColorMode {
         return appState.get('colorMode');
+    }
+
+    addControl(control: maplibregl.IControl, position?: maplibregl.ControlPosition): void {
+        this.map?.addControl(control, position);
     }
 }

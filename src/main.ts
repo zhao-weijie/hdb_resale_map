@@ -7,6 +7,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { DataLoader } from './data/DataLoader';
 import { MapView } from './map/MapView';
 import { AnalyticsPanel } from './analytics/AnalyticsPanel';
+import { ColorScaleBar } from './components/ColorScaleBar';
+import { appState } from './state/AppState';
 
 // Detect mobile vs desktop
 const isMobile = window.innerWidth < 768;
@@ -41,11 +43,17 @@ async function initApp() {
         await dataLoader.load('data/hdb_data.arrow');
         console.log(`✓ Loaded ${dataLoader.getRecordCount()} transactions`);
 
+        // Expose all transactions in state so ColorScaleBar can fall back to them
+        appState.set('allTransactions', dataLoader.getAllData());
+
         // Initialize map
         console.log('🗺️ Initializing map...');
         const mapView = new MapView('map-container', dataLoader, isMobile);
         await mapView.initialize();
         console.log('✓ Map initialized');
+
+        // Add color scale bar to the map's top-right control area
+        mapView.addControl(new ColorScaleBar(), 'top-right');
 
         // Initialize analytics panel (desktop and mobile)
         console.log('📈 Initializing analytics panel...');

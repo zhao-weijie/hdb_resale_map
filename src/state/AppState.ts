@@ -18,6 +18,7 @@ export interface AppState {
     isSelectionModeActive: boolean;
     activeTab: 'overview' | 'fairvalue';
     colorMode: 'price' | 'price_psf';
+    colorScale: 'viridis' | 'turbo';
 
     // Selection geometry
     selectionCenter: { lat: number; lng: number } | null;
@@ -46,12 +47,14 @@ export class StateStore {
                 date: 'all',
                 flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
                 leaseMin: 0,
-                leaseMax: 99
+                leaseMax: 99,
+                floorMin: 1
             },
             selectionMode: 'radial',
             isSelectionModeActive: false,
             activeTab: 'overview',
             colorMode: 'price_psf',
+            colorScale: 'viridis',
             selectionCenter: null,
             selectionRadius: 500,
 

@@ -19,10 +19,12 @@
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "apache-arrow": "^18.1.0",
     "chart.js": "^4.4.0",
+    "d3-scale-chromatic": "^3.1.0",
     "maplibre-gl": "^4.7.1",
     "rbush": "^4.0.1"
   },
   "devDependencies": {
+    "@types/d3-scale-chromatic": "^3.1.0",
     "@types/rbush": "^3.0.3",
     "papaparse": "^5.5.3",
     "typescript": "^5.7.0",

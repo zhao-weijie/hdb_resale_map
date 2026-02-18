@@ -9,6 +9,7 @@ export interface GlobalFilters {
     flatTypes: string[];
     leaseMin: number;
     leaseMax: number;
+    floorMin: number;
 }
 
 /**
@@ -30,6 +31,12 @@ export function applyFilters(
         // Lease Filter
         if (t.remaining_lease_years < filters.leaseMin ||
             t.remaining_lease_years > filters.leaseMax) return false;
+
+        // Floor Filter - compare minimum floor against upper bound of storey range
+        if (filters.floorMin > 1) {
+            const upperBound = parseInt(t.storey_range.split(' TO ')[1]);
+            if (upperBound < filters.floorMin) return false;
+        }
 
         // Date Filter
         if (filters.date !== 'all') {

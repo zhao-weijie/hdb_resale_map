@@ -926,3 +926,131 @@ input[type="checkbox"] {
 .maplibregl-ctrl-group button+button {
     border-top: 1px solid var(--color-border) !important;
 }
+
+/* ── Color Scale Bar ─────────────────────────────────────────────────────── */
+
+/*
+ * The outer wrapper is the Maplibre control root.
+ * overflow: visible lets the hover labels extend to the left of the bar.
+ */
+.color-scale-bar.maplibregl-ctrl {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+/*
+ * The visible colored rectangle.
+ * Default height = 200px, chosen so the full bar fits at 900 px viewport
+ * height on both mobile (drawer open: 35 vh ≈ 315 px available) and desktop.
+ */
+.color-scale-gradient {
+    position: relative;
+    width: 29px;           /* matches Maplibre nav-button width */
+    height: 200px;         /* default – same as --colorscale-height */
+    max-height: calc(100vh - 130px);   /* desktop safety */
+    min-height: 40px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    background: var(--color-bg-card);
+    cursor: pointer;
+    overflow: visible;     /* labels extend left beyond the bar */
+    transition: opacity 0.15s;
+}
+
+.color-scale-gradient:hover {
+    opacity: 0.92;
+}
+
+/* The pixel-painted gradient canvas – fills the box, clipped by border-radius */
+.color-scale-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: calc(var(--radius-sm) - 1px);
+}
+
+/*
+ * Small label under the bar ("Viridis" / "Turbo").
+ * Rotated 90° so it reads vertically beside the bar, or kept horizontal.
+ */
+.color-scale-label {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--color-text-muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* ── Hover markers overlay ───────────────────────────────────────────────── */
+
+.color-scale-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+    display: none;   /* shown via JS on mouseenter */
+}
+
+/* Each marker sits at the correct % position on the bar */
+.scale-marker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    overflow: visible;
+}
+
+/* Horizontal white tick across the full bar width */
+.scale-marker-tick {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    top: 0;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Price label to the left of the bar */
+.scale-marker-label {
+    position: absolute;
+    right: calc(100% + 6px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    line-height: 1.4;
+    background: var(--color-bg-card);
+    color: var(--color-text-main);
+    padding: 2px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+}
+
+/* ── Mobile responsive ───────────────────────────────────────────────────── */
+/*
+ * On mobile the analytics panel opens as a bottom sheet (65 vh).
+ * This leaves ~35 vh of visible map area.  Constrain the bar's height so
+ * it stays fully above the sheet even on small phones.
+ * JS (ColorScaleBar.watchAnalyticsPanel) adjusts maxHeight dynamically
+ * when the drawer opens/closes; this CSS provides the conservative baseline.
+ */
+@media (max-width: 768px) {
+    .color-scale-gradient {
+        max-height: calc(35vh - 80px);
+    }
+}
