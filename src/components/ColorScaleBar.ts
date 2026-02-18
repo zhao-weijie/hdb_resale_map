@@ -1,4 +1,5 @@
 import { interpolateViridis, interpolateTurbo } from 'd3-scale-chromatic';
+import { rgb as d3rgb } from 'd3-color';
 import type { HDBTransaction } from '../data/DataLoader';
 import { appState } from '../state/AppState';
 
@@ -6,15 +7,14 @@ export type ColorScale = 'viridis' | 'turbo';
 
 /**
  * Build a 256-entry RGB lookup table for a given color scale.
- * Avoids repeated regex parsing inside the hot getFillColor path.
+ * Uses d3-color's rgb() parser instead of regex so it handles any CSS color
+ * format that d3-scale-chromatic may return (rgb, hsl, hex, floats…).
  */
 export function buildColorLookup(scale: ColorScale): [number, number, number][] {
     const fn = scale === 'viridis' ? interpolateViridis : interpolateTurbo;
     return Array.from({ length: 256 }, (_, i) => {
-        const t = i / 255;
-        const s = fn(t);
-        const m = s.match(/\d+/g)!;
-        return [+m[0], +m[1], +m[2]] as [number, number, number];
+        const c = d3rgb(fn(i / 255));
+        return [Math.round(c.r), Math.round(c.g), Math.round(c.b)] as [number, number, number];
     });
 }
 
@@ -184,25 +184,20 @@ export class ColorScaleBar {
         const ctx = this.canvasEl.getContext('2d');
         if (!ctx) return;
 
-        const imageData = ctx.createImageData(w, h);
-        const fn =
-            this.colorScale === 'viridis' ? interpolateViridis : interpolateTurbo;
+        const fn = this.colorScale === 'viridis' ? interpolateViridis : interpolateTurbo;
 
-        for (let y = 0; y < h; y++) {
-            // t=1 at top (max), t=0 at bottom (min)
-            const t = 1 - y / Math.max(1, h - 1);
-            const s = fn(t);
-            const m = s.match(/\d+/g)!;
-            const r = +m[0], g = +m[1], b = +m[2];
-            for (let x = 0; x < w; x++) {
-                const idx = (y * w + x) * 4;
-                imageData.data[idx] = r;
-                imageData.data[idx + 1] = g;
-                imageData.data[idx + 2] = b;
-                imageData.data[idx + 3] = 255;
-            }
+        // Use CSS gradient stops — fn(t) returns a valid CSS color string, so
+        // we hand it directly to the browser rather than trying to parse it.
+        // Top of bar = max value (t=1), bottom = min value (t=0).
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        const steps = 32;
+        for (let i = 0; i <= steps; i++) {
+            const stopPos = i / steps;      // 0 = top, 1 = bottom
+            const t = 1 - stopPos;          // t=1 at top (max), t=0 at bottom (min)
+            grad.addColorStop(stopPos, fn(t));
         }
-        ctx.putImageData(imageData, 0, 0);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
     }
 
     private showMarkers(): void {

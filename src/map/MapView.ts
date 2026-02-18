@@ -249,6 +249,8 @@ export class MapView {
             ? new Set(selectedTransactions.map(t => `${t.latitude}-${t.longitude}-${t.resale_price}`))
             : null;
 
+        const colorScale = appState.get('colorScale');
+
         // Unified visualization for Desktop & Mobile
         layers.push(new ScatterplotLayer({
             id: 'scatterplot-layer',
@@ -264,6 +266,10 @@ export class MapView {
                     ? 60  // Fade out unselected points when there's a selection
                     : 255;
                 return [r, g, b, alpha] as [number, number, number, number];
+            },
+            // Tell Deck.gl to re-evaluate getFillColor whenever these change
+            updateTriggers: {
+                getFillColor: [minValue, maxValue, colorScale, selectedTransactions]
             },
             opacity: 1, // Use RGBA alpha instead
             pickable: true,
