@@ -36,6 +36,11 @@ export class AnalyticsPanel {
     private startDragLat: number | null = null;
     private startDragLng: number | null = null;
 
+    // Popup pagination state
+    private readonly PAGE_SIZE = 5;
+    private popupTransactions: HDBTransaction[] = [];
+    private popupMeta: { lat: number; lng: number; title: string; subtitle: string } | null = null;
+
     constructor(containerId: string, dataLoader: DataLoader, mapView: MapView) {
         const container = document.getElementById(containerId);
         if (!container) {
@@ -433,7 +438,6 @@ export class AnalyticsPanel {
             if (relevant.length === 0) return;
 
             relevant.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
-            const top5 = relevant.slice(0, 5);
 
             const geocodeKey = `${clicked.block}|${clicked.street_name}`;
             const geocodeData = this.geocodeCache[geocodeKey];
@@ -446,39 +450,24 @@ export class AnalyticsPanel {
             const leaseCommenceYear = Number(clicked.lease_commence_date);
             const currentLease = 99 - (currentYear - leaseCommenceYear);
             const mrt = clicked.mrt_distance_m ? `${Math.round(clicked.mrt_distance_m)}m to MRT` : '';
+            const subtitle = currentLease > 0
+                ? [currentLease > 0 ? `${currentLease} yrs lease` : '', mrt].filter(Boolean).join(' • ')
+                : '';
 
-            const rows = top5.map(t => {
-                const psf = t.resale_price / (t.floor_area_sqm * 10.7639);
-                return `
-                    <tr>
-                        <td>${new Date(t.transaction_date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}</td>
-                        <td>${t.flat_type}</td>
-                        <td>${t.storey_range}</td>
-                        <td>$${(t.resale_price / 1000).toFixed(0)}k</td>
-                        <td>$${Math.round(psf)}</td>
-                    </tr>
-                `}).join('');
-
-            const html = `
-                <div class="popover-header">
-                    <div class="popover-title">
-                        ${title}
-                        ${currentLease > 0 ? `<div class="popover-subtitle">${currentLease} yrs lease • ${mrt}</div>` : ''}
-                    </div>
-                </div>
-                <div class="popover-body">
-                    <table class="popover-table">
-                        <thead><tr><th>Date</th><th>Type</th><th>Floor</th><th>Price</th><th>PSF</th></tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                    ${relevant.length > 5 ? `<div class="popover-footer">${relevant.length - 5} more transactions</div>` : ''}
-                </div>
-            `;
-
-            this.mapView.showPopup(lat, lng, html);
+            this.popupTransactions = relevant;
+            this.popupMeta = { lat, lng, title, subtitle };
+            this.renderTransactionPopup(0);
         });
 
-        // 3. Drag Selection
+        // 3. Popup pagination — single delegated listener on document
+        document.addEventListener('click', (e: MouseEvent) => {
+            const btn = (e.target as HTMLElement).closest('[data-popup-page]') as HTMLElement | null;
+            if (!btn) return;
+            const page = parseInt(btn.dataset.popupPage!, 10);
+            this.renderTransactionPopup(page);
+        });
+
+        // 4. Drag Selection
         this.mapView.setOnDragSelection({
             onStart: (lat, lng) => {
                 this.startDragLat = lat;
@@ -526,6 +515,54 @@ export class AnalyticsPanel {
                 }
             }
         });
+    }
+
+    private renderTransactionPopup(page: number): void {
+        if (!this.popupMeta) return;
+        const html = this.buildTransactionPopupHTML(page);
+        this.mapView.showPopup(this.popupMeta.lat, this.popupMeta.lng, html);
+    }
+
+    private buildTransactionPopupHTML(page: number): string {
+        const { title, subtitle } = this.popupMeta!;
+        const total = this.popupTransactions.length;
+        const totalPages = Math.ceil(total / this.PAGE_SIZE);
+        const slice = this.popupTransactions.slice(page * this.PAGE_SIZE, (page + 1) * this.PAGE_SIZE);
+
+        const rows = slice.map(t => {
+            const psf = t.resale_price / (t.floor_area_sqm * 10.7639);
+            return `<tr>
+                <td>${new Date(t.transaction_date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}</td>
+                <td>${t.flat_type}</td>
+                <td>${t.storey_range}</td>
+                <td>$${(t.resale_price / 1000).toFixed(0)}k</td>
+                <td>$${Math.round(psf)}</td>
+            </tr>`;
+        }).join('');
+
+        const nav = totalPages > 1 ? `
+            <div class="popup-nav">
+                ${page > 0
+                    ? `<button class="popup-nav-btn" data-popup-page="${page - 1}">← Prev</button>`
+                    : `<span></span>`}
+                <span class="popup-nav-info">${page + 1} / ${totalPages}</span>
+                ${page < totalPages - 1
+                    ? `<button class="popup-nav-btn" data-popup-page="${page + 1}">Next →</button>`
+                    : `<span></span>`}
+            </div>` : '';
+
+        return `
+            <div class="popover-header">
+                <div class="popover-title">${title}</div>
+                ${subtitle ? `<div class="popover-subtitle">${subtitle}</div>` : ''}
+            </div>
+            <div class="popover-body">
+                <table class="popover-table">
+                    <thead><tr><th>Date</th><th>Type</th><th>Floor</th><th>Price</th><th>PSF</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                ${nav}
+            </div>`;
     }
 
     private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
