@@ -94,45 +94,75 @@ def get_onemap_token() -> Optional[str]:
         return None
 
 
+DATAGOV_API_BASE = "https://api-open.data.gov.sg/v1/public/api/datasets"
+DATAGOV_RESALE_ID = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
+
+
+def download_hdb_csv() -> pd.DataFrame:
+    """
+    Download latest HDB resale data from data.gov.sg API.
+    Uses the initiate-download / poll-download flow to get a presigned URL.
+    """
+    import time
+    from io import StringIO
+
+    print("Downloading HDB resale data from data.gov.sg...")
+
+    # Step 1: Initiate download
+    resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_RESALE_ID}/initiate-download",
+                        headers={"Content-Type": "application/json"}, timeout=30)
+    resp.raise_for_status()
+    payload = resp.json()
+
+    # Step 2: Poll until download URL is ready
+    for attempt in range(30):
+        url = payload.get("data", {}).get("url")
+        if url:
+            break
+        poll_resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_RESALE_ID}/poll-download",
+                                 headers={"Content-Type": "application/json"}, timeout=30)
+        poll_resp.raise_for_status()
+        payload = poll_resp.json()
+        time.sleep(2)
+    else:
+        raise RuntimeError("Timed out waiting for data.gov.sg download URL")
+
+    # Step 3: Download the CSV
+    print(f"  Fetching CSV from presigned URL...")
+    csv_resp = requests.get(url, timeout=120)
+    csv_resp.raise_for_status()
+
+    df = pd.read_csv(StringIO(csv_resp.text))
+    print(f"✓ Downloaded {len(df)} transactions from data.gov.sg")
+    return df
+
+
 def fetch_hdb_data() -> pd.DataFrame:
     """
-    Load HDB resale data from local CSV file
-    
+    Load HDB resale data — from local CSV if present, otherwise download from data.gov.sg.
+
     Returns:
         DataFrame with all HDB resale transactions (2017-present)
     """
-    print("Loading HDB resale data from local CSV...")
-    
-    # Look for the CSV file in scripts directory first, then project root
     csv_filename = "ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv"
     csv_paths = [
-        Path(__file__).parent / csv_filename,  # scripts directory
-        Path(__file__).parent.parent / csv_filename,  # project root
+        Path(__file__).parent / csv_filename,
+        Path(__file__).parent.parent / csv_filename,
     ]
-    
-    csv_path = None
-    for path in csv_paths:
-        if path.exists():
-            csv_path = path
-            break
-    
-    if csv_path is None:
-        raise FileNotFoundError(
-            f"CSV file not found: {csv_filename}\n"
-            f"Searched in:\n"
-            f"  - {csv_paths[0]}\n"
-            f"  - {csv_paths[1]}\n"
-            "Please ensure the HDB resale CSV is in one of these locations."
-        )
-    
-    df = pd.read_csv(csv_path)
-    print(f"✓ Loaded {len(df)} total transactions from {csv_path}")
-    
-    # Save to data directory for consistency
+
+    csv_path = next((p for p in csv_paths if p.exists()), None)
+
+    if csv_path:
+        print(f"Loading HDB resale data from local CSV: {csv_path}")
+        df = pd.read_csv(csv_path)
+        print(f"✓ Loaded {len(df)} total transactions")
+    else:
+        df = download_hdb_csv()
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(RAW_DATA_FILE, index=False)
-    print(f"✓ Copied to {RAW_DATA_FILE}")
-    
+    print(f"✓ Saved to {RAW_DATA_FILE}")
+
     return df
 
 
@@ -390,12 +420,12 @@ def main():
     print("HDB Resale Geocoding Pipeline")
     print("=" * 60)
     
-    # Step 1: Fetch data
+    # Step 1: Fetch transaction data
     df = fetch_hdb_data()
     
     # Step 2: Extract unique addresses
     addresses = extract_unique_addresses(df)
-    
+
     # Step 3: Geocode addresses
     geocode_cache = geocode_addresses(addresses)
     

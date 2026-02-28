@@ -1025,14 +1025,14 @@ input[type="checkbox"] {
     white-space: nowrap;
 }
 
-/* ── Hover markers overlay ───────────────────────────────────────────────── */
+/* ── Stat markers overlay ────────────────────────────────────────────────── */
 
 .color-scale-overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
     overflow: visible;
-    display: none;   /* shown via JS on mouseenter */
+    display: none;   /* shown via JS when stats are available */
 }
 
 /* Each marker sits at the correct % position on the bar */
@@ -1055,7 +1055,7 @@ input[type="checkbox"] {
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
-/* Price label to the left of the bar */
+/* Price label to the left of the bar (global stats) */
 .scale-marker-label {
     position: absolute;
     right: calc(100% + 6px);
@@ -1071,6 +1071,26 @@ input[type="checkbox"] {
     border-radius: 3px;
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-card);
+}
+
+/* ── Selection markers (2nd set, left side further out, orange accent) ──── */
+
+.color-scale-overlay--selection {
+    z-index: 1;
+}
+
+.scale-marker--selection .scale-marker-tick {
+    background: var(--color-primary);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    height: 2px;
+}
+
+/* Offset selection labels further left, past the global labels */
+.scale-marker--selection .scale-marker-label {
+    right: calc(100% + 110px);
+    background: var(--color-primary);
+    color: var(--color-primary-bg);
+    border-color: var(--color-primary-hover);
 }
 
 /* ── Mobile responsive ───────────────────────────────────────────────────── */

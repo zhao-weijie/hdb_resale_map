@@ -6,11 +6,13 @@ and exports to Apache Arrow format for efficient client-side loading.
 """
 
 import json
-from datetime import datetime
+import time
+from io import StringIO
 from pathlib import Path
 from typing import Tuple, Dict
 import pandas as pd
 import numpy as np
+import requests
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -25,6 +27,41 @@ MRT_GEOJSON = PUBLIC_DATA_DIR / "LTAMRTStationExitGEOJSON.geojson"
 PRICE_INDEX_CSV = PUBLIC_DATA_DIR / "HDBResalePriceIndex1Q2009100Quarterly.csv"
 OUTPUT_ARROW = PUBLIC_DATA_DIR / "hdb_data.arrow"
 OUTPUT_PARQUET = PUBLIC_DATA_DIR / "hdb_data.parquet"  # Alternative format
+
+DATAGOV_API_BASE = "https://api-open.data.gov.sg/v1/public/api/datasets"
+DATAGOV_PRICE_INDEX_ID = "d_14f63e595975691e7c24a27ae4c07c79"
+
+
+def download_price_index():
+    """Download the latest HDB Resale Price Index from data.gov.sg and overwrite the local CSV."""
+    print("Downloading HDB Resale Price Index from data.gov.sg...")
+
+    resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/initiate-download",
+                        headers={"Content-Type": "application/json"}, timeout=30)
+    resp.raise_for_status()
+    payload = resp.json()
+
+    for _ in range(30):
+        url = payload.get("data", {}).get("url")
+        if url:
+            break
+        poll_resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/poll-download",
+                                 headers={"Content-Type": "application/json"}, timeout=30)
+        poll_resp.raise_for_status()
+        payload = poll_resp.json()
+        time.sleep(2)
+    else:
+        raise RuntimeError("Timed out waiting for price index download URL")
+
+    csv_resp = requests.get(url, timeout=30)
+    csv_resp.raise_for_status()
+
+    df = pd.read_csv(StringIO(csv_resp.text))
+    df.columns = [c.lower() for c in df.columns]
+
+    PRICE_INDEX_CSV.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(PRICE_INDEX_CSV, index=False)
+    print(f"✓ Price index updated: {len(df)} quarters, latest={df['quarter'].max()}")
 
 
 def load_data() -> Tuple[pd.DataFrame, Dict]:
@@ -274,20 +311,16 @@ def export_to_arrow(df: pd.DataFrame):
 
 
 def main():
-    """Main build execution"""
+    """Main build execution."""
     print("=" * 60)
     print("HDB Resale Arrow Builder")
     print("=" * 60)
-    
-    # Load data
+
+    download_price_index()
     df, geocode_cache = load_data()
-    
-    # Join and enrich
     enriched_df = join_and_enrich_data(df, geocode_cache)
-    
-    # Export
     export_to_arrow(enriched_df)
-    
+
     print("\n" + "=" * 60)
     print("Build complete!")
     print(f"Output: {OUTPUT_ARROW}")

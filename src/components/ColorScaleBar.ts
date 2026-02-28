@@ -49,6 +49,19 @@ function formatPrice(v: number, mode: 'price' | 'price_psf'): string {
     return `$${Math.round(v / 1000)}K`;
 }
 
+function dedupePoints(
+    points: Array<{ value: number; label: string }>,
+    threshold: number
+): Array<{ value: number; label: string }> {
+    const result: typeof points = [];
+    for (const p of points) {
+        if (!result.some((u) => Math.abs(u.value - p.value) < threshold)) {
+            result.push(p);
+        }
+    }
+    return result;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 /**
@@ -65,11 +78,13 @@ export class ColorScaleBar {
     private gradientEl: HTMLElement | null = null;
     private canvasEl: HTMLCanvasElement | null = null;
     private overlayEl: HTMLElement | null = null;
+    private selectionOverlayEl: HTMLElement | null = null;
     //private labelEl: HTMLElement | null = null;
 
     private colorScale: ColorScale = 'viridis';
     private colorMode: 'price' | 'price_psf' = 'price_psf';
     private stats: Stats | null = null;
+    private selectionStats: Stats | null = null;
     private resizeObserver: ResizeObserver | null = null;
     private panelObserver: MutationObserver | null = null;
 
@@ -88,9 +103,13 @@ export class ColorScaleBar {
         this.canvasEl.className = 'color-scale-canvas';
         this.canvasEl.setAttribute('aria-hidden', 'true');
 
-        // ── Overlay: tick marks + labels shown on hover ───────────────────
+        // ── Overlay: tick marks + labels (global stats, always visible) ────
         this.overlayEl = document.createElement('div');
         this.overlayEl.className = 'color-scale-overlay';
+
+        // ── Selection overlay: tick marks for selection stats ────────────
+        this.selectionOverlayEl = document.createElement('div');
+        this.selectionOverlayEl.className = 'color-scale-overlay color-scale-overlay--selection';
 
         // ── Small label beneath the bar showing current scale name ────────
         /*this.labelEl = document.createElement('div');
@@ -99,6 +118,7 @@ export class ColorScaleBar {
 
         this.gradientEl.appendChild(this.canvasEl);
         this.gradientEl.appendChild(this.overlayEl);
+        this.gradientEl.appendChild(this.selectionOverlayEl);
         this.outerEl.appendChild(this.gradientEl);
         //this.outerEl.appendChild(this.labelEl);
 
@@ -128,6 +148,7 @@ export class ColorScaleBar {
 
         appState.subscribe('filteredTransactions', () => this.refreshStats());
         appState.subscribe('allTransactions', () => this.refreshStats());
+        appState.subscribe('selectedTransactions', () => this.refreshSelectionStats());
 
         // ── Sync initial values ───────────────────────────────────────────
         this.colorScale = appState.get('colorScale');
@@ -152,6 +173,7 @@ export class ColorScaleBar {
         this.panelObserver?.disconnect();
         this.outerEl?.remove();
         this.outerEl = null;
+        this.selectionOverlayEl = null;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────
@@ -166,6 +188,20 @@ export class ColorScaleBar {
         );
         this.stats = computeStats(values);
         this.renderGradient();
+        this.renderMarkers();
+    }
+
+    private refreshSelectionStats(): void {
+        const selected = appState.get('selectedTransactions');
+        if (!selected || selected.length === 0) {
+            this.selectionStats = null;
+        } else {
+            const values = selected.map((t: HDBTransaction) =>
+                this.colorMode === 'price' ? t.resale_price : t.price_psf
+            );
+            this.selectionStats = computeStats(values);
+        }
+        this.renderMarkers();
     }
 
     private renderGradient(): void {
@@ -201,14 +237,33 @@ export class ColorScaleBar {
     }
 
     private showMarkers(): void {
-        if (!this.overlayEl || !this.stats) return;
+        if (this.overlayEl) this.overlayEl.style.display = 'block';
+        if (this.selectionOverlayEl && this.selectionStats) {
+            this.selectionOverlayEl.style.display = 'block';
+        }
+    }
+
+    private hideMarkers(): void {
+        if (this.overlayEl) this.overlayEl.style.display = 'none';
+        if (this.selectionOverlayEl) this.selectionOverlayEl.style.display = 'none';
+    }
+
+    /** Rebuild marker HTML for both overlays (but keep them hidden until hover). */
+    private renderMarkers(): void {
+        if (!this.overlayEl || !this.stats) {
+            if (this.overlayEl) this.overlayEl.innerHTML = '';
+            if (this.selectionOverlayEl) this.selectionOverlayEl.innerHTML = '';
+            return;
+        }
+
         const { min, max, median, std } = this.stats;
-        if (max === min) return; // Degenerate range
+        if (max === min) return;
 
         const mode = this.colorMode;
         const clamp = (v: number) => Math.max(min, Math.min(max, v));
 
-        const points: Array<{ value: number; label: string }> = [
+        // ── Global markers ──────────────────────────────────────────────
+        const globalPoints: Array<{ value: number; label: string }> = [
             { value: max,                label: formatPrice(max, mode) },
             { value: clamp(median + std), label: `+1σ  ${formatPrice(clamp(median + std), mode)}` },
             { value: median,              label: `Med  ${formatPrice(median, mode)}` },
@@ -216,14 +271,8 @@ export class ColorScaleBar {
             { value: min,                label: formatPrice(min, mode) },
         ];
 
-        // Remove points that overlap (within 4% of the range)
         const threshold = (max - min) * 0.04;
-        const deduped: typeof points = [];
-        for (const p of points) {
-            if (!deduped.some((u) => Math.abs(u.value - p.value) < threshold)) {
-                deduped.push(p);
-            }
-        }
+        const deduped = dedupePoints(globalPoints, threshold);
 
         this.overlayEl.innerHTML = deduped
             .map(({ value, label }) => {
@@ -236,11 +285,35 @@ export class ColorScaleBar {
             })
             .join('');
 
-        this.overlayEl.style.display = 'block';
-    }
+        // ── Selection markers (positioned on the global scale) ──────────
+        if (!this.selectionOverlayEl) return;
 
-    private hideMarkers(): void {
-        if (this.overlayEl) this.overlayEl.style.display = 'none';
+        if (!this.selectionStats) {
+            this.selectionOverlayEl.innerHTML = '';
+            return;
+        }
+
+        const sel = this.selectionStats;
+        const selPoints: Array<{ value: number; label: string }> = [
+            { value: sel.max,                              label: `Max ${formatPrice(sel.max, mode)}` },
+            { value: clamp(sel.median + sel.std),          label: `+1σ  ${formatPrice(clamp(sel.median + sel.std), mode)}` },
+            { value: sel.median,                           label: `Med  ${formatPrice(sel.median, mode)}` },
+            { value: clamp(sel.median - sel.std),          label: `-1σ  ${formatPrice(clamp(sel.median - sel.std), mode)}` },
+            { value: sel.min,                              label: `Min ${formatPrice(sel.min, mode)}` },
+        ];
+
+        const selDeduped = dedupePoints(selPoints, threshold);
+
+        this.selectionOverlayEl.innerHTML = selDeduped
+            .map(({ value, label }) => {
+                const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
+                const topPct = (1 - pct) * 100;
+                return `<div class="scale-marker scale-marker--selection" style="top:${topPct.toFixed(2)}%">
+                    <div class="scale-marker-tick"></div>
+                    <div class="scale-marker-label">${label}</div>
+                </div>`;
+            })
+            .join('');
     }
 
     /**

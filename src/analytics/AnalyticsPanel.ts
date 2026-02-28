@@ -175,8 +175,17 @@ export class AnalyticsPanel {
     private attachEventListeners(): void {
         // Color mode toggle
         const colorModeSelect = document.getElementById('color-mode-select') as HTMLSelectElement;
+        // Restore saved color mode
+        try {
+            const savedColorMode = localStorage.getItem('hdb_colorMode');
+            if (savedColorMode && colorModeSelect) {
+                colorModeSelect.value = savedColorMode;
+                this.mapView.setColorMode(savedColorMode as any);
+            }
+        } catch (_) { /* localStorage unavailable */ }
         colorModeSelect?.addEventListener('change', () => {
             this.mapView.setColorMode(colorModeSelect.value as any);
+            try { localStorage.setItem('hdb_colorMode', colorModeSelect.value); } catch (_) {}
         });
 
         // Panel Toggle

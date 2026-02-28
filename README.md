@@ -28,15 +28,17 @@ npm install
 ### 2. Prepare Data
 
 ```bash
-# Run geocoding pipeline (takes ~1 hour first time)
-cd scripts
-python geocode_pipeline.py
+# Run geocoding pipeline (downloads data from data.gov.sg, geocodes addresses via OneMap)
+# First run: ~1 hour. Subsequent runs: fast, only new addresses are geocoded.
+python scripts/geocode_pipeline.py
 
-# Build Arrow data file
-python build_arrow.py
+# Build Arrow data file (~1 min)
+python scripts/build_arrow.py
 ```
 
-This will create `data/hdb_data.arrow` which the web app loads.
+This creates `public/data/hdb_data.arrow` which the web app loads.
+
+**Note:** `geocode_pipeline.py` will automatically download the latest HDB resale CSV and resale price index from data.gov.sg if no local CSV is found. To use a local CSV instead, place it in `scripts/` as `ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv`.
 
 ### 3. Run Development Server
 
@@ -58,13 +60,18 @@ Output will be in `dist/` directory, ready for deployment.
 
 ```
 hdb_resale_map/
+├── .github/workflows/
+│   ├── deploy.yml        # Deploy to GitHub Pages on push to main
+│   └── update-data.yml   # Auto-update data every Friday 00:00 UTC
 ├── scripts/              # Data pipeline (Python)
-│   ├── geocode_pipeline.py
-│   ├── build_arrow.py
+│   ├── geocode_pipeline.py   # Downloads data + geocodes addresses
+│   ├── build_arrow.py        # Joins geocodes + exports Arrow file
 │   └── requirements.txt
-├── data/                 # Generated data files
-│   ├── hdb_data.arrow   # Main data (created by pipeline)
-│   └── addresses_geocoded.json
+├── public/data/          # Static data files served with the app
+│   ├── hdb_data.arrow
+│   ├── hdb_data.parquet
+│   ├── addresses_geocoded.json
+│   └── HDBResalePriceIndex1Q2009100Quarterly.csv
 ├── src/                  # Web application (TypeScript)
 │   ├── main.ts
 │   ├── data/
@@ -75,7 +82,6 @@ hdb_resale_map/
 │   │   └── RadialSelection.ts
 │   └── analytics/
 │       └── AnalyticsPanel.ts
-├── public/               # Static assets
 ├── index.html
 ├── package.json
 └── vite.config.ts
@@ -91,13 +97,14 @@ hdb_resale_map/
 
 ## Data Updates
 
-To update with the latest HDB data:
+Data is automatically refreshed every Friday via GitHub Actions (`update-data.yml`). The workflow:
 
-1. Replace `ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv` with the new file
-2. Run `python scripts/geocode_pipeline.py` (only new addresses will be geocoded)
-3. Run `python scripts/build_arrow.py`
-4. Copy `data/hdb_data.arrow` to `public/data/` directory
-5. Rebuild the app: `npm run build`
+1. Downloads the latest HDB resale transactions and price index from [data.gov.sg](https://data.gov.sg)
+2. Geocodes any new addresses via the OneMap API (typically none — all HDB blocks are already cached)
+3. Rebuilds `public/data/hdb_data.arrow` from the full dataset (~1 min)
+4. Commits changed files and pushes to `main`, triggering a redeployment
+
+To trigger a manual update, use the **workflow_dispatch** option in the GitHub Actions tab.
 
 ## License
 

@@ -81,11 +81,45 @@ export class FiltersCard {
             card?.classList.toggle('collapsed');
         });
 
+        // Restore saved filters from localStorage into form inputs
+        this.restoreSavedFilters();
+
         // Apply Filters
         const applyBtn = document.getElementById('apply-filters-btn');
         applyBtn?.addEventListener('click', () => {
             this.applyGlobalFilters(onFiltersApplied);
         });
+
+        // Auto-apply if saved filters exist
+        try {
+            if (localStorage.getItem('hdb_globalFilters')) {
+                this.applyGlobalFilters(onFiltersApplied);
+            }
+        } catch (_) { /* localStorage unavailable */ }
+    }
+
+    private restoreSavedFilters(): void {
+        try {
+            const saved = localStorage.getItem('hdb_globalFilters');
+            if (!saved) return;
+            const filters = JSON.parse(saved);
+
+            const dateInput = document.getElementById('filter-date') as HTMLInputElement;
+            if (dateInput && filters.date) dateInput.value = filters.date;
+
+            const flatCheckboxes = document.querySelectorAll('#filter-flat-type input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+            flatCheckboxes.forEach(cb => {
+                cb.checked = filters.flatTypes?.includes(cb.value) ?? true;
+            });
+
+            const leaseMin = document.getElementById('filter-lease-min') as HTMLInputElement;
+            const leaseMax = document.getElementById('filter-lease-max') as HTMLInputElement;
+            if (leaseMin && filters.leaseMin != null) leaseMin.value = String(filters.leaseMin);
+            if (leaseMax && filters.leaseMax != null) leaseMax.value = String(filters.leaseMax);
+
+            const floorMin = document.getElementById('filter-floor-min') as HTMLInputElement;
+            if (floorMin && filters.floorMin != null) floorMin.value = String(filters.floorMin);
+        } catch (_) { /* localStorage unavailable or invalid */ }
     }
 
     private applyGlobalFilters(onFiltersApplied: (filtered: HDBTransaction[]) => void): void {
@@ -96,13 +130,19 @@ export class FiltersCard {
         const leaseMax = document.getElementById('filter-lease-max') as HTMLInputElement;
         const floorMin = document.getElementById('filter-floor-min') as HTMLInputElement;
 
-        appState.set('globalFilters', {
+        const filters = {
             date: dateSelect.value,
             flatTypes: Array.from(flatTypeInputs).map(i => (i as HTMLInputElement).value),
             leaseMin: parseInt(leaseMin.value) || 0,
             leaseMax: parseInt(leaseMax.value) || 99,
             floorMin: parseInt(floorMin.value) || 1
-        });
+        };
+        appState.set('globalFilters', filters);
+
+        // Persist filters to localStorage
+        try {
+            localStorage.setItem('hdb_globalFilters', JSON.stringify(filters));
+        } catch (_) { /* localStorage unavailable */ }
 
         // 2. Filter Data
         const allData = this.dataLoader.getAllData();

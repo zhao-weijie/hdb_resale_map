@@ -107,6 +107,15 @@ export class LocationCard {
                     const selected = this.radialSelection.getSelectedTransactions();
                     onSelectionUpdate(selected);
                 }
+
+                // Persist last search to localStorage
+                const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
+                try {
+                    localStorage.setItem('hdb_lastSearch', JSON.stringify({
+                        query: input.value.trim(),
+                        radius: radiusInput?.value || '500'
+                    }));
+                } catch (_) { /* localStorage unavailable */ }
             } else {
                 alert('Location not found');
             }
@@ -129,8 +138,20 @@ export class LocationCard {
         // Trigger default initial search ONLY on DESKTOP
         const isMobile = window.innerWidth < 768;
         if (!isMobile) {
-            input.value = "085101";
-            if (radiusInput) radiusInput.value = "888";
+            // Restore last search from localStorage, or use defaults
+            let defaultQuery = "085101";
+            let defaultRadius = "888";
+            try {
+                const saved = localStorage.getItem('hdb_lastSearch');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    defaultQuery = parsed.query || defaultQuery;
+                    defaultRadius = parsed.radius || defaultRadius;
+                }
+            } catch (_) { /* localStorage unavailable */ }
+
+            input.value = defaultQuery;
+            if (radiusInput) radiusInput.value = defaultRadius;
             performSearch();
         }
     }
