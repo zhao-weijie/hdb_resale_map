@@ -76503,14 +76503,6 @@
     "postal": "341103",
     "address": "103A BIDADARI PARK DRIVE ALKAFF COURTVIEW SINGAPORE 341103"
   },
-  "116|BT MERAH VIEW": {
-    "block": "116",
-    "street_name": "BT MERAH VIEW",
-    "latitude": 1.28513427067055,
-    "longitude": 103.821532226321,
-    "postal": "151116",
-    "address": "116 BUKIT MERAH VIEW SINGAPORE 151116"
-  },
   "6|JLN BATU": {
     "block": "6",
     "street_name": "JLN BATU",
@@ -76518,6 +76510,86 @@
     "longitude": 103.884012115114,
     "postal": "431006",
     "address": "6 JALAN BATU DI TANJONG RHU SINGAPORE 431006"
+  },
+  "11|HOLLAND DR": {
+    "block": "11",
+    "street_name": "HOLLAND DR",
+    "latitude": 1.30905394546184,
+    "longitude": 103.794063120888,
+    "postal": "271011",
+    "address": "11 HOLLAND DRIVE HOLLAND VISTA SINGAPORE 271011"
+  },
+  "39|JLN TIGA": {
+    "block": "39",
+    "street_name": "JLN TIGA",
+    "latitude": 1.30782060282339,
+    "longitude": 103.885092299552,
+    "postal": "390039",
+    "address": "39 JALAN TIGA PINE GREEN SINGAPORE 390039"
+  },
+  "5|JLN BATU": {
+    "block": "5",
+    "street_name": "JLN BATU",
+    "latitude": 1.30156359677462,
+    "longitude": 103.884028473673,
+    "postal": "431005",
+    "address": "5 JALAN BATU DI TANJONG RHU SINGAPORE 431005"
+  },
+  "15|BEACH RD": {
+    "block": "15",
+    "street_name": "BEACH RD",
+    "latitude": 1.30334823372441,
+    "longitude": 103.863134272442,
+    "postal": "190015",
+    "address": "15 BEACH ROAD CRAWFORD POST OFFICE SINGAPORE 190015"
+  },
+  "464|UPP SERANGOON RD": {
+    "block": "464",
+    "street_name": "UPP SERANGOON RD",
+    "latitude": 1.37249606725852,
+    "longitude": 103.896129636264,
+    "postal": "530464",
+    "address": "464 UPPER SERANGOON ROAD HARMONY VIEW @ HOUGANG SINGAPORE 530464"
+  },
+  "52|KENT RD": {
+    "block": "52",
+    "street_name": "KENT RD",
+    "latitude": 1.31606256409181,
+    "longitude": 103.851611305628,
+    "postal": "210052",
+    "address": "52 KENT ROAD KENT VILLE SINGAPORE 210052"
+  },
+  "2|QUEEN'S RD": {
+    "block": "2",
+    "street_name": "QUEEN'S RD",
+    "latitude": 1.31778631433714,
+    "longitude": 103.807262757565,
+    "postal": "260002",
+    "address": "2 QUEEN'S ROAD FARRER GARDENS SINGAPORE 260002"
+  },
+  "54|KENT RD": {
+    "block": "54",
+    "street_name": "KENT RD",
+    "latitude": 1.31707725396013,
+    "longitude": 103.852598943471,
+    "postal": "210054",
+    "address": "54 KENT ROAD KENT VILLE SINGAPORE 210054"
+  },
+  "3|QUEEN'S RD": {
+    "block": "3",
+    "street_name": "QUEEN'S RD",
+    "latitude": 1.31833337221312,
+    "longitude": 103.808097181789,
+    "postal": "260003",
+    "address": "3 QUEEN'S ROAD FARRER GARDENS SINGAPORE 260003"
+  },
+  "116|BT MERAH VIEW": {
+    "block": "116",
+    "street_name": "BT MERAH VIEW",
+    "latitude": 1.28513427067055,
+    "longitude": 103.821532226321,
+    "postal": "151116",
+    "address": "116 BUKIT MERAH VIEW SINGAPORE 151116"
   },
   "107|TOWNER RD": {
     "block": "107",
@@ -76534,14 +76606,6 @@
     "longitude": 103.861346713506,
     "postal": "321105",
     "address": "105 TOWNER ROAD SINGAPORE 321105"
-  },
-  "11|HOLLAND DR": {
-    "block": "11",
-    "street_name": "HOLLAND DR",
-    "latitude": 1.30905394546184,
-    "longitude": 103.794063120888,
-    "postal": "271011",
-    "address": "11 HOLLAND DRIVE HOLLAND VISTA SINGAPORE 271011"
   },
   "105|TAMPINES ST 11": {
     "block": "105",
@@ -76695,30 +76759,6 @@
     "postal": "521147",
     "address": "147 TAMPINES AVENUE 5 SINGAPORE 521147"
   },
-  "39|JLN TIGA": {
-    "block": "39",
-    "street_name": "JLN TIGA",
-    "latitude": 1.30782060282339,
-    "longitude": 103.885092299552,
-    "postal": "390039",
-    "address": "39 JALAN TIGA PINE GREEN SINGAPORE 390039"
-  },
-  "5|JLN BATU": {
-    "block": "5",
-    "street_name": "JLN BATU",
-    "latitude": 1.30156359677462,
-    "longitude": 103.884028473673,
-    "postal": "431005",
-    "address": "5 JALAN BATU DI TANJONG RHU SINGAPORE 431005"
-  },
-  "15|BEACH RD": {
-    "block": "15",
-    "street_name": "BEACH RD",
-    "latitude": 1.30334823372441,
-    "longitude": 103.863134272442,
-    "postal": "190015",
-    "address": "15 BEACH ROAD CRAWFORD POST OFFICE SINGAPORE 190015"
-  },
   "111|WHAMPOA RD": {
     "block": "111",
     "street_name": "WHAMPOA RD",
@@ -76822,14 +76862,6 @@
     "longitude": 103.822612454246,
     "postal": "152120",
     "address": "120 BUKIT MERAH VIEW BUKIT MERAH VIEW SINGAPORE 152120"
-  },
-  "464|UPP SERANGOON RD": {
-    "block": "464",
-    "street_name": "UPP SERANGOON RD",
-    "latitude": 1.37249606725852,
-    "longitude": 103.896129636264,
-    "postal": "530464",
-    "address": "464 UPPER SERANGOON ROAD HARMONY VIEW @ HOUGANG SINGAPORE 530464"
   },
   "101|TOWNER RD": {
     "block": "101",
@@ -76967,14 +76999,6 @@
     "postal": "381120",
     "address": "120 PAYA LEBAR WAY SINGAPORE 381120"
   },
-  "52|KENT RD": {
-    "block": "52",
-    "street_name": "KENT RD",
-    "latitude": 1.31606256409181,
-    "longitude": 103.851611305628,
-    "postal": "210052",
-    "address": "52 KENT ROAD KENT VILLE SINGAPORE 210052"
-  },
   "104|WHAMPOA DR": {
     "block": "104",
     "street_name": "WHAMPOA DR",
@@ -77038,14 +77062,6 @@
     "longitude": 103.945090000876,
     "postal": "521156",
     "address": "156 TAMPINES STREET 12 SINGAPORE 521156"
-  },
-  "2|QUEEN'S RD": {
-    "block": "2",
-    "street_name": "QUEEN'S RD",
-    "latitude": 1.31778631433714,
-    "longitude": 103.807262757565,
-    "postal": "260002",
-    "address": "2 QUEEN'S ROAD FARRER GARDENS SINGAPORE 260002"
   },
   "787|CHOA CHU KANG NTH 6": {
     "block": "787",
@@ -77247,14 +77263,6 @@
     "postal": "323101",
     "address": "101 WHAMPOA DRIVE WHAMPOA VIEW SINGAPORE 323101"
   },
-  "54|KENT RD": {
-    "block": "54",
-    "street_name": "KENT RD",
-    "latitude": 1.31707725396013,
-    "longitude": 103.852598943471,
-    "postal": "210054",
-    "address": "54 KENT ROAD KENT VILLE SINGAPORE 210054"
-  },
   "225|TAMPINES ST 23": {
     "block": "225",
     "street_name": "TAMPINES ST 23",
@@ -77310,14 +77318,6 @@
     "longitude": 103.946176771298,
     "postal": "521113",
     "address": "113 TAMPINES STREET 11 SINGAPORE 521113"
-  },
-  "3|QUEEN'S RD": {
-    "block": "3",
-    "street_name": "QUEEN'S RD",
-    "latitude": 1.31833337221312,
-    "longitude": 103.808097181789,
-    "postal": "260003",
-    "address": "3 QUEEN'S ROAD FARRER GARDENS SINGAPORE 260003"
   },
   "165|TAMPINES ST 12": {
     "block": "165",
