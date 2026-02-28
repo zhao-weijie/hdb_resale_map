@@ -90,12 +90,8 @@ export class FiltersCard {
             this.applyGlobalFilters(onFiltersApplied);
         });
 
-        // Auto-apply if saved filters exist
-        try {
-            if (localStorage.getItem('hdb_globalFilters')) {
-                this.applyGlobalFilters(onFiltersApplied);
-            }
-        } catch (_) { /* localStorage unavailable */ }
+        // Always auto-apply on load — uses saved filters if present, otherwise the defaults
+        this.applyGlobalFilters(onFiltersApplied);
     }
 
     private restoreSavedFilters(): void {

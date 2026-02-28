@@ -43,13 +43,23 @@ async function initApp() {
         await dataLoader.load('data/hdb_data.arrow');
         console.log(`✓ Loaded ${dataLoader.getRecordCount()} transactions`);
 
-        // Expose all transactions in state so ColorScaleBar can fall back to them
-        appState.set('allTransactions', dataLoader.getAllData());
+        const allData = dataLoader.getAllData();
+        appState.set('allTransactions', allData);
+
+        // Apply default filter (2024-01 onwards) on first visit so ColorScaleBar
+        // stats and map reflect the recent market. FiltersCard will override this
+        // when the user explicitly applies filters (or on return visits via localStorage).
+        const defaultFrom = appState.get('globalFilters').date;
+        const defaultFiltered = defaultFrom
+            ? allData.filter(t => t.month >= defaultFrom)
+            : allData;
+        appState.set('filteredTransactions', defaultFiltered);
 
         // Initialize map
         console.log('🗺️ Initializing map...');
         const mapView = new MapView('map-container', dataLoader, isMobile);
         await mapView.initialize();
+        mapView.setFilteredData(defaultFiltered);
         console.log('✓ Map initialized');
 
         // Add color scale bar to the map's top-right control area

@@ -44,7 +44,7 @@ export class StateStore {
             filteredTransactions: [],
             selectedTransactions: null,
             globalFilters: {
-                date: 'all',
+                date: '2024-01',
                 flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
                 leaseMin: 0,
                 leaseMax: 99,
