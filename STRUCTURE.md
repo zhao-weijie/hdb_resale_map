@@ -12,16 +12,13 @@ hdb_resale_map/
 │   ├── geocode_pipeline.py
 │   ├── build_arrow.py
 │   ├── requirements.txt
-│   ├── data/                         # Generated data files (HERE, not root)
-│   │   ├── addresses_geocoded.json  # 2.46 MB
-│   │   ├── hdb_resale_raw.csv       # 23 MB  
-│   │   ├── hdb_data.arrow          # 25.2 MB ✓
-│   │   └── hdb_data.parquet        # 4.2 MB (alternative)
+│   ├── data/                         # Generated raw data cache (HERE, not root)
+│   │   └── hdb_resale_raw.csv       # 23 MB
 │   └── ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv
 │
 ├── public/                           # Static assets for web app
 │   └── data/
-│       └── hdb_data.arrow           # 25.2 MB ✓ COPIED HERE - WEB APP WILL LOAD THIS
+│       └── hdb_data.arrow           # 25.2 MB ✓ WEB APP WILL LOAD THIS
 │
 ├── src/                              # TypeScript source code
 │   ├── main.ts
@@ -45,7 +42,7 @@ hdb_resale_map/
 
 ## ✅ Key Points
 
-1. **Data pipeline output** → `scripts/data/` (works fine from scripts directory)
+1. **Raw data cache** → `scripts/data/` (works fine from scripts directory)
 2. **Web app data** → `public/data/hdb_data.arrow` ✓ **Already copied!**
 3. **Source code** → `src/` with all modules in place
 

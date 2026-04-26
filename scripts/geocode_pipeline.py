@@ -341,7 +341,8 @@ def verify_cache(cache: Dict[str, Dict]):
     invalid_keys = []
     
     for key, data in cache.items():
-        if data.get("latitude") is None:
+        if data.get("latitude") is None or data.get("longitude") is None:
+            invalid_keys.append(key)
             continue
             
         block = data.get("block")

@@ -69,7 +69,6 @@ hdb_resale_map/
 │   └── requirements.txt
 ├── public/data/          # Static data files served with the app
 │   ├── hdb_data.arrow
-│   ├── hdb_data.parquet
 │   ├── addresses_geocoded.json
 │   └── HDBResalePriceIndex1Q2009100Quarterly.csv
 ├── src/                  # Web application (TypeScript)

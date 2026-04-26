@@ -14,7 +14,6 @@ import pandas as pd
 import numpy as np
 import requests
 import pyarrow as pa
-import pyarrow.parquet as pq
 from datagov_client import DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS, datagov_get
 
 
@@ -27,7 +26,6 @@ GEOCODE_CACHE = PUBLIC_DATA_DIR / "addresses_geocoded.json"
 MRT_GEOJSON = PUBLIC_DATA_DIR / "LTAMRTStationExitGEOJSON.geojson"
 PRICE_INDEX_CSV = PUBLIC_DATA_DIR / "HDBResalePriceIndex1Q2009100Quarterly.csv"
 OUTPUT_ARROW = PUBLIC_DATA_DIR / "hdb_data.arrow"
-OUTPUT_PARQUET = PUBLIC_DATA_DIR / "hdb_data.parquet"  # Alternative format
 
 DATAGOV_API_BASE = "https://api-open.data.gov.sg/v1/public/api/datasets"
 DATAGOV_PRICE_INDEX_ID = "d_14f63e595975691e7c24a27ae4c07c79"
@@ -293,11 +291,6 @@ def export_to_arrow(df: pd.DataFrame):
     
     arrow_size_mb = OUTPUT_ARROW.stat().st_size / (1024 * 1024)
     print(f"  ✓ Saved Arrow file: {OUTPUT_ARROW} ({arrow_size_mb:.2f} MB)")
-    
-    # Also export as Parquet (alternative, often smaller)
-    pq.write_table(table, OUTPUT_PARQUET, compression='snappy')
-    parquet_size_mb = OUTPUT_PARQUET.stat().st_size / (1024 * 1024)
-    print(f"  ✓ Saved Parquet file: {OUTPUT_PARQUET} ({parquet_size_mb:.2f} MB)")
     
     # Print statistics
     print(f"\n  Data summary:")

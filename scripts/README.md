@@ -48,8 +48,7 @@ python build_arrow.py
 ```
 
 **Output:**
-- `data/hdb_data.arrow` - Main data file (Arrow IPC format)
-- `data/hdb_data.parquet` - Alternative format (often smaller)
+- `../public/data/hdb_data.arrow` - Main data file (Arrow IPC format)
 
 **Duration:** ~1 minute
 

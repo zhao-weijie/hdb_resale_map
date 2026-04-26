@@ -36,7 +36,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/hdb_data.arrow public/data/hdb_data.parquet public/data/addresses_geocoded.json public/data/HDBResalePriceIndex1Q2009100Quarterly.csv
+          git add public/data/hdb_data.arrow public/data/addresses_geocoded.json public/data/HDBResalePriceIndex1Q2009100Quarterly.csv
           if git diff --staged --quiet; then
             echo "No data changes — skipping commit"
           else
