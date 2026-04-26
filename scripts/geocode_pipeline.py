@@ -27,7 +27,7 @@ ONEMAP_PASSWORD = os.getenv("ONEMAP_PASSWORD")
 ONEMAP_TOKEN_URL = "https://www.onemap.gov.sg/api/auth/post/getToken"
 ONEMAP_SEARCH_URL = "https://www.onemap.gov.sg/api/common/elastic/search"
 RATE_LIMIT_DELAY = 0.2035  # 210ms between requests (~285 req/min, under 290/min limit as of Oct 2025)
-OUTPUT_DIR = Path(__file__).parent.parent / "data"
+OUTPUT_DIR = Path(__file__).parent / "data"
 # Use public/data as the single source of truth for geocoded addresses
 CACHE_FILE = Path(__file__).parent.parent / "public" / "data" / "addresses_geocoded.json"
 RAW_DATA_FILE = OUTPUT_DIR / "hdb_resale_raw.csv"
@@ -138,25 +138,25 @@ def download_hdb_csv() -> pd.DataFrame:
 
 def fetch_hdb_data() -> pd.DataFrame:
     """
-    Load HDB resale data — from local CSV if present, otherwise download from data.gov.sg.
+    Load HDB resale data from data.gov.sg, or from HDB_RESALE_CSV when explicitly provided.
 
     Returns:
         DataFrame with all HDB resale transactions (2017-present)
     """
-    csv_filename = "ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv"
-    csv_paths = [
-        Path(__file__).parent / csv_filename,
-        Path(__file__).parent.parent / csv_filename,
-    ]
-
-    csv_path = next((p for p in csv_paths if p.exists()), None)
+    csv_path = os.getenv("HDB_RESALE_CSV")
 
     if csv_path:
+        csv_path = Path(csv_path)
         print(f"Loading HDB resale data from local CSV: {csv_path}")
         df = pd.read_csv(csv_path)
         print(f"✓ Loaded {len(df)} total transactions")
     else:
         df = download_hdb_csv()
+
+    before_dedupe = len(df)
+    df = df.drop_duplicates().reset_index(drop=True)
+    if len(df) != before_dedupe:
+        print(f"✓ Removed {before_dedupe - len(df)} duplicate transactions")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(RAW_DATA_FILE, index=False)

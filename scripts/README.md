@@ -19,7 +19,7 @@ Fetches HDB resale data from data.gov.sg and geocodes addresses via OneMap API.
 ```bash
 python geocode_pipeline.py
 ```
-- Loads your provided CSV file
+- Downloads the latest HDB resale CSV from data.gov.sg
 - Extracts unique `block + street_name` combinations (~12,000 addresses)
 - Geocodes via OneMap API with rate limiting
 - Caches results to avoid re-geocoding on updates
@@ -73,3 +73,5 @@ python build_arrow.py
 ```
 
 The geocoding cache will ensure only new addresses are geocoded.
+
+To test with a local CSV instead of data.gov.sg, set `HDB_RESALE_CSV=/path/to/file.csv`.

@@ -38,7 +38,7 @@ python scripts/build_arrow.py
 
 This creates `public/data/hdb_data.arrow` which the web app loads.
 
-**Note:** `geocode_pipeline.py` will automatically download the latest HDB resale CSV and resale price index from data.gov.sg if no local CSV is found. To use a local CSV instead, place it in `scripts/` as `ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv`.
+**Note:** `geocode_pipeline.py` downloads the latest HDB resale CSV from data.gov.sg by default. To test with a local CSV instead, set `HDB_RESALE_CSV=/path/to/file.csv`.
 
 ### 3. Run Development Server
 
