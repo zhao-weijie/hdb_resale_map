@@ -97,4 +97,16 @@ describe('applyFilters', () => {
         const result = applyFilters(mockTransactions, filters);
         expect(result.length).toBe(mockTransactions.length);
     });
+
+    it('filters from the selected month onward', () => {
+        const filters: GlobalFilters = {
+            flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
+            date: '2024-01',
+            leaseMin: 0,
+            leaseMax: 99,
+            floorMin: 1
+        };
+        const result = applyFilters(mockTransactions, filters);
+        expect(result.map(t => t.flat_type)).toEqual(['4 ROOM', '5 ROOM']);
+    });
 });

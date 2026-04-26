@@ -7,6 +7,7 @@ import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
 import { FairValueAnalysis } from './FairValueAnalysis';
 import { appState } from '../state/AppState';
+import { applyFilters } from '../utils/filters';
 
 // Import component classes
 import { LocationCard } from '../components/LocationCard';
@@ -268,43 +269,11 @@ export class AnalyticsPanel {
     }
 
     private applyFiltersToTransactions(transactions: HDBTransaction[]): HDBTransaction[] {
-        const now = new Date();
-        return transactions.filter(t => {
-            if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
-            if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
-                t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
-            if (appState.get('globalFilters').date !== 'all') {
-                const txDate = new Date(t.transaction_date);
-                const diffTime = Math.abs(now.getTime() - txDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
-                if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
-                if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
-                if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
-            }
-            return true;
-        });
+        return applyFilters(transactions, appState.get('globalFilters'));
     }
 
     private getGlobalFilteredData(): HDBTransaction[] {
-        const allData = this.dataLoader.getAllData();
-        const now = new Date();
-
-        return allData.filter(t => {
-            if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
-            if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
-                t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
-            if (appState.get('globalFilters').date !== 'all') {
-                const txDate = new Date(t.transaction_date);
-                const diffTime = Math.abs(now.getTime() - txDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
-                if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
-                if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
-                if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
-            }
-            return true;
-        });
+        return applyFilters(this.dataLoader.getAllData(), appState.get('globalFilters'));
     }
 
     private renderStats(data?: HDBTransaction[]): void {
@@ -426,23 +395,10 @@ export class AnalyticsPanel {
 
             if (!clicked) return;
 
-            const relevant = allData.filter(t => {
-                if (t.block !== clicked.block || t.street_name !== clicked.street_name) return false;
-                if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
-                if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
-                    t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
-                if (appState.get('globalFilters').date !== 'all') {
-                    const now = new Date();
-                    const txDate = new Date(t.transaction_date);
-                    const diffTime = Math.abs(now.getTime() - txDate.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    if (appState.get('globalFilters').date === '6m' && diffDays > 180) return false;
-                    if (appState.get('globalFilters').date === '1y' && diffDays > 365) return false;
-                    if (appState.get('globalFilters').date === '3y' && diffDays > 365 * 3) return false;
-                    if (appState.get('globalFilters').date === '5y' && diffDays > 365 * 5) return false;
-                }
-                return true;
-            });
+            const relevant = applyFilters(
+                allData.filter(t => t.block === clicked.block && t.street_name === clicked.street_name),
+                appState.get('globalFilters')
+            );
 
             if (relevant.length === 0) return;
 

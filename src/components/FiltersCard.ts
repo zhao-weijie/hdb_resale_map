@@ -5,6 +5,7 @@
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { appState } from '../state/AppState';
+import { applyFilters, type GlobalFilters } from '../utils/filters';
 
 export class FiltersCard {
     private dataLoader: DataLoader;
@@ -101,7 +102,7 @@ export class FiltersCard {
             const filters = JSON.parse(saved);
 
             const dateInput = document.getElementById('filter-date') as HTMLInputElement;
-            if (dateInput && filters.date) dateInput.value = filters.date;
+            if (dateInput && /^\d{4}-\d{2}$/.test(filters.date)) dateInput.value = filters.date;
 
             const flatCheckboxes = document.querySelectorAll('#filter-flat-type input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
             flatCheckboxes.forEach(cb => {
@@ -120,14 +121,14 @@ export class FiltersCard {
 
     private applyGlobalFilters(onFiltersApplied: (filtered: HDBTransaction[]) => void): void {
         // 1. Gather Filter Values
-        const dateSelect = document.getElementById('filter-date') as HTMLSelectElement;
+        const dateInput = document.getElementById('filter-date') as HTMLInputElement;
         const flatTypeInputs = document.querySelectorAll('#filter-flat-type input:checked');
         const leaseMin = document.getElementById('filter-lease-min') as HTMLInputElement;
         const leaseMax = document.getElementById('filter-lease-max') as HTMLInputElement;
         const floorMin = document.getElementById('filter-floor-min') as HTMLInputElement;
 
-        const filters = {
-            date: dateSelect.value,
+        const filters: GlobalFilters = {
+            date: dateInput.value,
             flatTypes: Array.from(flatTypeInputs).map(i => (i as HTMLInputElement).value),
             leaseMin: parseInt(leaseMin.value) || 0,
             leaseMax: parseInt(leaseMax.value) || 99,
@@ -143,30 +144,7 @@ export class FiltersCard {
         // 2. Filter Data
         const allData = this.dataLoader.getAllData();
 
-        const filtered = allData.filter(t => {
-            // Flat Type
-            if (!appState.get('globalFilters').flatTypes.includes(t.flat_type)) return false;
-
-            // Lease
-            if (t.remaining_lease_years < appState.get('globalFilters').leaseMin ||
-                t.remaining_lease_years > appState.get('globalFilters').leaseMax) return false;
-
-            // Date - filter from selected month onward
-            if (appState.get('globalFilters').date) {
-                const selectedMonth = appState.get('globalFilters').date; // Format: YYYY-MM
-                const txDate = new Date(t.transaction_date);
-                const txYearMonth = txDate.getFullYear() + '-' + String(txDate.getMonth() + 1).padStart(2, '0');
-                if (txYearMonth < selectedMonth) return false;
-            }
-
-            // Floor - compare minimum floor against upper bound of storey range
-            if (appState.get('globalFilters').floorMin > 1) {
-                const upperBound = parseInt(t.storey_range.split(' TO ')[1]);
-                if (upperBound < appState.get('globalFilters').floorMin) return false;
-            }
-
-            return true;
-        });
+        const filtered = applyFilters(allData, filters);
 
         // 3. Update Map & Callback
         this.mapView.setFilteredData(filtered);

@@ -14,10 +14,11 @@ describe('StateStore', () => {
         expect(store.get('activeTab')).toBe('overview');
         expect(store.get('selectedTransactions')).toBeNull();
         expect(store.get('globalFilters')).toEqual({
-            date: 'all',
+            date: '2024-01',
             flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
             leaseMin: 0,
-            leaseMax: 99
+            leaseMax: 99,
+            floorMin: 1
         });
     });
 

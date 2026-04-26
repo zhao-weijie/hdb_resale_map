@@ -9,6 +9,7 @@ import { MapView } from './map/MapView';
 import { AnalyticsPanel } from './analytics/AnalyticsPanel';
 import { ColorScaleBar } from './components/ColorScaleBar';
 import { appState } from './state/AppState';
+import { applyFilters } from './utils/filters';
 
 // Detect mobile vs desktop
 const isMobile = window.innerWidth < 768;
@@ -49,10 +50,7 @@ async function initApp() {
         // Apply default filter (2024-01 onwards) on first visit so ColorScaleBar
         // stats and map reflect the recent market. FiltersCard will override this
         // when the user explicitly applies filters (or on return visits via localStorage).
-        const defaultFrom = appState.get('globalFilters').date;
-        const defaultFiltered = defaultFrom
-            ? allData.filter(t => t.month >= defaultFrom)
-            : allData;
+        const defaultFiltered = applyFilters(allData, appState.get('globalFilters'));
         appState.set('filteredTransactions', defaultFiltered);
 
         // Initialize map
