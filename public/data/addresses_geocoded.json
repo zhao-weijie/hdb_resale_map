@@ -76583,6 +76583,126 @@
     "postal": "260003",
     "address": "3 QUEEN'S ROAD FARRER GARDENS SINGAPORE 260003"
   },
+  "228A|ANG MO KIO ST 23": {
+    "block": "228A",
+    "street_name": "ANG MO KIO ST 23",
+    "latitude": 1.368034523483097,
+    "longitude": 103.8394255988815,
+    "postal": "561228",
+    "address": "228A ANG MO KIO STREET 23 ANG MO KIO COURT SINGAPORE 561228"
+  },
+  "547B|BEDOK NTH AVE 1": {
+    "block": "547B",
+    "street_name": "BEDOK NTH AVE 1",
+    "latitude": 1.329758985574049,
+    "longitude": 103.9254345290756,
+    "postal": "462547",
+    "address": "547B BEDOK NORTH AVENUE 1 BEDOK NORTH VALE SINGAPORE 462547"
+  },
+  "154B|BEDOK STH RD": {
+    "block": "154B",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.317723214090242,
+    "longitude": 103.9469022265382,
+    "postal": "462154",
+    "address": "154B BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 462154"
+  },
+  "467C|BT BATOK WEST AVE 9": {
+    "block": "467C",
+    "street_name": "BT BATOK WEST AVE 9",
+    "latitude": 1.355922380753564,
+    "longitude": 103.7425516751325,
+    "postal": "653467",
+    "address": "467C BUKIT BATOK WEST AVENUE 9 WEST PLAINS @ BUKIT BATOK SINGAPORE 653467"
+  },
+  "467A|BT BATOK WEST AVE 9": {
+    "block": "467A",
+    "street_name": "BT BATOK WEST AVE 9",
+    "latitude": 1.35651860042533,
+    "longitude": 103.743862528559,
+    "postal": "651467",
+    "address": "467A BUKIT BATOK WEST AVENUE 9 WEST PLAINS @ BUKIT BATOK SINGAPORE 651467"
+  },
+  "467B|BT BATOK WEST AVE 9": {
+    "block": "467B",
+    "street_name": "BT BATOK WEST AVE 9",
+    "latitude": 1.35614011912777,
+    "longitude": 103.7431637852842,
+    "postal": "652467",
+    "address": "467B BUKIT BATOK WEST AVENUE 9 WEST PLAINS @ BUKIT BATOK SINGAPORE 652467"
+  },
+  "377A|HOUGANG ST 32": {
+    "block": "377A",
+    "street_name": "HOUGANG ST 32",
+    "latitude": 1.363020098673113,
+    "longitude": 103.8946653122367,
+    "postal": "531377",
+    "address": "377A HOUGANG STREET 32 HOUGANG RIVERCOURT SINGAPORE 531377"
+  },
+  "422A|NORTHSHORE DR": {
+    "block": "422A",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.419657102132827,
+    "longitude": 103.9040066588465,
+    "postal": "821422",
+    "address": "422A NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 821422"
+  },
+  "94|DAWSON RD": {
+    "block": "94",
+    "street_name": "DAWSON RD",
+    "latitude": 1.296274834101812,
+    "longitude": 103.8112064375748,
+    "postal": "141094",
+    "address": "94 DAWSON ROAD SKYPARC @ DAWSON SINGAPORE 141094"
+  },
+  "619B|TAMPINES ST 61": {
+    "block": "619B",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.36188469560748,
+    "longitude": 103.9394040171763,
+    "postal": "522619",
+    "address": "619B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522619"
+  },
+  "618B|TAMPINES ST 61": {
+    "block": "618B",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.362323279315013,
+    "longitude": 103.9391417714057,
+    "postal": "522618",
+    "address": "618B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522618"
+  },
+  "619A|TAMPINES ST 61": {
+    "block": "619A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.361885853654712,
+    "longitude": 103.9386871436541,
+    "postal": "521619",
+    "address": "619A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521619"
+  },
+  "874C|TAMPINES ST 85": {
+    "block": "874C",
+    "street_name": "TAMPINES ST 85",
+    "latitude": 1.354000404258416,
+    "longitude": 103.9309408381578,
+    "postal": "523874",
+    "address": "874C TAMPINES STREET 85 TAMPINES GREENFLORA SINGAPORE 523874"
+  },
+  "874D|TAMPINES ST 85": {
+    "block": "874D",
+    "street_name": "TAMPINES ST 85",
+    "latitude": 1.35462980931459,
+    "longitude": 103.9312726383234,
+    "postal": "524874",
+    "address": "874D TAMPINES STREET 85 TAMPINES GREENFLORA SINGAPORE 524874"
+  },
+  "104A|BIDADARI PK DR": {
+    "block": "104A",
+    "street_name": "BIDADARI PK DR",
+    "latitude": 1.335321977889235,
+    "longitude": 103.8709339933374,
+    "postal": "341104",
+    "address": "104A BIDADARI PARK DRIVE ALKAFF COURTVIEW SINGAPORE 341104"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77470,125 +77590,5 @@
     "longitude": 103.8737478403971,
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
-  },
-  "228A|ANG MO KIO ST 23": {
-    "block": "228A",
-    "street_name": "ANG MO KIO ST 23",
-    "latitude": 1.368034523483097,
-    "longitude": 103.8394255988815,
-    "postal": "561228",
-    "address": "228A ANG MO KIO STREET 23 ANG MO KIO COURT SINGAPORE 561228"
-  },
-  "547B|BEDOK NTH AVE 1": {
-    "block": "547B",
-    "street_name": "BEDOK NTH AVE 1",
-    "latitude": 1.329758985574049,
-    "longitude": 103.9254345290756,
-    "postal": "462547",
-    "address": "547B BEDOK NORTH AVENUE 1 BEDOK NORTH VALE SINGAPORE 462547"
-  },
-  "154B|BEDOK STH RD": {
-    "block": "154B",
-    "street_name": "BEDOK STH RD",
-    "latitude": 1.317723214090242,
-    "longitude": 103.9469022265382,
-    "postal": "462154",
-    "address": "154B BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 462154"
-  },
-  "467C|BT BATOK WEST AVE 9": {
-    "block": "467C",
-    "street_name": "BT BATOK WEST AVE 9",
-    "latitude": 1.355922380753564,
-    "longitude": 103.7425516751325,
-    "postal": "653467",
-    "address": "467C BUKIT BATOK WEST AVENUE 9 WEST PLAINS @ BUKIT BATOK SINGAPORE 653467"
-  },
-  "467A|BT BATOK WEST AVE 9": {
-    "block": "467A",
-    "street_name": "BT BATOK WEST AVE 9",
-    "latitude": 1.35651860042533,
-    "longitude": 103.743862528559,
-    "postal": "651467",
-    "address": "467A BUKIT BATOK WEST AVENUE 9 WEST PLAINS @ BUKIT BATOK SINGAPORE 651467"
-  },
-  "467B|BT BATOK WEST AVE 9": {
-    "block": "467B",
-    "street_name": "BT BATOK WEST AVE 9",
-    "latitude": 1.35614011912777,
-    "longitude": 103.7431637852842,
-    "postal": "652467",
-    "address": "467B BUKIT BATOK WEST AVENUE 9 WEST PLAINS @ BUKIT BATOK SINGAPORE 652467"
-  },
-  "377A|HOUGANG ST 32": {
-    "block": "377A",
-    "street_name": "HOUGANG ST 32",
-    "latitude": 1.363020098673113,
-    "longitude": 103.8946653122367,
-    "postal": "531377",
-    "address": "377A HOUGANG STREET 32 HOUGANG RIVERCOURT SINGAPORE 531377"
-  },
-  "422A|NORTHSHORE DR": {
-    "block": "422A",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.419657102132827,
-    "longitude": 103.9040066588465,
-    "postal": "821422",
-    "address": "422A NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 821422"
-  },
-  "94|DAWSON RD": {
-    "block": "94",
-    "street_name": "DAWSON RD",
-    "latitude": 1.296274834101812,
-    "longitude": 103.8112064375748,
-    "postal": "141094",
-    "address": "94 DAWSON ROAD SKYPARC @ DAWSON SINGAPORE 141094"
-  },
-  "619B|TAMPINES ST 61": {
-    "block": "619B",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.36188469560748,
-    "longitude": 103.9394040171763,
-    "postal": "522619",
-    "address": "619B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522619"
-  },
-  "618B|TAMPINES ST 61": {
-    "block": "618B",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.362323279315013,
-    "longitude": 103.9391417714057,
-    "postal": "522618",
-    "address": "618B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522618"
-  },
-  "619A|TAMPINES ST 61": {
-    "block": "619A",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.361885853654712,
-    "longitude": 103.9386871436541,
-    "postal": "521619",
-    "address": "619A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521619"
-  },
-  "874C|TAMPINES ST 85": {
-    "block": "874C",
-    "street_name": "TAMPINES ST 85",
-    "latitude": 1.354000404258416,
-    "longitude": 103.9309408381578,
-    "postal": "523874",
-    "address": "874C TAMPINES STREET 85 TAMPINES GREENFLORA SINGAPORE 523874"
-  },
-  "874D|TAMPINES ST 85": {
-    "block": "874D",
-    "street_name": "TAMPINES ST 85",
-    "latitude": 1.35462980931459,
-    "longitude": 103.9312726383234,
-    "postal": "524874",
-    "address": "874D TAMPINES STREET 85 TAMPINES GREENFLORA SINGAPORE 524874"
-  },
-  "104A|BIDADARI PK DR": {
-    "block": "104A",
-    "street_name": "BIDADARI PK DR",
-    "latitude": 1.335321977889235,
-    "longitude": 103.8709339933374,
-    "postal": "341104",
-    "address": "104A BIDADARI PARK DRIVE ALKAFF COURTVIEW SINGAPORE 341104"
   }
 }
