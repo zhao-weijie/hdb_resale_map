@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple, Optional
 import requests
 import pandas as pd
 from dotenv import load_dotenv
+from datagov_client import DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS, datagov_get
 
 
 # Load environment variables
@@ -109,8 +110,7 @@ def download_hdb_csv() -> pd.DataFrame:
     print("Downloading HDB resale data from data.gov.sg...")
 
     # Step 1: Initiate download
-    resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_RESALE_ID}/initiate-download",
-                        headers={"Content-Type": "application/json"}, timeout=30)
+    resp = datagov_get(f"{DATAGOV_API_BASE}/{DATAGOV_RESALE_ID}/initiate-download", timeout=30)
     resp.raise_for_status()
     payload = resp.json()
 
@@ -119,11 +119,10 @@ def download_hdb_csv() -> pd.DataFrame:
         url = payload.get("data", {}).get("url")
         if url:
             break
-        poll_resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_RESALE_ID}/poll-download",
-                                 headers={"Content-Type": "application/json"}, timeout=30)
+        time.sleep(DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS)
+        poll_resp = datagov_get(f"{DATAGOV_API_BASE}/{DATAGOV_RESALE_ID}/poll-download", timeout=30)
         poll_resp.raise_for_status()
         payload = poll_resp.json()
-        time.sleep(2)
     else:
         raise RuntimeError("Timed out waiting for data.gov.sg download URL")
 

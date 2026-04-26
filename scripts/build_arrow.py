@@ -15,6 +15,7 @@ import numpy as np
 import requests
 import pyarrow as pa
 import pyarrow.parquet as pq
+from datagov_client import DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS, datagov_get
 
 
 # Configuration
@@ -36,8 +37,7 @@ def download_price_index():
     """Download the latest HDB Resale Price Index from data.gov.sg and overwrite the local CSV."""
     print("Downloading HDB Resale Price Index from data.gov.sg...")
 
-    resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/initiate-download",
-                        headers={"Content-Type": "application/json"}, timeout=30)
+    resp = datagov_get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/initiate-download", timeout=30)
     resp.raise_for_status()
     payload = resp.json()
 
@@ -45,11 +45,10 @@ def download_price_index():
         url = payload.get("data", {}).get("url")
         if url:
             break
-        poll_resp = requests.get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/poll-download",
-                                 headers={"Content-Type": "application/json"}, timeout=30)
+        time.sleep(DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS)
+        poll_resp = datagov_get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/poll-download", timeout=30)
         poll_resp.raise_for_status()
         payload = poll_resp.json()
-        time.sleep(2)
     else:
         raise RuntimeError("Timed out waiting for price index download URL")
 
