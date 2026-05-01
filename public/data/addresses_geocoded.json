@@ -77590,5 +77590,21 @@
     "longitude": 103.8737478403971,
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
+  },
+  "377B|HOUGANG ST 32": {
+    "block": "377B",
+    "street_name": "HOUGANG ST 32",
+    "latitude": 1.36220591877146,
+    "longitude": 103.8947421164873,
+    "postal": "532377",
+    "address": "377B HOUGANG STREET 32 HOUGANG RIVERCOURT SINGAPORE 532377"
+  },
+  "620A|TAMPINES ST 61": {
+    "block": "620A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.361409893256154,
+    "longitude": 103.9388550088543,
+    "postal": "521620",
+    "address": "620A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521620"
   }
 }
