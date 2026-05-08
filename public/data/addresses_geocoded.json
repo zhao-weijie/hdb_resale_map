@@ -76703,6 +76703,22 @@
     "postal": "341104",
     "address": "104A BIDADARI PARK DRIVE ALKAFF COURTVIEW SINGAPORE 341104"
   },
+  "377B|HOUGANG ST 32": {
+    "block": "377B",
+    "street_name": "HOUGANG ST 32",
+    "latitude": 1.36220591877146,
+    "longitude": 103.8947421164873,
+    "postal": "532377",
+    "address": "377B HOUGANG STREET 32 HOUGANG RIVERCOURT SINGAPORE 532377"
+  },
+  "620A|TAMPINES ST 61": {
+    "block": "620A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.361409893256154,
+    "longitude": 103.9388550088543,
+    "postal": "521620",
+    "address": "620A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521620"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77591,20 +77607,20 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "377B|HOUGANG ST 32": {
-    "block": "377B",
-    "street_name": "HOUGANG ST 32",
-    "latitude": 1.36220591877146,
-    "longitude": 103.8947421164873,
-    "postal": "532377",
-    "address": "377B HOUGANG STREET 32 HOUGANG RIVERCOURT SINGAPORE 532377"
+  "421B|NORTHSHORE DR": {
+    "block": "421B",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.419246373674442,
+    "longitude": 103.9047047084346,
+    "postal": "822421",
+    "address": "421B NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 822421"
   },
-  "620A|TAMPINES ST 61": {
-    "block": "620A",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.361409893256154,
-    "longitude": 103.9388550088543,
-    "postal": "521620",
-    "address": "620A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521620"
+  "415B|NORTHSHORE DR": {
+    "block": "415B",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.417186983477018,
+    "longitude": 103.9000341407225,
+    "postal": "822415",
+    "address": "415B NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 822415"
   }
 }
