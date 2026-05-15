@@ -76719,894 +76719,6 @@
     "postal": "521620",
     "address": "620A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521620"
   },
-  "116|BT MERAH VIEW": {
-    "block": "116",
-    "street_name": "BT MERAH VIEW",
-    "latitude": 1.285134270670557,
-    "longitude": 103.8215322263205,
-    "postal": "151116",
-    "address": "116 BUKIT MERAH VIEW SINGAPORE 151116"
-  },
-  "107|TOWNER RD": {
-    "block": "107",
-    "street_name": "TOWNER RD",
-    "latitude": 1.319795086259866,
-    "longitude": 103.8604358142447,
-    "postal": "321107",
-    "address": "107 TOWNER ROAD SINGAPORE 321107"
-  },
-  "105|TOWNER RD": {
-    "block": "105",
-    "street_name": "TOWNER RD",
-    "latitude": 1.320813042822798,
-    "longitude": 103.8613467135059,
-    "postal": "321105",
-    "address": "105 TOWNER ROAD SINGAPORE 321105"
-  },
-  "105|TAMPINES ST 11": {
-    "block": "105",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.34809312469491,
-    "longitude": 103.9471775644766,
-    "postal": "521105",
-    "address": "105 TAMPINES STREET 11 SINGAPORE 521105"
-  },
-  "227|TAMPINES ST 23": {
-    "block": "227",
-    "street_name": "TAMPINES ST 23",
-    "latitude": 1.354707980687186,
-    "longitude": 103.9550027151958,
-    "postal": "521227",
-    "address": "227 TAMPINES STREET 23 SINGAPORE 521227"
-  },
-  "253|TAMPINES ST 21": {
-    "block": "253",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.353264077045109,
-    "longitude": 103.9481148204276,
-    "postal": "521253",
-    "address": "253 TAMPINES STREET 21 SINGAPORE 521253"
-  },
-  "233|TAMPINES ST 21": {
-    "block": "233",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.356409335806168,
-    "longitude": 103.9475286769826,
-    "postal": "521233",
-    "address": "233 TAMPINES STREET 21 SINGAPORE 521233"
-  },
-  "141|LOR 2 TOA PAYOH": {
-    "block": "141",
-    "street_name": "LOR 2 TOA PAYOH",
-    "latitude": 1.335837619571769,
-    "longitude": 103.8457312041101,
-    "postal": "311141",
-    "address": "141 LORONG 2 TOA PAYOH SINGAPORE 311141"
-  },
-  "119|BT MERAH VIEW": {
-    "block": "119",
-    "street_name": "BT MERAH VIEW",
-    "latitude": 1.283422476846971,
-    "longitude": 103.8210682272278,
-    "postal": "NIL",
-    "address": "119 BUKIT MERAH VIEW APEX DAY CARE ACTIVITY CENTRE"
-  },
-  "110|SPOTTISWOODE PK RD": {
-    "block": "110",
-    "street_name": "SPOTTISWOODE PK RD",
-    "latitude": 1.27363823413532,
-    "longitude": 103.8364203347327,
-    "postal": "081110",
-    "address": "110 SPOTTISWOODE PARK ROAD SPOTTISWOODE PARK ESTATE SINGAPORE 081110"
-  },
-  "216|CHOA CHU KANG CTRL": {
-    "block": "216",
-    "street_name": "CHOA CHU KANG CTRL",
-    "latitude": 1.383083024341294,
-    "longitude": 103.7470766276923,
-    "postal": "NIL",
-    "address": "BLK 216 AND 215 CHOA CHU KANG CENTRAL"
-  },
-  "121|PAYA LEBAR WAY": {
-    "block": "121",
-    "street_name": "PAYA LEBAR WAY",
-    "latitude": 1.321925016304331,
-    "longitude": 103.8828603559723,
-    "postal": "381121",
-    "address": "121 PAYA LEBAR WAY SINGAPORE 381121"
-  },
-  "101|JLN RAJAH": {
-    "block": "101",
-    "street_name": "JLN RAJAH",
-    "latitude": 1.328714783929596,
-    "longitude": 103.8505453210323,
-    "postal": "NIL",
-    "address": "101 JALAN RAJAH NEIGHBOURHOOD POLICE POST MOULMEIN"
-  },
-  "150|MEI LING ST": {
-    "block": "150",
-    "street_name": "MEI LING ST",
-    "latitude": 1.294903078546949,
-    "longitude": 103.8036992985747,
-    "postal": "141150",
-    "address": "150 MEI LING STREET SINGAPORE 141150"
-  },
-  "109|TAMPINES ST 11": {
-    "block": "109",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.347407807373298,
-    "longitude": 103.9488118276471,
-    "postal": "521109",
-    "address": "109 TAMPINES STREET 11 SINGAPORE 521109"
-  },
-  "166|TAMPINES ST 12": {
-    "block": "166",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.348821006515529,
-    "longitude": 103.9464333510761,
-    "postal": "521166",
-    "address": "166 TAMPINES STREET 12 SINGAPORE 521166"
-  },
-  "164|TAMPINES ST 12": {
-    "block": "164",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.349621514265501,
-    "longitude": 103.9460006910966,
-    "postal": "521164",
-    "address": "164 TAMPINES STREET 12 SINGAPORE 521164"
-  },
-  "247|TAMPINES ST 21": {
-    "block": "247",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.352280921716592,
-    "longitude": 103.9469115526444,
-    "postal": "521247",
-    "address": "247 TAMPINES STREET 21 SINGAPORE 521247"
-  },
-  "254|TAMPINES ST 21": {
-    "block": "254",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.352993299123987,
-    "longitude": 103.9493499775968,
-    "postal": "521254",
-    "address": "254 TAMPINES STREET 21 SINGAPORE 521254"
-  },
-  "142|TAMPINES ST 12": {
-    "block": "142",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.3486971218162,
-    "longitude": 103.9448596214717,
-    "postal": "521142",
-    "address": "142 TAMPINES STREET 12 SINGAPORE 521142"
-  },
-  "125|TAMPINES ST 11": {
-    "block": "125",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346314203474794,
-    "longitude": 103.9501252750005,
-    "postal": "521125",
-    "address": "125 TAMPINES STREET 11 SINGAPORE 521125"
-  },
-  "147|TAMPINES AVE 5": {
-    "block": "147",
-    "street_name": "TAMPINES AVE 5",
-    "latitude": 1.349232388195592,
-    "longitude": 103.9421810329289,
-    "postal": "521147",
-    "address": "147 TAMPINES AVENUE 5 SINGAPORE 521147"
-  },
-  "111|WHAMPOA RD": {
-    "block": "111",
-    "street_name": "WHAMPOA RD",
-    "latitude": 1.326589759170566,
-    "longitude": 103.8561879174856,
-    "postal": "321111",
-    "address": "111 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321111"
-  },
-  "112|LOR 3 GEYLANG": {
-    "block": "112",
-    "street_name": "LOR 3 GEYLANG",
-    "latitude": 1.31210823499255,
-    "longitude": 103.8737836613358,
-    "postal": "381112",
-    "address": "112 LORONG 3 GEYLANG SINGAPORE 381112"
-  },
-  "103|TOWNER RD": {
-    "block": "103",
-    "street_name": "TOWNER RD",
-    "latitude": 1.320643815122853,
-    "longitude": 103.8616340811473,
-    "postal": "322103",
-    "address": "103 TOWNER ROAD SINGAPORE 322103"
-  },
-  "168|STIRLING RD": {
-    "block": "168",
-    "street_name": "STIRLING RD",
-    "latitude": 1.290020507358117,
-    "longitude": 103.8031880443692,
-    "postal": "141168",
-    "address": "168 STIRLING ROAD SINGAPORE 141168"
-  },
-  "255|TAMPINES ST 21": {
-    "block": "255",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.352743287231756,
-    "longitude": 103.9503835746336,
-    "postal": "521255",
-    "address": "255 TAMPINES STREET 21 SINGAPORE 521255"
-  },
-  "112|TAMPINES ST 11": {
-    "block": "112",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346298135772561,
-    "longitude": 103.9475098055943,
-    "postal": "521112",
-    "address": "112 TAMPINES STREET 11 SINGAPORE 521112"
-  },
-  "102|TAMPINES ST 11": {
-    "block": "102",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346716162676569,
-    "longitude": 103.9455213882849,
-    "postal": "521102",
-    "address": "102 TAMPINES STREET 11 SINGAPORE 521102"
-  },
-  "226|TAMPINES ST 23": {
-    "block": "226",
-    "street_name": "TAMPINES ST 23",
-    "latitude": 1.355517960091005,
-    "longitude": 103.9540091891314,
-    "postal": "521226",
-    "address": "226 TAMPINES STREET 23 SINGAPORE 521226"
-  },
-  "228|TAMPINES ST 23": {
-    "block": "228",
-    "street_name": "TAMPINES ST 23",
-    "latitude": 1.355603532328489,
-    "longitude": 103.9546520573391,
-    "postal": "521228",
-    "address": "228 TAMPINES STREET 23 SINGAPORE 521228"
-  },
-  "882|TAMPINES ST 84": {
-    "block": "882",
-    "street_name": "TAMPINES ST 84",
-    "latitude": 1.352046849380141,
-    "longitude": 103.9334620493843,
-    "postal": "NIL",
-    "address": "882 TAMPINES STREET 84 HAPPY KIDS CHILDCARE & DEVELOPMENT CENTRE"
-  },
-  "256|TAMPINES ST 21": {
-    "block": "256",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.353235727085127,
-    "longitude": 103.9499466148988,
-    "postal": "522256",
-    "address": "256 TAMPINES STREET 21 SINGAPORE 522256"
-  },
-  "124|TAMPINES ST 11": {
-    "block": "124",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.345184289110755,
-    "longitude": 103.9497933250937,
-    "postal": "521124",
-    "address": "124 TAMPINES STREET 11 SINGAPORE 521124"
-  },
-  "120|BT MERAH VIEW": {
-    "block": "120",
-    "street_name": "BT MERAH VIEW",
-    "latitude": 1.282774432394833,
-    "longitude": 103.822612454246,
-    "postal": "152120",
-    "address": "120 BUKIT MERAH VIEW BUKIT MERAH VIEW SINGAPORE 152120"
-  },
-  "101|TOWNER RD": {
-    "block": "101",
-    "street_name": "TOWNER RD",
-    "latitude": 1.319425390407265,
-    "longitude": 103.8610874626075,
-    "postal": "322101",
-    "address": "101 TOWNER ROAD SINGAPORE 322101"
-  },
-  "110|WHAMPOA RD": {
-    "block": "110",
-    "street_name": "WHAMPOA RD",
-    "latitude": 1.326821225811215,
-    "longitude": 103.8558907147579,
-    "postal": "321110",
-    "address": "110 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321110"
-  },
-  "112|WHAMPOA RD": {
-    "block": "112",
-    "street_name": "WHAMPOA RD",
-    "latitude": 1.32600154062316,
-    "longitude": 103.8567322059891,
-    "postal": "NIL",
-    "address": "112 WHAMPOA ROAD PCF SPARKLETOTS PRESCHOOL @ WHAMPOA BLK 112 (KN)"
-  },
-  "103|JLN RAJAH": {
-    "block": "103",
-    "street_name": "JLN RAJAH",
-    "latitude": 1.327341433335403,
-    "longitude": 103.8527806503651,
-    "postal": "321103",
-    "address": "103 JALAN RAJAH SINGAPORE 321103"
-  },
-  "139|TAMPINES ST 11": {
-    "block": "139",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346160739848543,
-    "longitude": 103.9445092279995,
-    "postal": "521139",
-    "address": "139 TAMPINES STREET 11 SINGAPORE 521139"
-  },
-  "138|TAMPINES ST 11": {
-    "block": "138",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.34550450627241,
-    "longitude": 103.9455883553824,
-    "postal": "521138",
-    "address": "138 TAMPINES STREET 11 SINGAPORE 521138"
-  },
-  "242|TAMPINES ST 21": {
-    "block": "242",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.354038837426376,
-    "longitude": 103.9465837728735,
-    "postal": "521242",
-    "address": "242 TAMPINES STREET 21 SINGAPORE 521242"
-  },
-  "157|TAMPINES ST 12": {
-    "block": "157",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.351073290773782,
-    "longitude": 103.9450038568856,
-    "postal": "521157",
-    "address": "157 TAMPINES STREET 12 SINGAPORE 521157"
-  },
-  "244|TAMPINES ST 21": {
-    "block": "244",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.3538084064214,
-    "longitude": 103.947114964145,
-    "postal": "521244",
-    "address": "244 TAMPINES STREET 21 SINGAPORE 521244"
-  },
-  "150|TAMPINES ST 12": {
-    "block": "150",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.350946099750131,
-    "longitude": 103.9432601150564,
-    "postal": "521150",
-    "address": "150 TAMPINES STREET 12 SINGAPORE 521150"
-  },
-  "110|TAMPINES ST 11": {
-    "block": "110",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346946622481148,
-    "longitude": 103.9493069632903,
-    "postal": "521110",
-    "address": "110 TAMPINES STREET 11 SINGAPORE 521110"
-  },
-  "101|TAMPINES ST 11": {
-    "block": "101",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.34739870794536,
-    "longitude": 103.9452923593267,
-    "postal": "NIL",
-    "address": "101 TAMPINES STREET 11 SAINT LUKE'S ELDERCARE TAMPINES CENTRE"
-  },
-  "126|TAMPINES ST 11": {
-    "block": "126",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.345786132887234,
-    "longitude": 103.9503216112906,
-    "postal": "521126",
-    "address": "126 TAMPINES STREET 11 SINGAPORE 521126"
-  },
-  "229|TAMPINES ST 23": {
-    "block": "229",
-    "street_name": "TAMPINES ST 23",
-    "latitude": 1.355931434538552,
-    "longitude": 103.953944534569,
-    "postal": "521229",
-    "address": "229 TAMPINES STREET 23 SINGAPORE 521229"
-  },
-  "151|TAMPINES ST 12": {
-    "block": "151",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.351400473880474,
-    "longitude": 103.9437933564081,
-    "postal": "521151",
-    "address": "151 TAMPINES STREET 12 SINGAPORE 521151"
-  },
-  "149|TAMPINES ST 12": {
-    "block": "149",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.351401991552104,
-    "longitude": 103.9427272736209,
-    "postal": "521149",
-    "address": "149 TAMPINES STREET 12 SINGAPORE 521149"
-  },
-  "120|PAYA LEBAR WAY": {
-    "block": "120",
-    "street_name": "PAYA LEBAR WAY",
-    "latitude": 1.322594152438592,
-    "longitude": 103.884296105282,
-    "postal": "381120",
-    "address": "120 PAYA LEBAR WAY SINGAPORE 381120"
-  },
-  "104|WHAMPOA DR": {
-    "block": "104",
-    "street_name": "WHAMPOA DR",
-    "latitude": 1.320799591238311,
-    "longitude": 103.8533277854204,
-    "postal": "323104",
-    "address": "104 WHAMPOA DRIVE WHAMPOA VIEW SINGAPORE 323104"
-  },
-  "111|TAMPINES ST 11": {
-    "block": "111",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346914713784628,
-    "longitude": 103.9474164646421,
-    "postal": "521111",
-    "address": "111 TAMPINES STREET 11 SINGAPORE 521111"
-  },
-  "145|TAMPINES ST 12": {
-    "block": "145",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.348801821388851,
-    "longitude": 103.9436910203783,
-    "postal": "521145",
-    "address": "145 TAMPINES STREET 12 SINGAPORE 521145"
-  },
-  "235|TAMPINES ST 21": {
-    "block": "235",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.355490809198619,
-    "longitude": 103.9482592658163,
-    "postal": "521235",
-    "address": "235 TAMPINES STREET 21 SINGAPORE 521235"
-  },
-  "248|TAMPINES ST 21": {
-    "block": "248",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.351910190428362,
-    "longitude": 103.9471087733782,
-    "postal": "521248",
-    "address": "248 TAMPINES STREET 21 SINGAPORE 521248"
-  },
-  "158|TAMPINES ST 12": {
-    "block": "158",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.351414561088038,
-    "longitude": 103.9458590485929,
-    "postal": "521158",
-    "address": "158 TAMPINES STREET 12 SINGAPORE 521158"
-  },
-  "114|TAMPINES ST 11": {
-    "block": "114",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.345971624993967,
-    "longitude": 103.9467599971141,
-    "postal": "521114",
-    "address": "114 TAMPINES STREET 11 SINGAPORE 521114"
-  },
-  "156|TAMPINES ST 12": {
-    "block": "156",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.351621943599655,
-    "longitude": 103.945090000876,
-    "postal": "521156",
-    "address": "156 TAMPINES STREET 12 SINGAPORE 521156"
-  },
-  "787|CHOA CHU KANG NTH 6": {
-    "block": "787",
-    "street_name": "CHOA CHU KANG NTH 6",
-    "latitude": 1.39582035325567,
-    "longitude": 103.7477526496606,
-    "postal": "682787",
-    "address": "787 CHOA CHU KANG NORTH 6 SINGAPORE 682787"
-  },
-  "122|PAYA LEBAR WAY": {
-    "block": "122",
-    "street_name": "PAYA LEBAR WAY",
-    "latitude": 1.322600375171983,
-    "longitude": 103.8824632035746,
-    "postal": "381122",
-    "address": "122 PAYA LEBAR WAY SINGAPORE 381122"
-  },
-  "102|JLN RAJAH": {
-    "block": "102",
-    "street_name": "JLN RAJAH",
-    "latitude": 1.328223064447614,
-    "longitude": 103.8515197538446,
-    "postal": "321102",
-    "address": "102 JALAN RAJAH RAJAH COURT SINGAPORE 321102"
-  },
-  "109|WHAMPOA RD": {
-    "block": "109",
-    "street_name": "WHAMPOA RD",
-    "latitude": 1.327148175776567,
-    "longitude": 103.8557009144204,
-    "postal": "321109",
-    "address": "109 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321109"
-  },
-  "106|TOWNER RD": {
-    "block": "106",
-    "street_name": "TOWNER RD",
-    "latitude": 1.321020009915332,
-    "longitude": 103.8609978331371,
-    "postal": "322106",
-    "address": "106 TOWNER ROAD SINGAPORE 322106"
-  },
-  "221|TAMPINES ST 24": {
-    "block": "221",
-    "street_name": "TAMPINES ST 24",
-    "latitude": 1.355160562331167,
-    "longitude": 103.9523610562333,
-    "postal": "521221",
-    "address": "221 TAMPINES STREET 24 SINGAPORE 521221"
-  },
-  "234|TAMPINES ST 21": {
-    "block": "234",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.35590413566013,
-    "longitude": 103.9480246167335,
-    "postal": "521234",
-    "address": "234 TAMPINES STREET 21 SINGAPORE 521234"
-  },
-  "107|TAMPINES ST 11": {
-    "block": "107",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.34836421842074,
-    "longitude": 103.9481587238136,
-    "postal": "521107",
-    "address": "107 TAMPINES STREET 11 SINGAPORE 521107"
-  },
-  "161|TAMPINES ST 12": {
-    "block": "161",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.350000848396019,
-    "longitude": 103.9459783243551,
-    "postal": "521161",
-    "address": "161 TAMPINES STREET 12 SINGAPORE 521161"
-  },
-  "222|TAMPINES ST 24": {
-    "block": "222",
-    "street_name": "TAMPINES ST 24",
-    "latitude": 1.355517060602187,
-    "longitude": 103.9526864777211,
-    "postal": "521222",
-    "address": "222 TAMPINES STREET 24 SINGAPORE 521222"
-  },
-  "159|TAMPINES ST 12": {
-    "block": "159",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.351041308474023,
-    "longitude": 103.9460515393752,
-    "postal": "521159",
-    "address": "159 TAMPINES STREET 12 SINGAPORE 521159"
-  },
-  "163|TAMPINES ST 12": {
-    "block": "163",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.349532230997996,
-    "longitude": 103.9474591407135,
-    "postal": "521163",
-    "address": "163 TAMPINES STREET 12 SINGAPORE 521163"
-  },
-  "754|WOODLANDS CIRCLE": {
-    "block": "754",
-    "street_name": "WOODLANDS CIRCLE",
-    "latitude": 1.445289017126342,
-    "longitude": 103.7939287664311,
-    "postal": "731754",
-    "address": "754 WOODLANDS CIRCLE SINGAPORE 731754"
-  },
-  "231|TAMPINES ST 21": {
-    "block": "231",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.355941247040716,
-    "longitude": 103.9491704323694,
-    "postal": "521231",
-    "address": "231 TAMPINES STREET 21 SINGAPORE 521231"
-  },
-  "141|TAMPINES ST 12": {
-    "block": "141",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.348248953152752,
-    "longitude": 103.9449207138538,
-    "postal": "521141",
-    "address": "141 TAMPINES STREET 12 SINGAPORE 521141"
-  },
-  "245|TAMPINES ST 21": {
-    "block": "245",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.35320840937902,
-    "longitude": 103.9464898403628,
-    "postal": "521245",
-    "address": "245 TAMPINES STREET 21 SINGAPORE 521245"
-  },
-  "259|BT PANJANG RING RD": {
-    "block": "259",
-    "street_name": "BT PANJANG RING RD",
-    "latitude": 1.377042931124766,
-    "longitude": 103.7733100868461,
-    "postal": "671259",
-    "address": "259 BUKIT PANJANG RING ROAD BUKIT PANJANG NEIGHBOURHOOD CENTRE SINGAPORE 671259"
-  },
-  "126|GEYLANG EAST AVE 1": {
-    "block": "126",
-    "street_name": "GEYLANG EAST AVE 1",
-    "latitude": 1.317556994915258,
-    "longitude": 103.887130250228,
-    "postal": "381126",
-    "address": "126 GEYLANG EAST AVENUE 1 GEYLANG EAST GROVE SINGAPORE 381126"
-  },
-  "331|TAH CHING RD": {
-    "block": "331",
-    "street_name": "TAH CHING RD",
-    "latitude": 1.338074586296848,
-    "longitude": 103.7234321487243,
-    "postal": "611331",
-    "address": "331 TAH CHING ROAD SINGAPORE 611331"
-  },
-  "106|JLN RAJAH": {
-    "block": "106",
-    "street_name": "JLN RAJAH",
-    "latitude": 1.328476557951175,
-    "longitude": 103.8546988748658,
-    "postal": "321106",
-    "address": "106 JALAN RAJAH RAJAH COURT SINGAPORE 321106"
-  },
-  "223|TAMPINES ST 24": {
-    "block": "223",
-    "street_name": "TAMPINES ST 24",
-    "latitude": 1.355384475351373,
-    "longitude": 103.9532045023957,
-    "postal": "521223",
-    "address": "223 TAMPINES STREET 24 SINGAPORE 521223"
-  },
-  "127|TAMPINES ST 11": {
-    "block": "127",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.345431634879503,
-    "longitude": 103.9506476278794,
-    "postal": "521127",
-    "address": "127 TAMPINES STREET 11 SINGAPORE 521127"
-  },
-  "148|TAMPINES AVE 5": {
-    "block": "148",
-    "street_name": "TAMPINES AVE 5",
-    "latitude": 1.350613171435027,
-    "longitude": 103.9422499742785,
-    "postal": "521148",
-    "address": "148 TAMPINES AVENUE 5 SINGAPORE 521148"
-  },
-  "102|TOWNER RD": {
-    "block": "102",
-    "street_name": "TOWNER RD",
-    "latitude": 1.320586094569071,
-    "longitude": 103.8620020151442,
-    "postal": "322102",
-    "address": "102 TOWNER ROAD SINGAPORE 322102"
-  },
-  "101|WHAMPOA DR": {
-    "block": "101",
-    "street_name": "WHAMPOA DR",
-    "latitude": 1.320417101876028,
-    "longitude": 103.8538139464019,
-    "postal": "323101",
-    "address": "101 WHAMPOA DRIVE WHAMPOA VIEW SINGAPORE 323101"
-  },
-  "225|TAMPINES ST 23": {
-    "block": "225",
-    "street_name": "TAMPINES ST 23",
-    "latitude": 1.355158635955559,
-    "longitude": 103.95401278891,
-    "postal": "521225",
-    "address": "225 TAMPINES STREET 23 SINGAPORE 521225"
-  },
-  "125|BT MERAH VIEW": {
-    "block": "125",
-    "street_name": "BT MERAH VIEW",
-    "latitude": 1.285061192161408,
-    "longitude": 103.8238120115965,
-    "postal": "151125",
-    "address": "125 BUKIT MERAH VIEW SINGAPORE 151125"
-  },
-  "125|GEYLANG EAST AVE 1": {
-    "block": "125",
-    "street_name": "GEYLANG EAST AVE 1",
-    "latitude": 1.317443878005006,
-    "longitude": 103.8863737322645,
-    "postal": "381125",
-    "address": "125 GEYLANG EAST AVENUE 1 GEYLANG EAST GROVE SINGAPORE 381125"
-  },
-  "123|PAYA LEBAR WAY": {
-    "block": "123",
-    "street_name": "PAYA LEBAR WAY",
-    "latitude": 1.322756054256954,
-    "longitude": 103.8832352121901,
-    "postal": "381123",
-    "address": "123 PAYA LEBAR WAY SINGAPORE 381123"
-  },
-  "108|MCNAIR RD": {
-    "block": "108",
-    "street_name": "MCNAIR RD",
-    "latitude": 1.321619038316907,
-    "longitude": 103.8593827195056,
-    "postal": "321108",
-    "address": "108 MCNAIR ROAD MCNAIR SPRING SINGAPORE 321108"
-  },
-  "114|LOR 3 GEYLANG": {
-    "block": "114",
-    "street_name": "LOR 3 GEYLANG",
-    "latitude": 1.311498985278267,
-    "longitude": 103.8740318159661,
-    "postal": "381114",
-    "address": "114 LORONG 3 GEYLANG SINGAPORE 381114"
-  },
-  "113|TAMPINES ST 11": {
-    "block": "113",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.346478517220594,
-    "longitude": 103.9461767712973,
-    "postal": "521113",
-    "address": "113 TAMPINES STREET 11 SINGAPORE 521113"
-  },
-  "165|TAMPINES ST 12": {
-    "block": "165",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.349259623136546,
-    "longitude": 103.9458594510229,
-    "postal": "521165",
-    "address": "165 TAMPINES STREET 12 SINGAPORE 521165"
-  },
-  "146|TAMPINES AVE 5": {
-    "block": "146",
-    "street_name": "TAMPINES AVE 5",
-    "latitude": 1.348008341742479,
-    "longitude": 103.942813802423,
-    "postal": "521146",
-    "address": "146 TAMPINES AVENUE 5 SINGAPORE 521146"
-  },
-  "215|CHOA CHU KANG CTRL": {
-    "block": "215",
-    "street_name": "CHOA CHU KANG CTRL",
-    "latitude": 1.383083024341294,
-    "longitude": 103.7470766276923,
-    "postal": "NIL",
-    "address": "BLK 216 AND 215 CHOA CHU KANG CENTRAL"
-  },
-  "104|TOWNER RD": {
-    "block": "104",
-    "street_name": "TOWNER RD",
-    "latitude": 1.319823544626457,
-    "longitude": 103.8609797453633,
-    "postal": "322104",
-    "address": "104 TOWNER ROAD SINGAPORE 322104"
-  },
-  "243|TAMPINES ST 21": {
-    "block": "243",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.354195274448072,
-    "longitude": 103.9471220941048,
-    "postal": "521243",
-    "address": "243 TAMPINES STREET 21 SINGAPORE 521243"
-  },
-  "162|TAMPINES ST 12": {
-    "block": "162",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.349904964111985,
-    "longitude": 103.9471397966483,
-    "postal": "521162",
-    "address": "162 TAMPINES STREET 12 SINGAPORE 521162"
-  },
-  "126|BT MERAH VIEW": {
-    "block": "126",
-    "street_name": "BT MERAH VIEW",
-    "latitude": 1.284425404607744,
-    "longitude": 103.8239091740726,
-    "postal": "151126",
-    "address": "126 BUKIT MERAH VIEW SINGAPORE 151126"
-  },
-  "246|TAMPINES ST 21": {
-    "block": "246",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.353225497744194,
-    "longitude": 103.9472321823378,
-    "postal": "521246",
-    "address": "246 TAMPINES STREET 21 SINGAPORE 521246"
-  },
-  "144|TAMPINES ST 12": {
-    "block": "144",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.348418577506464,
-    "longitude": 103.9437258465351,
-    "postal": "521144",
-    "address": "144 TAMPINES STREET 12 SINGAPORE 521144"
-  },
-  "232|TAMPINES ST 21": {
-    "block": "232",
-    "street_name": "TAMPINES ST 21",
-    "latitude": 1.3564101927157,
-    "longitude": 103.9487017367278,
-    "postal": "521232",
-    "address": "232 TAMPINES STREET 21 SINGAPORE 521232"
-  },
-  "106|TAMPINES ST 11": {
-    "block": "106",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.347539192065528,
-    "longitude": 103.9476754279861,
-    "postal": "521106",
-    "address": "106 TAMPINES STREET 11 SINGAPORE 521106"
-  },
-  "113|LOR 3 GEYLANG": {
-    "block": "113",
-    "street_name": "LOR 3 GEYLANG",
-    "latitude": 1.311797847319426,
-    "longitude": 103.873852489639,
-    "postal": "381113",
-    "address": "113 LORONG 3 GEYLANG SINGAPORE 381113"
-  },
-  "108|TAMPINES ST 11": {
-    "block": "108",
-    "street_name": "TAMPINES ST 11",
-    "latitude": 1.347866464382061,
-    "longitude": 103.9485616162593,
-    "postal": "521108",
-    "address": "108 TAMPINES STREET 11 SINGAPORE 521108"
-  },
-  "104|JLN RAJAH": {
-    "block": "104",
-    "street_name": "JLN RAJAH",
-    "latitude": 1.327804969614578,
-    "longitude": 103.8532622845638,
-    "postal": "321104",
-    "address": "104 JALAN RAJAH SINGAPORE 321104"
-  },
-  "224|TAMPINES ST 23": {
-    "block": "224",
-    "street_name": "TAMPINES ST 23",
-    "latitude": 1.35538493501861,
-    "longitude": 103.95348853253,
-    "postal": "521224",
-    "address": "224 TAMPINES STREET 23 SINGAPORE 521224"
-  },
-  "160|TAMPINES ST 12": {
-    "block": "160",
-    "street_name": "TAMPINES ST 12",
-    "latitude": 1.350702366353935,
-    "longitude": 103.9451836188453,
-    "postal": "521160",
-    "address": "160 TAMPINES STREET 12 SINGAPORE 521160"
-  },
-  "230|TAMPINES ST 24": {
-    "block": "230",
-    "street_name": "TAMPINES ST 24",
-    "latitude": 1.355932425808211,
-    "longitude": 103.9527466098691,
-    "postal": "524230",
-    "address": "230 TAMPINES STREET 24 SINGAPORE 524230"
-  },
-  "124|PAYA LEBAR WAY": {
-    "block": "124",
-    "street_name": "PAYA LEBAR WAY",
-    "latitude": 1.323088766816814,
-    "longitude": 103.8837390974386,
-    "postal": "381124",
-    "address": "124 PAYA LEBAR WAY SINGAPORE 381124"
-  },
-  "111|LOR 3 GEYLANG": {
-    "block": "111",
-    "street_name": "LOR 3 GEYLANG",
-    "latitude": 1.312348005062085,
-    "longitude": 103.8737478403971,
-    "postal": "381111",
-    "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
-  },
   "421B|NORTHSHORE DR": {
     "block": "421B",
     "street_name": "NORTHSHORE DR",
@@ -77622,5 +76734,917 @@
     "longitude": 103.9000341407225,
     "postal": "822415",
     "address": "415B NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 822415"
+  },
+  "116|BT MERAH VIEW": {
+    "block": "116",
+    "street_name": "BT MERAH VIEW",
+    "latitude": 1.28513427067055,
+    "longitude": 103.821532226321,
+    "postal": "151116",
+    "address": "116 BUKIT MERAH VIEW SINGAPORE 151116"
+  },
+  "107|TOWNER RD": {
+    "block": "107",
+    "street_name": "TOWNER RD",
+    "latitude": 1.31979508625986,
+    "longitude": 103.860435814245,
+    "postal": "321107",
+    "address": "107 TOWNER ROAD SINGAPORE 321107"
+  },
+  "105|TOWNER RD": {
+    "block": "105",
+    "street_name": "TOWNER RD",
+    "latitude": 1.3208130428228,
+    "longitude": 103.861346713506,
+    "postal": "321105",
+    "address": "105 TOWNER ROAD SINGAPORE 321105"
+  },
+  "105|TAMPINES ST 11": {
+    "block": "105",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.3480931246949,
+    "longitude": 103.947177564477,
+    "postal": "521105",
+    "address": "105 TAMPINES STREET 11 SINGAPORE 521105"
+  },
+  "227|TAMPINES ST 23": {
+    "block": "227",
+    "street_name": "TAMPINES ST 23",
+    "latitude": 1.35470798068718,
+    "longitude": 103.955002715196,
+    "postal": "521227",
+    "address": "227 TAMPINES STREET 23 SINGAPORE 521227"
+  },
+  "253|TAMPINES ST 21": {
+    "block": "253",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35326407704511,
+    "longitude": 103.948114820428,
+    "postal": "521253",
+    "address": "253 TAMPINES STREET 21 SINGAPORE 521253"
+  },
+  "233|TAMPINES ST 21": {
+    "block": "233",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35640933580615,
+    "longitude": 103.947528676983,
+    "postal": "521233",
+    "address": "233 TAMPINES STREET 21 SINGAPORE 521233"
+  },
+  "141|LOR 2 TOA PAYOH": {
+    "block": "141",
+    "street_name": "LOR 2 TOA PAYOH",
+    "latitude": 1.33583761957175,
+    "longitude": 103.84573120411,
+    "postal": "311141",
+    "address": "141 LORONG 2 TOA PAYOH SINGAPORE 311141"
+  },
+  "119|BT MERAH VIEW": {
+    "block": "119",
+    "street_name": "BT MERAH VIEW",
+    "latitude": 1.28342247684697,
+    "longitude": 103.821068227228,
+    "postal": "152119",
+    "address": "119 BUKIT MERAH VIEW APEX DAY CARE ACTIVITY CENTRE SINGAPORE 152119"
+  },
+  "110|SPOTTISWOODE PK RD": {
+    "block": "110",
+    "street_name": "SPOTTISWOODE PK RD",
+    "latitude": 1.2736382341353,
+    "longitude": 103.836420334733,
+    "postal": "081110",
+    "address": "110 SPOTTISWOODE PARK ROAD SPOTTISWOODE PARK ESTATE SINGAPORE 081110"
+  },
+  "216|CHOA CHU KANG CTRL": {
+    "block": "216",
+    "street_name": "CHOA CHU KANG CTRL",
+    "latitude": 1.38308302434129,
+    "longitude": 103.747076627693,
+    "postal": "NIL",
+    "address": "BLK 216 AND 215 CHOA CHU KANG CENTRAL"
+  },
+  "121|PAYA LEBAR WAY": {
+    "block": "121",
+    "street_name": "PAYA LEBAR WAY",
+    "latitude": 1.32192501630432,
+    "longitude": 103.882860355973,
+    "postal": "381121",
+    "address": "121 PAYA LEBAR WAY SINGAPORE 381121"
+  },
+  "101|JLN RAJAH": {
+    "block": "101",
+    "street_name": "JLN RAJAH",
+    "latitude": 1.32871478392959,
+    "longitude": 103.850545321033,
+    "postal": "321101",
+    "address": "101 JALAN RAJAH NEIGHBOURHOOD POLICE POST MOULMEIN SINGAPORE 321101"
+  },
+  "150|MEI LING ST": {
+    "block": "150",
+    "street_name": "MEI LING ST",
+    "latitude": 1.29490307854693,
+    "longitude": 103.803699298575,
+    "postal": "141150",
+    "address": "150 MEI LING STREET SINGAPORE 141150"
+  },
+  "109|TAMPINES ST 11": {
+    "block": "109",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34740780737329,
+    "longitude": 103.948811827647,
+    "postal": "521109",
+    "address": "109 TAMPINES STREET 11 SINGAPORE 521109"
+  },
+  "166|TAMPINES ST 12": {
+    "block": "166",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34882100651553,
+    "longitude": 103.946433351076,
+    "postal": "521166",
+    "address": "166 TAMPINES STREET 12 SINGAPORE 521166"
+  },
+  "164|TAMPINES ST 12": {
+    "block": "164",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.3496215142655,
+    "longitude": 103.946000691097,
+    "postal": "521164",
+    "address": "164 TAMPINES STREET 12 SINGAPORE 521164"
+  },
+  "247|TAMPINES ST 21": {
+    "block": "247",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35228092171658,
+    "longitude": 103.946911552645,
+    "postal": "521247",
+    "address": "247 TAMPINES STREET 21 SINGAPORE 521247"
+  },
+  "254|TAMPINES ST 21": {
+    "block": "254",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35299329912397,
+    "longitude": 103.949349977597,
+    "postal": "521254",
+    "address": "254 TAMPINES STREET 21 SINGAPORE 521254"
+  },
+  "142|TAMPINES ST 12": {
+    "block": "142",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34869712181619,
+    "longitude": 103.944859621472,
+    "postal": "521142",
+    "address": "142 TAMPINES STREET 12 SINGAPORE 521142"
+  },
+  "125|TAMPINES ST 11": {
+    "block": "125",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34631420347479,
+    "longitude": 103.950125275001,
+    "postal": "521125",
+    "address": "125 TAMPINES STREET 11 SINGAPORE 521125"
+  },
+  "147|TAMPINES AVE 5": {
+    "block": "147",
+    "street_name": "TAMPINES AVE 5",
+    "latitude": 1.34923238819558,
+    "longitude": 103.942181032929,
+    "postal": "521147",
+    "address": "147 TAMPINES AVENUE 5 SINGAPORE 521147"
+  },
+  "111|WHAMPOA RD": {
+    "block": "111",
+    "street_name": "WHAMPOA RD",
+    "latitude": 1.32658975917056,
+    "longitude": 103.856187917486,
+    "postal": "321111",
+    "address": "111 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321111"
+  },
+  "112|LOR 3 GEYLANG": {
+    "block": "112",
+    "street_name": "LOR 3 GEYLANG",
+    "latitude": 1.31210823499254,
+    "longitude": 103.873783661336,
+    "postal": "381112",
+    "address": "112 LORONG 3 GEYLANG SINGAPORE 381112"
+  },
+  "103|TOWNER RD": {
+    "block": "103",
+    "street_name": "TOWNER RD",
+    "latitude": 1.32064381512285,
+    "longitude": 103.861634081148,
+    "postal": "322103",
+    "address": "103 TOWNER ROAD SINGAPORE 322103"
+  },
+  "168|STIRLING RD": {
+    "block": "168",
+    "street_name": "STIRLING RD",
+    "latitude": 1.29002050735811,
+    "longitude": 103.80318804437,
+    "postal": "141168",
+    "address": "168 STIRLING ROAD SINGAPORE 141168"
+  },
+  "255|TAMPINES ST 21": {
+    "block": "255",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35274328723174,
+    "longitude": 103.950383574634,
+    "postal": "521255",
+    "address": "255 TAMPINES STREET 21 SINGAPORE 521255"
+  },
+  "112|TAMPINES ST 11": {
+    "block": "112",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34629813577257,
+    "longitude": 103.947509805595,
+    "postal": "521112",
+    "address": "112 TAMPINES STREET 11 SINGAPORE 521112"
+  },
+  "102|TAMPINES ST 11": {
+    "block": "102",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34671616267656,
+    "longitude": 103.945521388285,
+    "postal": "521102",
+    "address": "102 TAMPINES STREET 11 SINGAPORE 521102"
+  },
+  "226|TAMPINES ST 23": {
+    "block": "226",
+    "street_name": "TAMPINES ST 23",
+    "latitude": 1.35551796009099,
+    "longitude": 103.954009189132,
+    "postal": "521226",
+    "address": "226 TAMPINES STREET 23 SINGAPORE 521226"
+  },
+  "228|TAMPINES ST 23": {
+    "block": "228",
+    "street_name": "TAMPINES ST 23",
+    "latitude": 1.35560353232848,
+    "longitude": 103.954652057339,
+    "postal": "521228",
+    "address": "228 TAMPINES STREET 23 SINGAPORE 521228"
+  },
+  "882|TAMPINES ST 84": {
+    "block": "882",
+    "street_name": "TAMPINES ST 84",
+    "latitude": 1.35204684938015,
+    "longitude": 103.933462049385,
+    "postal": "521882",
+    "address": "882 TAMPINES STREET 84 HAPPY KIDS CHILDCARE & DEVELOPMENT CENTRE SINGAPORE 521882"
+  },
+  "256|TAMPINES ST 21": {
+    "block": "256",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35323572708512,
+    "longitude": 103.949946614899,
+    "postal": "522256",
+    "address": "256 TAMPINES STREET 21 SINGAPORE 522256"
+  },
+  "124|TAMPINES ST 11": {
+    "block": "124",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34518428911075,
+    "longitude": 103.949793325094,
+    "postal": "521124",
+    "address": "124 TAMPINES STREET 11 SINGAPORE 521124"
+  },
+  "120|BT MERAH VIEW": {
+    "block": "120",
+    "street_name": "BT MERAH VIEW",
+    "latitude": 1.28277443239482,
+    "longitude": 103.822612454246,
+    "postal": "152120",
+    "address": "120 BUKIT MERAH VIEW BUKIT MERAH VIEW SINGAPORE 152120"
+  },
+  "101|TOWNER RD": {
+    "block": "101",
+    "street_name": "TOWNER RD",
+    "latitude": 1.31942539040726,
+    "longitude": 103.861087462608,
+    "postal": "322101",
+    "address": "101 TOWNER ROAD SINGAPORE 322101"
+  },
+  "110|WHAMPOA RD": {
+    "block": "110",
+    "street_name": "WHAMPOA RD",
+    "latitude": 1.32682122581121,
+    "longitude": 103.855890714758,
+    "postal": "321110",
+    "address": "110 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321110"
+  },
+  "112|WHAMPOA RD": {
+    "block": "112",
+    "street_name": "WHAMPOA RD",
+    "latitude": 1.32600154062314,
+    "longitude": 103.856732205989,
+    "postal": "321112",
+    "address": "112 WHAMPOA ROAD PCF SPARKLETOTS PRESCHOOL @ WHAMPOA BLK 112 (KN) SINGAPORE 321112"
+  },
+  "103|JLN RAJAH": {
+    "block": "103",
+    "street_name": "JLN RAJAH",
+    "latitude": 1.32734143333539,
+    "longitude": 103.852780650365,
+    "postal": "321103",
+    "address": "103 JALAN RAJAH SINGAPORE 321103"
+  },
+  "139|TAMPINES ST 11": {
+    "block": "139",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34616073984853,
+    "longitude": 103.944509228,
+    "postal": "521139",
+    "address": "139 TAMPINES STREET 11 SINGAPORE 521139"
+  },
+  "138|TAMPINES ST 11": {
+    "block": "138",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.3455045062724,
+    "longitude": 103.945588355383,
+    "postal": "521138",
+    "address": "138 TAMPINES STREET 11 SINGAPORE 521138"
+  },
+  "242|TAMPINES ST 21": {
+    "block": "242",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35403883742636,
+    "longitude": 103.946583772874,
+    "postal": "521242",
+    "address": "242 TAMPINES STREET 21 SINGAPORE 521242"
+  },
+  "157|TAMPINES ST 12": {
+    "block": "157",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35107329077378,
+    "longitude": 103.945003856886,
+    "postal": "521157",
+    "address": "157 TAMPINES STREET 12 SINGAPORE 521157"
+  },
+  "244|TAMPINES ST 21": {
+    "block": "244",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35380840642139,
+    "longitude": 103.947114964145,
+    "postal": "521244",
+    "address": "244 TAMPINES STREET 21 SINGAPORE 521244"
+  },
+  "150|TAMPINES ST 12": {
+    "block": "150",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35094609975013,
+    "longitude": 103.943260115057,
+    "postal": "521150",
+    "address": "150 TAMPINES STREET 12 SINGAPORE 521150"
+  },
+  "110|TAMPINES ST 11": {
+    "block": "110",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34694662248116,
+    "longitude": 103.949306963291,
+    "postal": "521110",
+    "address": "110 TAMPINES STREET 11 SINGAPORE 521110"
+  },
+  "101|TAMPINES ST 11": {
+    "block": "101",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34739870794535,
+    "longitude": 103.945292359327,
+    "postal": "521101",
+    "address": "101 TAMPINES STREET 11 SAINT LUKE'S ELDERCARE TAMPINES CENTRE SINGAPORE 521101"
+  },
+  "126|TAMPINES ST 11": {
+    "block": "126",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34578613288722,
+    "longitude": 103.950321611291,
+    "postal": "521126",
+    "address": "126 TAMPINES STREET 11 SINGAPORE 521126"
+  },
+  "229|TAMPINES ST 23": {
+    "block": "229",
+    "street_name": "TAMPINES ST 23",
+    "latitude": 1.35593143453856,
+    "longitude": 103.953944534569,
+    "postal": "521229",
+    "address": "229 TAMPINES STREET 23 SINGAPORE 521229"
+  },
+  "151|TAMPINES ST 12": {
+    "block": "151",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35140047388047,
+    "longitude": 103.943793356408,
+    "postal": "521151",
+    "address": "151 TAMPINES STREET 12 SINGAPORE 521151"
+  },
+  "149|TAMPINES ST 12": {
+    "block": "149",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35140199155209,
+    "longitude": 103.942727273621,
+    "postal": "521149",
+    "address": "149 TAMPINES STREET 12 SINGAPORE 521149"
+  },
+  "120|PAYA LEBAR WAY": {
+    "block": "120",
+    "street_name": "PAYA LEBAR WAY",
+    "latitude": 1.32259415243858,
+    "longitude": 103.884296105282,
+    "postal": "381120",
+    "address": "120 PAYA LEBAR WAY SINGAPORE 381120"
+  },
+  "104|WHAMPOA DR": {
+    "block": "104",
+    "street_name": "WHAMPOA DR",
+    "latitude": 1.3207995912383,
+    "longitude": 103.853327785421,
+    "postal": "323104",
+    "address": "104 WHAMPOA DRIVE WHAMPOA VIEW SINGAPORE 323104"
+  },
+  "111|TAMPINES ST 11": {
+    "block": "111",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34691471378463,
+    "longitude": 103.947416464642,
+    "postal": "521111",
+    "address": "111 TAMPINES STREET 11 SINGAPORE 521111"
+  },
+  "145|TAMPINES ST 12": {
+    "block": "145",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34880182138885,
+    "longitude": 103.943691020379,
+    "postal": "521145",
+    "address": "145 TAMPINES STREET 12 SINGAPORE 521145"
+  },
+  "235|TAMPINES ST 21": {
+    "block": "235",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35549080919861,
+    "longitude": 103.948259265817,
+    "postal": "521235",
+    "address": "235 TAMPINES STREET 21 SINGAPORE 521235"
+  },
+  "248|TAMPINES ST 21": {
+    "block": "248",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35191019042837,
+    "longitude": 103.947108773379,
+    "postal": "521248",
+    "address": "248 TAMPINES STREET 21 SINGAPORE 521248"
+  },
+  "158|TAMPINES ST 12": {
+    "block": "158",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35141456108804,
+    "longitude": 103.945859048593,
+    "postal": "521158",
+    "address": "158 TAMPINES STREET 12 SINGAPORE 521158"
+  },
+  "114|TAMPINES ST 11": {
+    "block": "114",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34597162499396,
+    "longitude": 103.946759997114,
+    "postal": "521114",
+    "address": "114 TAMPINES STREET 11 SINGAPORE 521114"
+  },
+  "156|TAMPINES ST 12": {
+    "block": "156",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35162194359965,
+    "longitude": 103.945090000876,
+    "postal": "521156",
+    "address": "156 TAMPINES STREET 12 SINGAPORE 521156"
+  },
+  "787|CHOA CHU KANG NTH 6": {
+    "block": "787",
+    "street_name": "CHOA CHU KANG NTH 6",
+    "latitude": 1.39582035325566,
+    "longitude": 103.747752649661,
+    "postal": "682787",
+    "address": "787 CHOA CHU KANG NORTH 6 SINGAPORE 682787"
+  },
+  "122|PAYA LEBAR WAY": {
+    "block": "122",
+    "street_name": "PAYA LEBAR WAY",
+    "latitude": 1.32260037517198,
+    "longitude": 103.882463203575,
+    "postal": "381122",
+    "address": "122 PAYA LEBAR WAY SINGAPORE 381122"
+  },
+  "102|JLN RAJAH": {
+    "block": "102",
+    "street_name": "JLN RAJAH",
+    "latitude": 1.32822306444761,
+    "longitude": 103.851519753845,
+    "postal": "321102",
+    "address": "102 JALAN RAJAH RAJAH COURT SINGAPORE 321102"
+  },
+  "109|WHAMPOA RD": {
+    "block": "109",
+    "street_name": "WHAMPOA RD",
+    "latitude": 1.32714817577656,
+    "longitude": 103.855700914421,
+    "postal": "321109",
+    "address": "109 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321109"
+  },
+  "106|TOWNER RD": {
+    "block": "106",
+    "street_name": "TOWNER RD",
+    "latitude": 1.32102000991534,
+    "longitude": 103.860997833137,
+    "postal": "322106",
+    "address": "106 TOWNER ROAD SINGAPORE 322106"
+  },
+  "221|TAMPINES ST 24": {
+    "block": "221",
+    "street_name": "TAMPINES ST 24",
+    "latitude": 1.35516056233115,
+    "longitude": 103.952361056234,
+    "postal": "521221",
+    "address": "221 TAMPINES STREET 24 SINGAPORE 521221"
+  },
+  "234|TAMPINES ST 21": {
+    "block": "234",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35590413566011,
+    "longitude": 103.948024616734,
+    "postal": "521234",
+    "address": "234 TAMPINES STREET 21 SINGAPORE 521234"
+  },
+  "107|TAMPINES ST 11": {
+    "block": "107",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34836421842072,
+    "longitude": 103.948158723814,
+    "postal": "521107",
+    "address": "107 TAMPINES STREET 11 SINGAPORE 521107"
+  },
+  "161|TAMPINES ST 12": {
+    "block": "161",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35000084839602,
+    "longitude": 103.945978324355,
+    "postal": "521161",
+    "address": "161 TAMPINES STREET 12 SINGAPORE 521161"
+  },
+  "222|TAMPINES ST 24": {
+    "block": "222",
+    "street_name": "TAMPINES ST 24",
+    "latitude": 1.35551706060218,
+    "longitude": 103.952686477721,
+    "postal": "521222",
+    "address": "222 TAMPINES STREET 24 SINGAPORE 521222"
+  },
+  "159|TAMPINES ST 12": {
+    "block": "159",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35104130847402,
+    "longitude": 103.946051539375,
+    "postal": "521159",
+    "address": "159 TAMPINES STREET 12 SINGAPORE 521159"
+  },
+  "163|TAMPINES ST 12": {
+    "block": "163",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34953223099799,
+    "longitude": 103.947459140714,
+    "postal": "521163",
+    "address": "163 TAMPINES STREET 12 SINGAPORE 521163"
+  },
+  "754|WOODLANDS CIRCLE": {
+    "block": "754",
+    "street_name": "WOODLANDS CIRCLE",
+    "latitude": 1.44528901712634,
+    "longitude": 103.793928766431,
+    "postal": "731754",
+    "address": "754 WOODLANDS CIRCLE SINGAPORE 731754"
+  },
+  "231|TAMPINES ST 21": {
+    "block": "231",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35594124704072,
+    "longitude": 103.94917043237,
+    "postal": "521231",
+    "address": "231 TAMPINES STREET 21 SINGAPORE 521231"
+  },
+  "141|TAMPINES ST 12": {
+    "block": "141",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34824895315275,
+    "longitude": 103.944920713854,
+    "postal": "521141",
+    "address": "141 TAMPINES STREET 12 SINGAPORE 521141"
+  },
+  "245|TAMPINES ST 21": {
+    "block": "245",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35320840937901,
+    "longitude": 103.946489840363,
+    "postal": "521245",
+    "address": "245 TAMPINES STREET 21 SINGAPORE 521245"
+  },
+  "259|BT PANJANG RING RD": {
+    "block": "259",
+    "street_name": "BT PANJANG RING RD",
+    "latitude": 1.37704293112476,
+    "longitude": 103.773310086846,
+    "postal": "671259",
+    "address": "259 BUKIT PANJANG RING ROAD BUKIT PANJANG NEIGHBOURHOOD CENTRE SINGAPORE 671259"
+  },
+  "126|GEYLANG EAST AVE 1": {
+    "block": "126",
+    "street_name": "GEYLANG EAST AVE 1",
+    "latitude": 1.31755699491525,
+    "longitude": 103.887130250228,
+    "postal": "381126",
+    "address": "126 GEYLANG EAST AVENUE 1 GEYLANG EAST GROVE SINGAPORE 381126"
+  },
+  "331|TAH CHING RD": {
+    "block": "331",
+    "street_name": "TAH CHING RD",
+    "latitude": 1.33807458629683,
+    "longitude": 103.723432148725,
+    "postal": "611331",
+    "address": "331 TAH CHING ROAD SINGAPORE 611331"
+  },
+  "106|JLN RAJAH": {
+    "block": "106",
+    "street_name": "JLN RAJAH",
+    "latitude": 1.32847655795117,
+    "longitude": 103.854698874866,
+    "postal": "321106",
+    "address": "106 JALAN RAJAH RAJAH COURT SINGAPORE 321106"
+  },
+  "223|TAMPINES ST 24": {
+    "block": "223",
+    "street_name": "TAMPINES ST 24",
+    "latitude": 1.35538447535137,
+    "longitude": 103.953204502396,
+    "postal": "521223",
+    "address": "223 TAMPINES STREET 24 SINGAPORE 521223"
+  },
+  "127|TAMPINES ST 11": {
+    "block": "127",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34543163487949,
+    "longitude": 103.95064762788,
+    "postal": "521127",
+    "address": "127 TAMPINES STREET 11 SINGAPORE 521127"
+  },
+  "148|TAMPINES AVE 5": {
+    "block": "148",
+    "street_name": "TAMPINES AVE 5",
+    "latitude": 1.35061317143501,
+    "longitude": 103.942249974279,
+    "postal": "521148",
+    "address": "148 TAMPINES AVENUE 5 SINGAPORE 521148"
+  },
+  "102|TOWNER RD": {
+    "block": "102",
+    "street_name": "TOWNER RD",
+    "latitude": 1.32058609456907,
+    "longitude": 103.862002015145,
+    "postal": "322102",
+    "address": "102 TOWNER ROAD SINGAPORE 322102"
+  },
+  "101|WHAMPOA DR": {
+    "block": "101",
+    "street_name": "WHAMPOA DR",
+    "latitude": 1.32041710187602,
+    "longitude": 103.853813946402,
+    "postal": "323101",
+    "address": "101 WHAMPOA DRIVE WHAMPOA VIEW SINGAPORE 323101"
+  },
+  "225|TAMPINES ST 23": {
+    "block": "225",
+    "street_name": "TAMPINES ST 23",
+    "latitude": 1.35515863595555,
+    "longitude": 103.95401278891,
+    "postal": "521225",
+    "address": "225 TAMPINES STREET 23 SINGAPORE 521225"
+  },
+  "125|BT MERAH VIEW": {
+    "block": "125",
+    "street_name": "BT MERAH VIEW",
+    "latitude": 1.28506119216141,
+    "longitude": 103.823812011597,
+    "postal": "151125",
+    "address": "125 BUKIT MERAH VIEW SINGAPORE 151125"
+  },
+  "125|GEYLANG EAST AVE 1": {
+    "block": "125",
+    "street_name": "GEYLANG EAST AVE 1",
+    "latitude": 1.31744387800501,
+    "longitude": 103.886373732265,
+    "postal": "381125",
+    "address": "125 GEYLANG EAST AVENUE 1 GEYLANG EAST GROVE SINGAPORE 381125"
+  },
+  "123|PAYA LEBAR WAY": {
+    "block": "123",
+    "street_name": "PAYA LEBAR WAY",
+    "latitude": 1.32275605425694,
+    "longitude": 103.88323521219,
+    "postal": "381123",
+    "address": "123 PAYA LEBAR WAY SINGAPORE 381123"
+  },
+  "108|MCNAIR RD": {
+    "block": "108",
+    "street_name": "MCNAIR RD",
+    "latitude": 1.3216190383169,
+    "longitude": 103.859382719506,
+    "postal": "321108",
+    "address": "108 MCNAIR ROAD MCNAIR SPRING SINGAPORE 321108"
+  },
+  "114|LOR 3 GEYLANG": {
+    "block": "114",
+    "street_name": "LOR 3 GEYLANG",
+    "latitude": 1.31149898527826,
+    "longitude": 103.874031815966,
+    "postal": "381114",
+    "address": "114 LORONG 3 GEYLANG SINGAPORE 381114"
+  },
+  "113|TAMPINES ST 11": {
+    "block": "113",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34647851722058,
+    "longitude": 103.946176771298,
+    "postal": "521113",
+    "address": "113 TAMPINES STREET 11 SINGAPORE 521113"
+  },
+  "165|TAMPINES ST 12": {
+    "block": "165",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34925962313654,
+    "longitude": 103.945859451023,
+    "postal": "521165",
+    "address": "165 TAMPINES STREET 12 SINGAPORE 521165"
+  },
+  "146|TAMPINES AVE 5": {
+    "block": "146",
+    "street_name": "TAMPINES AVE 5",
+    "latitude": 1.34800834174247,
+    "longitude": 103.942813802423,
+    "postal": "521146",
+    "address": "146 TAMPINES AVENUE 5 SINGAPORE 521146"
+  },
+  "215|CHOA CHU KANG CTRL": {
+    "block": "215",
+    "street_name": "CHOA CHU KANG CTRL",
+    "latitude": 1.38308302434129,
+    "longitude": 103.747076627693,
+    "postal": "NIL",
+    "address": "BLK 216 AND 215 CHOA CHU KANG CENTRAL"
+  },
+  "104|TOWNER RD": {
+    "block": "104",
+    "street_name": "TOWNER RD",
+    "latitude": 1.31982354462646,
+    "longitude": 103.860979745364,
+    "postal": "322104",
+    "address": "104 TOWNER ROAD SINGAPORE 322104"
+  },
+  "243|TAMPINES ST 21": {
+    "block": "243",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35419527444806,
+    "longitude": 103.947122094105,
+    "postal": "521243",
+    "address": "243 TAMPINES STREET 21 SINGAPORE 521243"
+  },
+  "162|TAMPINES ST 12": {
+    "block": "162",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34990496411198,
+    "longitude": 103.947139796649,
+    "postal": "521162",
+    "address": "162 TAMPINES STREET 12 SINGAPORE 521162"
+  },
+  "126|BT MERAH VIEW": {
+    "block": "126",
+    "street_name": "BT MERAH VIEW",
+    "latitude": 1.28442540460774,
+    "longitude": 103.823909174073,
+    "postal": "151126",
+    "address": "126 BUKIT MERAH VIEW SINGAPORE 151126"
+  },
+  "246|TAMPINES ST 21": {
+    "block": "246",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35322549774418,
+    "longitude": 103.947232182338,
+    "postal": "521246",
+    "address": "246 TAMPINES STREET 21 SINGAPORE 521246"
+  },
+  "144|TAMPINES ST 12": {
+    "block": "144",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.34841857750645,
+    "longitude": 103.943725846535,
+    "postal": "521144",
+    "address": "144 TAMPINES STREET 12 SINGAPORE 521144"
+  },
+  "232|TAMPINES ST 21": {
+    "block": "232",
+    "street_name": "TAMPINES ST 21",
+    "latitude": 1.35641019271569,
+    "longitude": 103.948701736728,
+    "postal": "521232",
+    "address": "232 TAMPINES STREET 21 SINGAPORE 521232"
+  },
+  "106|TAMPINES ST 11": {
+    "block": "106",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34753919206552,
+    "longitude": 103.947675427986,
+    "postal": "521106",
+    "address": "106 TAMPINES STREET 11 SINGAPORE 521106"
+  },
+  "113|LOR 3 GEYLANG": {
+    "block": "113",
+    "street_name": "LOR 3 GEYLANG",
+    "latitude": 1.31179784731942,
+    "longitude": 103.873852489639,
+    "postal": "381113",
+    "address": "113 LORONG 3 GEYLANG SINGAPORE 381113"
+  },
+  "108|TAMPINES ST 11": {
+    "block": "108",
+    "street_name": "TAMPINES ST 11",
+    "latitude": 1.34786646438205,
+    "longitude": 103.94856161626,
+    "postal": "521108",
+    "address": "108 TAMPINES STREET 11 SINGAPORE 521108"
+  },
+  "104|JLN RAJAH": {
+    "block": "104",
+    "street_name": "JLN RAJAH",
+    "latitude": 1.32780496961457,
+    "longitude": 103.853262284564,
+    "postal": "321104",
+    "address": "104 JALAN RAJAH SINGAPORE 321104"
+  },
+  "224|TAMPINES ST 23": {
+    "block": "224",
+    "street_name": "TAMPINES ST 23",
+    "latitude": 1.35538493501861,
+    "longitude": 103.95348853253,
+    "postal": "521224",
+    "address": "224 TAMPINES STREET 23 SINGAPORE 521224"
+  },
+  "160|TAMPINES ST 12": {
+    "block": "160",
+    "street_name": "TAMPINES ST 12",
+    "latitude": 1.35070236635392,
+    "longitude": 103.945183618846,
+    "postal": "521160",
+    "address": "160 TAMPINES STREET 12 SINGAPORE 521160"
+  },
+  "230|TAMPINES ST 24": {
+    "block": "230",
+    "street_name": "TAMPINES ST 24",
+    "latitude": 1.35593242580821,
+    "longitude": 103.952746609869,
+    "postal": "524230",
+    "address": "230 TAMPINES STREET 24 SINGAPORE 524230"
+  },
+  "124|PAYA LEBAR WAY": {
+    "block": "124",
+    "street_name": "PAYA LEBAR WAY",
+    "latitude": 1.32308876681681,
+    "longitude": 103.883739097439,
+    "postal": "381124",
+    "address": "124 PAYA LEBAR WAY SINGAPORE 381124"
+  },
+  "111|LOR 3 GEYLANG": {
+    "block": "111",
+    "street_name": "LOR 3 GEYLANG",
+    "latitude": 1.31234800506209,
+    "longitude": 103.873747840397,
+    "postal": "381111",
+    "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
+  },
+  "154A|BEDOK STH RD": {
+    "block": "154A",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.3181828876969,
+    "longitude": 103.946753679727,
+    "postal": "461154",
+    "address": "154A BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 461154"
+  },
+  "153C|BEDOK STH RD": {
+    "block": "153C",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.31860853270671,
+    "longitude": 103.946523452962,
+    "postal": "463153",
+    "address": "153C BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 463153"
+  },
+  "153B|BEDOK STH RD": {
+    "block": "153B",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.31906119758746,
+    "longitude": 103.946370356432,
+    "postal": "462153",
+    "address": "153B BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 462153"
   }
 }
