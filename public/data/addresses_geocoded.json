@@ -76735,6 +76735,30 @@
     "postal": "822415",
     "address": "415B NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 822415"
   },
+  "154A|BEDOK STH RD": {
+    "block": "154A",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.3181828876969,
+    "longitude": 103.946753679727,
+    "postal": "461154",
+    "address": "154A BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 461154"
+  },
+  "153C|BEDOK STH RD": {
+    "block": "153C",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.31860853270671,
+    "longitude": 103.946523452962,
+    "postal": "463153",
+    "address": "153C BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 463153"
+  },
+  "153B|BEDOK STH RD": {
+    "block": "153B",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.31906119758746,
+    "longitude": 103.946370356432,
+    "postal": "462153",
+    "address": "153B BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 462153"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77623,28 +77647,20 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "154A|BEDOK STH RD": {
-    "block": "154A",
-    "street_name": "BEDOK STH RD",
-    "latitude": 1.3181828876969,
-    "longitude": 103.946753679727,
-    "postal": "461154",
-    "address": "154A BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 461154"
+  "422B|NORTHSHORE DR": {
+    "block": "422B",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.4198034954577,
+    "longitude": 103.905195322462,
+    "postal": "822422",
+    "address": "422B NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 822422"
   },
-  "153C|BEDOK STH RD": {
-    "block": "153C",
-    "street_name": "BEDOK STH RD",
-    "latitude": 1.31860853270671,
-    "longitude": 103.946523452962,
-    "postal": "463153",
-    "address": "153C BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 463153"
-  },
-  "153B|BEDOK STH RD": {
-    "block": "153B",
-    "street_name": "BEDOK STH RD",
-    "latitude": 1.31906119758746,
-    "longitude": 103.946370356432,
-    "postal": "462153",
-    "address": "153B BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 462153"
+  "618A|TAMPINES ST 61": {
+    "block": "618A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.36233452000448,
+    "longitude": 103.938797272274,
+    "postal": "521618",
+    "address": "618A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521618"
   }
 }
