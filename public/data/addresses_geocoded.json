@@ -76759,6 +76759,22 @@
     "postal": "462153",
     "address": "153B BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 462153"
   },
+  "422B|NORTHSHORE DR": {
+    "block": "422B",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.4198034954577,
+    "longitude": 103.905195322462,
+    "postal": "822422",
+    "address": "422B NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 822422"
+  },
+  "618A|TAMPINES ST 61": {
+    "block": "618A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.36233452000448,
+    "longitude": 103.938797272274,
+    "postal": "521618",
+    "address": "618A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521618"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -76858,10 +76874,9 @@
   "101|JLN RAJAH": {
     "block": "101",
     "street_name": "JLN RAJAH",
-    "latitude": 1.32871478392959,
-    "longitude": 103.850545321033,
-    "postal": "321101",
-    "address": "101 JALAN RAJAH NEIGHBOURHOOD POLICE POST MOULMEIN SINGAPORE 321101"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "150|MEI LING ST": {
     "block": "150",
@@ -77026,10 +77041,9 @@
   "124|TAMPINES ST 11": {
     "block": "124",
     "street_name": "TAMPINES ST 11",
-    "latitude": 1.34518428911075,
-    "longitude": 103.949793325094,
-    "postal": "521124",
-    "address": "124 TAMPINES STREET 11 SINGAPORE 521124"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "120|BT MERAH VIEW": {
     "block": "120",
@@ -77082,10 +77096,9 @@
   "138|TAMPINES ST 11": {
     "block": "138",
     "street_name": "TAMPINES ST 11",
-    "latitude": 1.3455045062724,
-    "longitude": 103.945588355383,
-    "postal": "521138",
-    "address": "138 TAMPINES STREET 11 SINGAPORE 521138"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "242|TAMPINES ST 21": {
     "block": "242",
@@ -77647,20 +77660,20 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "422B|NORTHSHORE DR": {
-    "block": "422B",
+  "413C|NORTHSHORE DR": {
+    "block": "413C",
     "street_name": "NORTHSHORE DR",
-    "latitude": 1.4198034954577,
-    "longitude": 103.905195322462,
-    "postal": "822422",
-    "address": "422B NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 822422"
+    "latitude": 1.41703649391814,
+    "longitude": 103.900922125364,
+    "postal": "823413",
+    "address": "413C NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 823413"
   },
-  "618A|TAMPINES ST 61": {
-    "block": "618A",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.36233452000448,
-    "longitude": 103.938797272274,
-    "postal": "521618",
-    "address": "618A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521618"
+  "415A|NORTHSHORE DR": {
+    "block": "415A",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.4166307861995,
+    "longitude": 103.89948833933,
+    "postal": "821415",
+    "address": "415A NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 821415"
   }
 }
