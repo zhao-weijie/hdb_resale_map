@@ -76775,6 +76775,22 @@
     "postal": "521618",
     "address": "618A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521618"
   },
+  "413C|NORTHSHORE DR": {
+    "block": "413C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.41703649391814,
+    "longitude": 103.900922125364,
+    "postal": "823413",
+    "address": "413C NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 823413"
+  },
+  "415A|NORTHSHORE DR": {
+    "block": "415A",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.4166307861995,
+    "longitude": 103.89948833933,
+    "postal": "821415",
+    "address": "415A NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 821415"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -76874,9 +76890,10 @@
   "101|JLN RAJAH": {
     "block": "101",
     "street_name": "JLN RAJAH",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.32871478392959,
+    "longitude": 103.850545321033,
+    "postal": "321101",
+    "address": "101 JALAN RAJAH NEIGHBOURHOOD POLICE POST MOULMEIN SINGAPORE 321101"
   },
   "150|MEI LING ST": {
     "block": "150",
@@ -77041,17 +77058,17 @@
   "124|TAMPINES ST 11": {
     "block": "124",
     "street_name": "TAMPINES ST 11",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.34518428911075,
+    "longitude": 103.949793325094,
+    "postal": "521124",
+    "address": "124 TAMPINES STREET 11 SINGAPORE 521124"
   },
   "120|BT MERAH VIEW": {
     "block": "120",
     "street_name": "BT MERAH VIEW",
-    "latitude": 1.28277443239482,
-    "longitude": 103.822612454246,
-    "postal": "152120",
-    "address": "120 BUKIT MERAH VIEW BUKIT MERAH VIEW SINGAPORE 152120"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "101|TOWNER RD": {
     "block": "101",
@@ -77072,10 +77089,9 @@
   "112|WHAMPOA RD": {
     "block": "112",
     "street_name": "WHAMPOA RD",
-    "latitude": 1.32600154062314,
-    "longitude": 103.856732205989,
-    "postal": "321112",
-    "address": "112 WHAMPOA ROAD PCF SPARKLETOTS PRESCHOOL @ WHAMPOA BLK 112 (KN) SINGAPORE 321112"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "103|JLN RAJAH": {
     "block": "103",
@@ -77096,9 +77112,10 @@
   "138|TAMPINES ST 11": {
     "block": "138",
     "street_name": "TAMPINES ST 11",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.3455045062724,
+    "longitude": 103.945588355383,
+    "postal": "521138",
+    "address": "138 TAMPINES STREET 11 SINGAPORE 521138"
   },
   "242|TAMPINES ST 21": {
     "block": "242",
@@ -77599,10 +77616,9 @@
   "113|LOR 3 GEYLANG": {
     "block": "113",
     "street_name": "LOR 3 GEYLANG",
-    "latitude": 1.31179784731942,
-    "longitude": 103.873852489639,
-    "postal": "381113",
-    "address": "113 LORONG 3 GEYLANG SINGAPORE 381113"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "108|TAMPINES ST 11": {
     "block": "108",
@@ -77660,20 +77676,20 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "413C|NORTHSHORE DR": {
-    "block": "413C",
+  "415C|NORTHSHORE DR": {
+    "block": "415C",
     "street_name": "NORTHSHORE DR",
-    "latitude": 1.41703649391814,
-    "longitude": 103.900922125364,
-    "postal": "823413",
-    "address": "413C NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 823413"
+    "latitude": 1.41744806971584,
+    "longitude": 103.900302527175,
+    "postal": "823415",
+    "address": "415C NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 823415"
   },
-  "415A|NORTHSHORE DR": {
-    "block": "415A",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.4166307861995,
-    "longitude": 103.89948833933,
-    "postal": "821415",
-    "address": "415A NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 821415"
+  "111A|ALKAFF CRES": {
+    "block": "111A",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33469497701906,
+    "longitude": 103.873122770802,
+    "postal": "341111",
+    "address": "111A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341111"
   }
 }
