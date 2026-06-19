@@ -77034,10 +77034,9 @@
   "102|TAMPINES ST 11": {
     "block": "102",
     "street_name": "TAMPINES ST 11",
-    "latitude": 1.34671616267656,
-    "longitude": 103.945521388285,
-    "postal": "521102",
-    "address": "102 TAMPINES STREET 11 SINGAPORE 521102"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "226|TAMPINES ST 23": {
     "block": "226",
@@ -77458,10 +77457,9 @@
   "127|TAMPINES ST 11": {
     "block": "127",
     "street_name": "TAMPINES ST 11",
-    "latitude": 1.34543163487949,
-    "longitude": 103.95064762788,
-    "postal": "521127",
-    "address": "127 TAMPINES STREET 11 SINGAPORE 521127"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "148|TAMPINES AVE 5": {
     "block": "148",
