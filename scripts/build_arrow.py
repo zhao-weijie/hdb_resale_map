@@ -136,6 +136,12 @@ def load_price_index() -> dict:
     return {row['quarter']: row['index'] for _, row in df.iterrows()}
 
 
+def quarter_sort_key(quarter: str) -> Tuple[int, int]:
+    """Convert YYYY-QN to a sortable tuple."""
+    year, q = quarter.split('-Q')
+    return int(year), int(q)
+
+
 def month_to_quarter(month: str) -> str:
     """Convert YYYY-MM to YYYY-QX format."""
     year, mon = month.split('-')
@@ -239,8 +245,28 @@ def join_and_enrich_data(df: pd.DataFrame, geocode_cache: dict) -> pd.DataFrame:
     # Add price index for time adjustment
     print("  Adding price index...")
     price_index = load_price_index()
+    latest_known_quarter = max(price_index.keys(), key=quarter_sort_key)
+    latest_known_index = price_index[latest_known_quarter]
+
+    def get_price_index(quarter: str) -> float:
+        if quarter in price_index:
+            return price_index[quarter]
+        if quarter_sort_key(quarter) > quarter_sort_key(latest_known_quarter):
+            return latest_known_index
+        raise ValueError(f"Missing resale price index for historical quarter: {quarter}")
+
     df['quarter'] = df['month'].apply(month_to_quarter)
-    df['price_index'] = df['quarter'].apply(lambda q: price_index.get(q, 100.0))
+    df['price_index'] = df['quarter'].apply(get_price_index)
+    missing_future_quarters = sorted(
+        {q for q in df['quarter'].unique() if q not in price_index},
+        key=quarter_sort_key
+    )
+    if missing_future_quarters:
+        print(
+            "  ! Price index missing for future/new quarters "
+            f"{missing_future_quarters}; using latest known index "
+            f"{latest_known_quarter}={latest_known_index}"
+        )
     print(f"  ✓ Price index added")
     
     print(f"  ✓ Calculated derived fields: price_psm, price_psf, remaining_lease_years, storey_midpoint, mrt_distance_m, price_index")
