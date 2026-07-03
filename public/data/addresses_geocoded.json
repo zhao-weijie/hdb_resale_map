@@ -76807,6 +76807,30 @@
     "postal": "341111",
     "address": "111A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341111"
   },
+  "415D|NORTHSHORE DR": {
+    "block": "415D",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.417630179134547,
+    "longitude": 103.9005529307896,
+    "postal": "824415",
+    "address": "415D NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 824415"
+  },
+  "31|MARGARET DR": {
+    "block": "31",
+    "street_name": "MARGARET DR",
+    "latitude": 1.298250972615293,
+    "longitude": 103.8039614532428,
+    "postal": "140031",
+    "address": "31 MARGARET DRIVE SKYRESIDENCE @ DAWSON SINGAPORE 140031"
+  },
+  "620B|TAMPINES ST 61": {
+    "block": "620B",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.361412794652148,
+    "longitude": 103.939404356376,
+    "postal": "522620",
+    "address": "620B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522620"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77170,9 +77194,10 @@
   "110|TAMPINES ST 11": {
     "block": "110",
     "street_name": "TAMPINES ST 11",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.346946622481148,
+    "longitude": 103.9493069632903,
+    "postal": "521110",
+    "address": "110 TAMPINES STREET 11 SINGAPORE 521110"
   },
   "101|TAMPINES ST 11": {
     "block": "101",
@@ -77313,10 +77338,9 @@
   "109|WHAMPOA RD": {
     "block": "109",
     "street_name": "WHAMPOA RD",
-    "latitude": 1.327148175776567,
-    "longitude": 103.8557009144204,
-    "postal": "321109",
-    "address": "109 WHAMPOA ROAD WHAMPOA GARDENS SINGAPORE 321109"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "106|TOWNER RD": {
     "block": "106",
@@ -77409,10 +77433,9 @@
   "245|TAMPINES ST 21": {
     "block": "245",
     "street_name": "TAMPINES ST 21",
-    "latitude": 1.35320840937902,
-    "longitude": 103.9464898403628,
-    "postal": "521245",
-    "address": "245 TAMPINES STREET 21 SINGAPORE 521245"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "259|BT PANJANG RING RD": {
     "block": "259",
@@ -77694,28 +77717,20 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "415D|NORTHSHORE DR": {
-    "block": "415D",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.417630179134547,
-    "longitude": 103.9005529307896,
-    "postal": "824415",
-    "address": "415D NORTHSHORE DRIVE WATERFRONT I @ NORTHSHORE SINGAPORE 824415"
-  },
-  "31|MARGARET DR": {
-    "block": "31",
+  "35|MARGARET DR": {
+    "block": "35",
     "street_name": "MARGARET DR",
-    "latitude": 1.298250972615293,
-    "longitude": 103.8039614532428,
-    "postal": "140031",
-    "address": "31 MARGARET DRIVE SKYRESIDENCE @ DAWSON SINGAPORE 140031"
+    "latitude": 1.297556961829603,
+    "longitude": 103.8050587819395,
+    "postal": "140035",
+    "address": "35 MARGARET DRIVE SKYRESIDENCE @ DAWSON SINGAPORE 140035"
   },
-  "620B|TAMPINES ST 61": {
-    "block": "620B",
+  "621B|TAMPINES ST 61": {
+    "block": "621B",
     "street_name": "TAMPINES ST 61",
-    "latitude": 1.361412794652148,
-    "longitude": 103.939404356376,
-    "postal": "522620",
-    "address": "620B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522620"
+    "latitude": 1.360944654718365,
+    "longitude": 103.9393998564484,
+    "postal": "522621",
+    "address": "621B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522621"
   }
 }
