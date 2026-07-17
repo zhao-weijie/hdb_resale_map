@@ -76847,6 +76847,30 @@
     "postal": "522621",
     "address": "621B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522621"
   },
+  "419B|NORTHSHORE DR": {
+    "block": "419B",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.41803209660986,
+    "longitude": 103.902160274039,
+    "postal": "822419",
+    "address": "419B NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 822419"
+  },
+  "40A|MARGARET DR": {
+    "block": "40A",
+    "street_name": "MARGARET DR",
+    "latitude": 1.29700687306954,
+    "longitude": 103.806057140127,
+    "postal": "141040",
+    "address": "40A MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 141040"
+  },
+  "114A|ALKAFF CRES": {
+    "block": "114A",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33562146047276,
+    "longitude": 103.872708673996,
+    "postal": "341114",
+    "address": "114A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341114"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -76978,10 +77002,9 @@
   "164|TAMPINES ST 12": {
     "block": "164",
     "street_name": "TAMPINES ST 12",
-    "latitude": 1.3496215142655,
-    "longitude": 103.946000691097,
-    "postal": "521164",
-    "address": "164 TAMPINES STREET 12 SINGAPORE 521164"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "247|TAMPINES ST 21": {
     "block": "247",
@@ -77130,10 +77153,9 @@
   "101|TOWNER RD": {
     "block": "101",
     "street_name": "TOWNER RD",
-    "latitude": 1.31942539040726,
-    "longitude": 103.861087462608,
-    "postal": "322101",
-    "address": "101 TOWNER ROAD SINGAPORE 322101"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "110|WHAMPOA RD": {
     "block": "110",
@@ -77282,10 +77304,9 @@
   "145|TAMPINES ST 12": {
     "block": "145",
     "street_name": "TAMPINES ST 12",
-    "latitude": 1.34880182138885,
-    "longitude": 103.943691020379,
-    "postal": "521145",
-    "address": "145 TAMPINES STREET 12 SINGAPORE 521145"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "235|TAMPINES ST 21": {
     "block": "235",
@@ -77578,10 +77599,9 @@
   "113|TAMPINES ST 11": {
     "block": "113",
     "street_name": "TAMPINES ST 11",
-    "latitude": 1.34647851722058,
-    "longitude": 103.946176771298,
-    "postal": "521113",
-    "address": "113 TAMPINES STREET 11 SINGAPORE 521113"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "165|TAMPINES ST 12": {
     "block": "165",
@@ -77734,29 +77754,5 @@
     "longitude": 103.873747840397,
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
-  },
-  "419B|NORTHSHORE DR": {
-    "block": "419B",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.41803209660986,
-    "longitude": 103.902160274039,
-    "postal": "822419",
-    "address": "419B NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 822419"
-  },
-  "40A|MARGARET DR": {
-    "block": "40A",
-    "street_name": "MARGARET DR",
-    "latitude": 1.29700687306954,
-    "longitude": 103.806057140127,
-    "postal": "141040",
-    "address": "40A MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 141040"
-  },
-  "114A|ALKAFF CRES": {
-    "block": "114A",
-    "street_name": "ALKAFF CRES",
-    "latitude": 1.33562146047276,
-    "longitude": 103.872708673996,
-    "postal": "341114",
-    "address": "114A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341114"
   }
 }
