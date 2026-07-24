@@ -76954,10 +76954,10 @@
   "216|CHOA CHU KANG CTRL": {
     "block": "216",
     "street_name": "CHOA CHU KANG CTRL",
-    "latitude": 1.38308302434129,
-    "longitude": 103.747076627693,
-    "postal": "NIL",
-    "address": "BLK 216 AND 215 CHOA CHU KANG CENTRAL"
+    "latitude": 1.38319877383368,
+    "longitude": 103.747183263739,
+    "postal": "680216",
+    "address": "216 CHOA CHU KANG CENTRAL SINGAPORE 680216"
   },
   "121|PAYA LEBAR WAY": {
     "block": "121",
@@ -77002,9 +77002,10 @@
   "164|TAMPINES ST 12": {
     "block": "164",
     "street_name": "TAMPINES ST 12",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.3496215142655,
+    "longitude": 103.946000691097,
+    "postal": "521164",
+    "address": "164 TAMPINES STREET 12 SINGAPORE 521164"
   },
   "247|TAMPINES ST 21": {
     "block": "247",
@@ -77153,9 +77154,10 @@
   "101|TOWNER RD": {
     "block": "101",
     "street_name": "TOWNER RD",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.31942539040726,
+    "longitude": 103.861087462608,
+    "postal": "322101",
+    "address": "101 TOWNER ROAD SINGAPORE 322101"
   },
   "110|WHAMPOA RD": {
     "block": "110",
@@ -77304,9 +77306,10 @@
   "145|TAMPINES ST 12": {
     "block": "145",
     "street_name": "TAMPINES ST 12",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.34880182138885,
+    "longitude": 103.943691020379,
+    "postal": "521145",
+    "address": "145 TAMPINES STREET 12 SINGAPORE 521145"
   },
   "235|TAMPINES ST 21": {
     "block": "235",
@@ -77599,9 +77602,10 @@
   "113|TAMPINES ST 11": {
     "block": "113",
     "street_name": "TAMPINES ST 11",
-    "latitude": null,
-    "longitude": null,
-    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
+    "latitude": 1.34647851722058,
+    "longitude": 103.946176771298,
+    "postal": "521113",
+    "address": "113 TAMPINES STREET 11 SINGAPORE 521113"
   },
   "165|TAMPINES ST 12": {
     "block": "165",
@@ -77622,10 +77626,10 @@
   "215|CHOA CHU KANG CTRL": {
     "block": "215",
     "street_name": "CHOA CHU KANG CTRL",
-    "latitude": 1.38308302434129,
-    "longitude": 103.747076627693,
-    "postal": "NIL",
-    "address": "BLK 216 AND 215 CHOA CHU KANG CENTRAL"
+    "latitude": 1.38289363072177,
+    "longitude": 103.747120904492,
+    "postal": "680215",
+    "address": "215 CHOA CHU KANG CENTRAL SINGAPORE 680215"
   },
   "104|TOWNER RD": {
     "block": "104",
@@ -77754,5 +77758,21 @@
     "longitude": 103.873747840397,
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
+  },
+  "40B|MARGARET DR": {
+    "block": "40B",
+    "street_name": "MARGARET DR",
+    "latitude": 1.2968132363236,
+    "longitude": 103.806238002701,
+    "postal": "142040",
+    "address": "40B MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 142040"
+  },
+  "114B|ALKAFF CRES": {
+    "block": "114B",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33520716488237,
+    "longitude": 103.872596050083,
+    "postal": "342114",
+    "address": "114B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342114"
   }
 }
