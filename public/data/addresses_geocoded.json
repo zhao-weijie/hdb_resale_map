@@ -76871,6 +76871,38 @@
     "postal": "341114",
     "address": "114A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341114"
   },
+  "216|CHOA CHU KANG CTRL": {
+    "block": "216",
+    "street_name": "CHOA CHU KANG CTRL",
+    "latitude": 1.38319877383368,
+    "longitude": 103.747183263739,
+    "postal": "680216",
+    "address": "216 CHOA CHU KANG CENTRAL SINGAPORE 680216"
+  },
+  "215|CHOA CHU KANG CTRL": {
+    "block": "215",
+    "street_name": "CHOA CHU KANG CTRL",
+    "latitude": 1.38289363072177,
+    "longitude": 103.747120904492,
+    "postal": "680215",
+    "address": "215 CHOA CHU KANG CENTRAL SINGAPORE 680215"
+  },
+  "40B|MARGARET DR": {
+    "block": "40B",
+    "street_name": "MARGARET DR",
+    "latitude": 1.2968132363236,
+    "longitude": 103.806238002701,
+    "postal": "142040",
+    "address": "40B MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 142040"
+  },
+  "114B|ALKAFF CRES": {
+    "block": "114B",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33520716488237,
+    "longitude": 103.872596050083,
+    "postal": "342114",
+    "address": "114B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342114"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -76950,14 +76982,6 @@
     "longitude": 103.836420334733,
     "postal": "081110",
     "address": "110 SPOTTISWOODE PARK ROAD SPOTTISWOODE PARK ESTATE SINGAPORE 081110"
-  },
-  "216|CHOA CHU KANG CTRL": {
-    "block": "216",
-    "street_name": "CHOA CHU KANG CTRL",
-    "latitude": 1.38319877383368,
-    "longitude": 103.747183263739,
-    "postal": "680216",
-    "address": "216 CHOA CHU KANG CENTRAL SINGAPORE 680216"
   },
   "121|PAYA LEBAR WAY": {
     "block": "121",
@@ -77623,14 +77647,6 @@
     "postal": "521146",
     "address": "146 TAMPINES AVENUE 5 SINGAPORE 521146"
   },
-  "215|CHOA CHU KANG CTRL": {
-    "block": "215",
-    "street_name": "CHOA CHU KANG CTRL",
-    "latitude": 1.38289363072177,
-    "longitude": 103.747120904492,
-    "postal": "680215",
-    "address": "215 CHOA CHU KANG CENTRAL SINGAPORE 680215"
-  },
   "104|TOWNER RD": {
     "block": "104",
     "street_name": "TOWNER RD",
@@ -77759,20 +77775,28 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "40B|MARGARET DR": {
-    "block": "40B",
-    "street_name": "MARGARET DR",
-    "latitude": 1.2968132363236,
-    "longitude": 103.806238002701,
-    "postal": "142040",
-    "address": "40B MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 142040"
+  "421C|NORTHSHORE DR": {
+    "block": "421C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.41921326140541,
+    "longitude": 103.905299855658,
+    "postal": "823421",
+    "address": "421C NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 823421"
   },
-  "114B|ALKAFF CRES": {
-    "block": "114B",
-    "street_name": "ALKAFF CRES",
-    "latitude": 1.33520716488237,
-    "longitude": 103.872596050083,
-    "postal": "342114",
-    "address": "114B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342114"
+  "419C|NORTHSHORE DR": {
+    "block": "419C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.41830121804059,
+    "longitude": 103.90257297467,
+    "postal": "823419",
+    "address": "419C NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 823419"
+  },
+  "621A|TAMPINES ST 61": {
+    "block": "621A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.3609453346909,
+    "longitude": 103.938691824361,
+    "postal": "521621",
+    "address": "621A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521621"
   }
 }
