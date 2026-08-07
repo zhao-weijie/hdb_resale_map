@@ -76903,6 +76903,30 @@
     "postal": "342114",
     "address": "114B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342114"
   },
+  "421C|NORTHSHORE DR": {
+    "block": "421C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.41921326140541,
+    "longitude": 103.905299855658,
+    "postal": "823421",
+    "address": "421C NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 823421"
+  },
+  "419C|NORTHSHORE DR": {
+    "block": "419C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.41830121804059,
+    "longitude": 103.90257297467,
+    "postal": "823419",
+    "address": "419C NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 823419"
+  },
+  "621A|TAMPINES ST 61": {
+    "block": "621A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.3609453346909,
+    "longitude": 103.938691824361,
+    "postal": "521621",
+    "address": "621A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521621"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -76972,8 +76996,8 @@
     "street_name": "BT MERAH VIEW",
     "latitude": 1.28342247684697,
     "longitude": 103.821068227228,
-    "postal": "152119",
-    "address": "119 BUKIT MERAH VIEW APEX DAY CARE ACTIVITY CENTRE SINGAPORE 152119"
+    "postal": "NIL",
+    "address": "119 BUKIT MERAH VIEW APEX DAY CARE ACTIVITY CENTRE"
   },
   "110|SPOTTISWOODE PK RD": {
     "block": "110",
@@ -76996,8 +77020,8 @@
     "street_name": "JLN RAJAH",
     "latitude": 1.32871478392959,
     "longitude": 103.850545321033,
-    "postal": "321101",
-    "address": "101 JALAN RAJAH NEIGHBOURHOOD POLICE POST MOULMEIN SINGAPORE 321101"
+    "postal": "NIL",
+    "address": "101 JALAN RAJAH NEIGHBOURHOOD POLICE POST MOULMEIN"
   },
   "150|MEI LING ST": {
     "block": "150",
@@ -77148,8 +77172,8 @@
     "street_name": "TAMPINES ST 84",
     "latitude": 1.35204684938015,
     "longitude": 103.933462049385,
-    "postal": "521882",
-    "address": "882 TAMPINES STREET 84 HAPPY KIDS CHILDCARE & DEVELOPMENT CENTRE SINGAPORE 521882"
+    "postal": "NIL",
+    "address": "882 TAMPINES STREET 84 HAPPY KIDS CHILDCARE & DEVELOPMENT CENTRE"
   },
   "256|TAMPINES ST 21": {
     "block": "256",
@@ -77196,8 +77220,8 @@
     "street_name": "WHAMPOA RD",
     "latitude": 1.32600154062314,
     "longitude": 103.856732205989,
-    "postal": "321112",
-    "address": "112 WHAMPOA ROAD PCF SPARKLETOTS PRESCHOOL @ WHAMPOA BLK 112 (KN) SINGAPORE 321112"
+    "postal": "NIL",
+    "address": "112 WHAMPOA ROAD PCF SPARKLETOTS PRESCHOOL @ WHAMPOA BLK 112 (KN)"
   },
   "103|JLN RAJAH": {
     "block": "103",
@@ -77268,8 +77292,8 @@
     "street_name": "TAMPINES ST 11",
     "latitude": 1.34739870794535,
     "longitude": 103.945292359327,
-    "postal": "521101",
-    "address": "101 TAMPINES STREET 11 SAINT LUKE'S ELDERCARE TAMPINES CENTRE SINGAPORE 521101"
+    "postal": "NIL",
+    "address": "101 TAMPINES STREET 11 SAINT LUKE'S ELDERCARE TAMPINES CENTRE"
   },
   "126|TAMPINES ST 11": {
     "block": "126",
@@ -77775,28 +77799,28 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "421C|NORTHSHORE DR": {
-    "block": "421C",
+  "420B|NORTHSHORE DR": {
+    "block": "420B",
     "street_name": "NORTHSHORE DR",
-    "latitude": 1.41921326140541,
-    "longitude": 103.905299855658,
-    "postal": "823421",
-    "address": "421C NORTHSHORE DRIVE NORTHSHORE STRAITSVIEW SINGAPORE 823421"
+    "latitude": 1.4186531330314,
+    "longitude": 103.901912547383,
+    "postal": "822420",
+    "address": "420B NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 822420"
   },
-  "419C|NORTHSHORE DR": {
-    "block": "419C",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.41830121804059,
-    "longitude": 103.90257297467,
-    "postal": "823419",
-    "address": "419C NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 823419"
+  "112A|ALKAFF CRES": {
+    "block": "112A",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33543941437138,
+    "longitude": 103.873403171831,
+    "postal": "341112",
+    "address": "112A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341112"
   },
-  "621A|TAMPINES ST 61": {
-    "block": "621A",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.3609453346909,
-    "longitude": 103.938691824361,
-    "postal": "521621",
-    "address": "621A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521621"
+  "113A|ALKAFF CRES": {
+    "block": "113A",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33595942768701,
+    "longitude": 103.873151042839,
+    "postal": "341113",
+    "address": "113A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341113"
   }
 }
