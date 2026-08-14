@@ -76927,6 +76927,30 @@
     "postal": "521621",
     "address": "621A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521621"
   },
+  "420B|NORTHSHORE DR": {
+    "block": "420B",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.4186531330314,
+    "longitude": 103.901912547383,
+    "postal": "822420",
+    "address": "420B NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 822420"
+  },
+  "112A|ALKAFF CRES": {
+    "block": "112A",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33543941437138,
+    "longitude": 103.873403171831,
+    "postal": "341112",
+    "address": "112A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341112"
+  },
+  "113A|ALKAFF CRES": {
+    "block": "113A",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.33595942768701,
+    "longitude": 103.873151042839,
+    "postal": "341113",
+    "address": "113A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341113"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77738,10 +77762,9 @@
   "113|LOR 3 GEYLANG": {
     "block": "113",
     "street_name": "LOR 3 GEYLANG",
-    "latitude": 1.31179784731942,
-    "longitude": 103.873852489639,
-    "postal": "381113",
-    "address": "113 LORONG 3 GEYLANG SINGAPORE 381113"
+    "latitude": null,
+    "longitude": null,
+    "error": "HTTPSConnectionPool(host='www.onemap.gov.sg', port=443): Read timed out. (read timeout=10)"
   },
   "108|TAMPINES ST 11": {
     "block": "108",
@@ -77799,28 +77822,28 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "420B|NORTHSHORE DR": {
-    "block": "420B",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.4186531330314,
-    "longitude": 103.901912547383,
-    "postal": "822420",
-    "address": "420B NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 822420"
-  },
-  "112A|ALKAFF CRES": {
-    "block": "112A",
+  "111B|ALKAFF CRES": {
+    "block": "111B",
     "street_name": "ALKAFF CRES",
-    "latitude": 1.33543941437138,
-    "longitude": 103.873403171831,
-    "postal": "341112",
-    "address": "112A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341112"
+    "latitude": 1.3350053450689,
+    "longitude": 103.873330554771,
+    "postal": "342111",
+    "address": "111B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342111"
   },
-  "113A|ALKAFF CRES": {
-    "block": "113A",
-    "street_name": "ALKAFF CRES",
-    "latitude": 1.33595942768701,
-    "longitude": 103.873151042839,
-    "postal": "341113",
-    "address": "113A ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 341113"
+  "110A|BIDADARI PK DR": {
+    "block": "110A",
+    "street_name": "BIDADARI PK DR",
+    "latitude": 1.33348416178983,
+    "longitude": 103.873147176611,
+    "postal": "341110",
+    "address": "110A BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 341110"
+  },
+  "107B|BIDADARI PK DR": {
+    "block": "107B",
+    "street_name": "BIDADARI PK DR",
+    "latitude": 1.33437155153983,
+    "longitude": 103.872117221909,
+    "postal": "342107",
+    "address": "107B BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 342107"
   }
 }
