@@ -76975,6 +76975,46 @@
     "postal": "342107",
     "address": "107B BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 342107"
   },
+  "153A|BEDOK STH RD": {
+    "block": "153A",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.319367766761237,
+    "longitude": 103.9469952317953,
+    "postal": "461153",
+    "address": "153A BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 461153"
+  },
+  "464B|CLEMENTI AVE 1": {
+    "block": "464B",
+    "street_name": "CLEMENTI AVE 1",
+    "latitude": 1.310137434580558,
+    "longitude": 103.7679727743091,
+    "postal": "122464",
+    "address": "464B CLEMENTI AVENUE 1 CLEMENTI PEAKS SINGAPORE 122464"
+  },
+  "627A|TAMPINES ST 61": {
+    "block": "627A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.363241561253232,
+    "longitude": 103.940161575823,
+    "postal": "521627",
+    "address": "627A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521627"
+  },
+  "112B|ALKAFF CRES": {
+    "block": "112B",
+    "street_name": "ALKAFF CRES",
+    "latitude": 1.335862313536717,
+    "longitude": 103.8735040037253,
+    "postal": "342112",
+    "address": "112B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342112"
+  },
+  "110B|BIDADARI PK DR": {
+    "block": "110B",
+    "street_name": "BIDADARI PK DR",
+    "latitude": 1.334068254294078,
+    "longitude": 103.8732659365756,
+    "postal": "342110",
+    "address": "110B BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 342110"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77847,44 +77887,20 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "153A|BEDOK STH RD": {
-    "block": "153A",
-    "street_name": "BEDOK STH RD",
-    "latitude": 1.319367766761237,
-    "longitude": 103.9469952317953,
-    "postal": "461153",
-    "address": "153A BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 461153"
+  "622B|TAMPINES AVE 12": {
+    "block": "622B",
+    "street_name": "TAMPINES AVE 12",
+    "latitude": 1.360984429964985,
+    "longitude": 103.9406662046777,
+    "postal": "522622",
+    "address": "622B TAMPINES AVENUE 12 TAMPINES GREENVERGE SINGAPORE 522622"
   },
-  "464B|CLEMENTI AVE 1": {
-    "block": "464B",
-    "street_name": "CLEMENTI AVE 1",
-    "latitude": 1.310137434580558,
-    "longitude": 103.7679727743091,
-    "postal": "122464",
-    "address": "464B CLEMENTI AVENUE 1 CLEMENTI PEAKS SINGAPORE 122464"
-  },
-  "627A|TAMPINES ST 61": {
-    "block": "627A",
+  "627B|TAMPINES ST 61": {
+    "block": "627B",
     "street_name": "TAMPINES ST 61",
-    "latitude": 1.363241561253232,
-    "longitude": 103.940161575823,
-    "postal": "521627",
-    "address": "627A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521627"
-  },
-  "112B|ALKAFF CRES": {
-    "block": "112B",
-    "street_name": "ALKAFF CRES",
-    "latitude": 1.335862313536717,
-    "longitude": 103.8735040037253,
-    "postal": "342112",
-    "address": "112B ALKAFF CRESCENT ALKAFF OASIS SINGAPORE 342112"
-  },
-  "110B|BIDADARI PK DR": {
-    "block": "110B",
-    "street_name": "BIDADARI PK DR",
-    "latitude": 1.334068254294078,
-    "longitude": 103.8732659365756,
-    "postal": "342110",
-    "address": "110B BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 342110"
+    "latitude": 1.363609326915282,
+    "longitude": 103.9399423538667,
+    "postal": "522627",
+    "address": "627B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522627"
   }
 }
