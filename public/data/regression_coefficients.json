@@ -1,11 +1,11 @@
 {
-  "intercept": 8.571441713677979,
+  "intercept": 8.571443317470699,
   "features": {
-    "storey_midpoint": 0.014053758460692059,
-    "remaining_lease_years": 0.004807307495898361,
-    "mrt_distance_km": -0.09943046193023362,
-    "floor_area_sqm": -0.0026803960160832006,
-    "flat_type_encoded": 0.029129696753665744
+    "storey_midpoint": 0.014053785162300967,
+    "remaining_lease_years": 0.004807290659707618,
+    "mrt_distance_km": -0.09943018504022236,
+    "floor_area_sqm": -0.0026804142461323505,
+    "flat_type_encoded": 0.02913006428939295
   },
   "flat_type_mapping": {
     "0": "1 ROOM",
@@ -16,26 +16,26 @@
     "5": "EXECUTIVE",
     "6": "MULTI-GENERATION"
   },
-  "r_squared": 0.3838790479202079,
+  "r_squared": 0.3838771558502183,
   "latest_price_index": 202.8,
   "latest_quarter": "2026-Q2",
-  "n_samples": 233980,
+  "n_samples": 233978,
   "summary_stats": {
     "storey_midpoint": {
-      "mean": 8.782938712710488,
-      "std": 5.954075083199828
+      "mean": 8.78295822684184,
+      "std": 5.9540822535617215
     },
     "remaining_lease_years": {
-      "mean": 74.08469954696983,
-      "std": 14.266284665509382
+      "mean": 74.08494815751908,
+      "std": 14.266084722945346
     },
     "mrt_distance_km": {
-      "mean": 0.5680846202505143,
-      "std": 0.3677371342418713
+      "mean": 0.5680839046407289,
+      "std": 0.3677385007577809
     },
     "floor_area_sqm": {
-      "mean": 96.69152320711171,
-      "std": 24.022317801123442
+      "mean": 96.69187957842189,
+      "std": 24.02209342713684
     }
   },
   "compatibility_note": "Legacy compact linear model retained for existing frontend helpers. Use enhanced_model_summary/regression_model.json for accuracy metrics.",
@@ -43,10 +43,10 @@
     "model_file": "regression_model.json",
     "model_type": "ridge_onehot_log_adjusted_price_psm",
     "target": "log(price_psm * latest_price_index / price_index)",
-    "full_corpus_r_squared_log": 0.920301628105512,
-    "validation_r_squared_log": 0.9013057970917299,
-    "test_r_squared_log": 0.9047243470720394,
-    "address_group_holdout_r_squared_log": 0.8776134978237711,
-    "excluded_rows_without_published_price_index": 4898
+    "full_corpus_r_squared_log": 0.9202984480265457,
+    "validation_r_squared_log": 0.9012993359722041,
+    "test_r_squared_log": 0.90471450533661,
+    "address_group_holdout_r_squared_log": 0.8775532570995862,
+    "excluded_rows_without_published_price_index": 5497
   }
 }
