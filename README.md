@@ -7,7 +7,7 @@ An interactive, high-performance map visualization of Singapore HDB resale trans
 - 🗺️ **WebGL Map Visualization** - Renders 100,000+ transactions smoothly using Deck.gl
 - 🎯 **Radial Selection** - Draw circular areas to analyze specific neighborhoods
 - 📊 **Time-Series Analytics** - View price trends over time
-- 📱 **Mobile-Optimized** - Heatmap view for mobile devices
+- 📱 **Mobile-Optimized** - Map and viewport statistics for mobile devices
 - 💾 **100% Static** - Client-side only, deployable to GitHub Pages/Vercel/Netlify
 - 🚀 **Apache Arrow** - Efficient binary data format for fast loading
 
@@ -32,11 +32,11 @@ npm install
 # First run: ~1 hour. Subsequent runs: fast, only new addresses are geocoded.
 python scripts/geocode_pipeline.py
 
-# Build Arrow data file (~1 min)
+# Build yearly Arrow data files
 python scripts/build_arrow.py
 ```
 
-This creates `public/data/hdb_data.arrow` which the web app loads.
+This creates `public/data/manifest.json` and content-hashed yearly Arrow files. The app loads only years required by the default or saved date filter, fetching older history when requested. Prices shown are actual transaction prices, without regression estimates or price-index adjustment.
 
 **Note:** `geocode_pipeline.py` downloads the latest HDB resale CSV from data.gov.sg by default. To test with a local CSV instead, set `HDB_RESALE_CSV=/path/to/file.csv`.
 
@@ -46,7 +46,7 @@ This creates `public/data/hdb_data.arrow` which the web app loads.
 npm run dev
 ```
 
-Open browser to http://localhost:5173
+Open browser to http://localhost:5173/hdb_resale_map/
 
 ### 4. Build for Production
 
@@ -65,12 +65,13 @@ hdb_resale_map/
 │   └── update-data.yml   # Auto-update data every Friday 00:00 UTC
 ├── scripts/              # Data pipeline (Python)
 │   ├── geocode_pipeline.py   # Downloads data + geocodes addresses
-│   ├── build_arrow.py        # Joins geocodes + exports Arrow file
+│   ├── build_arrow.py        # Joins geocodes + exports yearly Arrow files
 │   └── requirements.txt
 ├── public/data/          # Static data files served with the app
-│   ├── hdb_data.arrow
+│   ├── manifest.json
+│   ├── hdb_data_<year>-<hash>.arrow
 │   ├── addresses_geocoded.json
-│   └── HDBResalePriceIndex1Q2009100Quarterly.csv
+│   └── upcoming_mop.geojson
 ├── src/                  # Web application (TypeScript)
 │   ├── main.ts
 │   ├── data/
@@ -98,10 +99,10 @@ hdb_resale_map/
 
 Data is automatically refreshed every Friday via GitHub Actions (`update-data.yml`). The workflow:
 
-1. Downloads the latest HDB resale transactions and price index from [data.gov.sg](https://data.gov.sg)
+1. Downloads the latest HDB resale transactions from [data.gov.sg](https://data.gov.sg)
 2. Geocodes any new addresses via the OneMap API (typically none — all HDB blocks are already cached)
-3. Rebuilds `public/data/hdb_data.arrow` from the full dataset (~1 min)
-4. Commits changed files and pushes to `main`, triggering a redeployment
+3. Rebuilds yearly Arrow files and the manifest from the full dataset, removing obsolete partitions
+4. Commits generated data changes to `main`; the deployment workflow runs after a successful update
 
 To trigger a manual update, use the **workflow_dispatch** option in the GitHub Actions tab.
 

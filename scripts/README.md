@@ -41,26 +41,32 @@ To increase the geocoding rate limit:
 
 ### Step 2: Build Arrow
 
-Joins geocoded addresses with transactions and exports to Arrow format.
+Joins geocoded addresses with transactions and exports yearly Arrow files and a manifest. No model training is performed.
 
 ```bash
 python build_arrow.py
 ```
 
 **Output:**
-- `../public/data/hdb_data.arrow` - Main data file (Arrow IPC format)
+- `../public/data/manifest.json` - Year URLs, row counts, date bounds, and content hashes
+- `../public/data/hdb_data_<year>-<hash>.arrow` - One Arrow IPC file per year
+
+The pipeline removes obsolete yearly files. It does not generate an unpartitioned Arrow file.
 
 **Duration:** ~1 minute
 
 ## Data Format
 
-The final Arrow file contains:
-- **~600,000+ transactions** from 2017-present
+The yearly Arrow files contain:
+- **Transactions** from 2017-present
 - **Coordinates:** latitude, longitude
 - **Pricing:** resale_price, price_psm, price_psf
 - **Property details:** town, flat_type, floor_area_sqm, storey_range
 - **Lease info:** lease_commence_date, remaining_lease_years
 - **Temporal:** month, transaction_date
+- **Location detail:** distance to the nearest MRT exit
+
+Prices remain nominal transaction prices; model predictions and price-index adjustment are not included.
 
 ## Updating Data
 

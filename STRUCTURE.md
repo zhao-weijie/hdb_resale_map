@@ -2,7 +2,7 @@
 
 ## ✅ Everything is set up correctly!
 
-Your folder structure is actually fine - the data ended up in `scripts/data/` instead of the root `data/`, but that doesn't matter since you've already copied the Arrow file to where it needs to be.
+Raw CSV input is cached in `scripts/data/`. The pipeline writes the manifest and yearly Arrow files directly to `public/data/`.
 
 ```
 hdb_resale_map/
@@ -18,7 +18,8 @@ hdb_resale_map/
 │
 ├── public/                           # Static assets for web app
 │   └── data/
-│       └── hdb_data.arrow           # 25.2 MB ✓ WEB APP WILL LOAD THIS
+│       ├── manifest.json            # Year URLs and metadata
+│       └── hdb_data_<year>-<hash>.arrow # Yearly transaction partitions
 │
 ├── src/                              # TypeScript source code
 │   ├── main.ts
@@ -43,7 +44,7 @@ hdb_resale_map/
 ## ✅ Key Points
 
 1. **Raw data cache** → `scripts/data/` (works fine from scripts directory)
-2. **Web app data** → `public/data/hdb_data.arrow` ✓ **Already copied!**
+2. **Web app data** → `public/data/manifest.json` and the yearly Arrow files
 3. **Source code** → `src/` with all modules in place
 
 ## Next Steps
@@ -58,4 +59,4 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173 to see your HDB Resale Analytics map!
+Then open http://localhost:5173/hdb_resale_map/ to see your HDB Resale Analytics map!

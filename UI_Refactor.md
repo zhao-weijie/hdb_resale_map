@@ -31,7 +31,7 @@ Set "Clear" as a Secondary Action (Ghost/Outline style or subtle text link).
 
 Filters: Group "Time Period," "Flat Type," and "Lease" into a distinct card. Use custom-styled checkboxes or a multi-select chip UI instead of native browser checkboxes.
 
-Tabs: Refactor "Overview" and "Fair Value" into modern tabs with a clear active state (e.g., a high-contrast bottom border or a "pill" background).
+Analytics: Present overview statistics and price trends in a single section.
 
 4. Layout & Hierarchy
 
