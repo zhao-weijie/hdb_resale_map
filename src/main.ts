@@ -1,106 +1,67 @@
-/**
- * Main application entry point
- */
-
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { refreshIcons } from './icons';
 import { DataLoader } from './data/DataLoader';
 import { MapView } from './map/MapView';
 import { AnalyticsPanel } from './analytics/AnalyticsPanel';
 import { ColorScaleBar } from './components/ColorScaleBar';
 import { appState } from './state/AppState';
 import { applyFilters } from './utils/filters';
+import { readSavedFilters } from './utils/savedFilters';
 
-// Detect mobile vs desktop
 const isMobile = window.innerWidth < 768;
 
 async function initApp() {
-    console.log('🚀 Initializing HDB Resale Analytics...');
-
-    // Show mobile banner if on mobile
-    // Show mobile banner if on mobile
+    const loading = document.getElementById('loading-overlay');
+    // A compact status leaves the basemap usable while transaction history loads.
+    loading?.classList.add('loading-status');
+    performance.mark('app-start');
     if (isMobile) {
         const banner = document.getElementById('mobile-banner');
         if (banner) {
-            banner.style.display = 'flex'; // Changed to flex for layout
-
-            // Close logic
+            banner.style.display = 'flex';
             const closeBtn = document.createElement('button');
             closeBtn.id = 'mobile-banner-close';
+            closeBtn.setAttribute('aria-label', 'Dismiss mobile banner');
             closeBtn.innerHTML = '<i data-lucide="x"></i>';
-            closeBtn.onclick = () => {
-                banner.style.display = 'none';
-            };
+            closeBtn.onclick = () => { banner.style.display = 'none'; };
             banner.appendChild(closeBtn);
-            // @ts-ignore
-            if (window.lucide) window.lucide.createIcons();
+            refreshIcons();
         }
     }
 
     try {
-        // Load data
-        console.log('📊 Loading data...');
+        const filters = readSavedFilters(appState.get('globalFilters'));
+        appState.set('globalFilters', filters);
         const dataLoader = new DataLoader();
-        await dataLoader.load('data/hdb_data.arrow');
-        console.log(`✓ Loaded ${dataLoader.getRecordCount()} transactions`);
-
-        const allData = dataLoader.getAllData();
-        appState.set('allTransactions', allData);
-
-        // Apply default filter (2024-01 onwards) on first visit so ColorScaleBar
-        // stats and map reflect the recent market. FiltersCard will override this
-        // when the user explicitly applies filters (or on return visits via localStorage).
-        const defaultFiltered = applyFilters(allData, appState.get('globalFilters'));
-        appState.set('filteredTransactions', defaultFiltered);
-
-        // Initialize map
-        console.log('🗺️ Initializing map...');
         const mapView = new MapView('map-container', dataLoader, isMobile);
-        await mapView.initialize();
-        mapView.setFilteredData(defaultFiltered);
-        console.log('✓ Map initialized');
-
-        // Add color scale bar to the map's top-right control area
-        mapView.addControl(new ColorScaleBar(), 'top-right');
-
-        // Initialize analytics panel (desktop and mobile)
-        console.log('📈 Initializing analytics panel...');
+        const mapReady = mapView.initialize().then(() => {
+            performance.mark('basemap-ready');
+            mapView.addControl(new ColorScaleBar(), 'top-right');
+        });
+        const dataReady = (async () => {
+            await dataLoader.loadManifest();
+            await dataLoader.ensureDateRange(filters.date);
+            appState.set('allTransactions', dataLoader.getAllData());
+            appState.set('filteredTransactions', applyFilters(dataLoader.getAllData(), filters));
+        })();
+        await Promise.all([mapReady, dataReady]);
+        mapView.setFilteredData(appState.get('filteredTransactions'));
         const analyticsPanel = new AnalyticsPanel('analytics-panel', dataLoader, mapView);
         analyticsPanel.render();
-        await analyticsPanel.init(); // Load fair value analysis coefficients
-        console.log('✓ Analytics panel initialized');
-
-        console.log('✅ Application ready!');
-
-        // Hide loading overlay
-        const loadingOverlay = document.getElementById('loading-overlay');
-        if (loadingOverlay) {
-            loadingOverlay.classList.add('fade-out');
-            setTimeout(() => {
-                loadingOverlay.style.display = 'none';
-            }, 500);
-        }
-
+        loading?.remove();
+        requestAnimationFrame(() => {
+            performance.mark('transactions-ready');
+            performance.measure('startup-to-transactions', 'app-start', 'transactions-ready');
+        });
+        console.log(`Application ready: ${dataLoader.getRecordCount()} loaded transactions`);
     } catch (error) {
-        console.error('❌ Failed to initialize application:', error);
-
-        // Show error in loading overlay
-        const loadingOverlay = document.getElementById('loading-overlay');
-        if (loadingOverlay) {
-            loadingOverlay.innerHTML = `
-                <div style="text-align: center; padding: 20px;">
-                    <i data-lucide="alert-circle" style="color: var(--color-danger); width: 48px; height: 48px; margin-bottom: 16px;"></i>
-                    <h3 style="margin-bottom: 8px;">Failed to load application</h3>
-                    <p style="color: var(--color-text-muted);">Please check your connection and try again.</p>
-                </div>
-            `;
-            // @ts-ignore
-            if (window.lucide) window.lucide.createIcons();
-        } else {
-            alert('Failed to load HDB data. Please check the console for details.');
+        console.error('Failed to initialize application:', error);
+        if (loading) {
+            loading.innerHTML = '<p>Could not load the map or transaction history. Please reload to retry.</p>';
+            loading.setAttribute('role', 'alert');
         }
     }
 }
 
-// Start the application
-initApp();
+void initApp();

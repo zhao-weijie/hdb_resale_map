@@ -10,6 +10,7 @@ import { applyFilters, type GlobalFilters } from '../utils/filters';
 export class FiltersCard {
     private dataLoader: DataLoader;
     private mapView: MapView;
+    private requestId = 0;
 
     constructor(
         dataLoader: DataLoader,
@@ -68,6 +69,7 @@ export class FiltersCard {
                 <div class="btn-row">
                     <button id="apply-filters-btn" class="btn-primary">Apply Filters</button>
                 </div>
+                <p id="filter-load-status" class="filter-load-status" role="status" aria-live="polite"></p>
             </div>
         </div>
         `;
@@ -88,21 +90,18 @@ export class FiltersCard {
         // Apply Filters
         const applyBtn = document.getElementById('apply-filters-btn');
         applyBtn?.addEventListener('click', () => {
-            this.applyGlobalFilters(onFiltersApplied);
+            void this.applyGlobalFilters(onFiltersApplied);
         });
 
-        // Always auto-apply on load — uses saved filters if present, otherwise the defaults
-        this.applyGlobalFilters(onFiltersApplied);
+        // Startup already loaded and applied these filters before rendering the panel.
     }
 
     private restoreSavedFilters(): void {
         try {
-            const saved = localStorage.getItem('hdb_globalFilters');
-            if (!saved) return;
-            const filters = JSON.parse(saved);
+            const filters = appState.get('globalFilters');
 
             const dateInput = document.getElementById('filter-date') as HTMLInputElement;
-            if (dateInput && /^\d{4}-\d{2}$/.test(filters.date)) dateInput.value = filters.date;
+            if (dateInput) dateInput.value = filters.date === 'all' ? '' : filters.date;
 
             const flatCheckboxes = document.querySelectorAll('#filter-flat-type input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
             flatCheckboxes.forEach(cb => {
@@ -119,7 +118,7 @@ export class FiltersCard {
         } catch (_) { /* localStorage unavailable or invalid */ }
     }
 
-    private applyGlobalFilters(onFiltersApplied: (filtered: HDBTransaction[]) => void): void {
+    private async applyGlobalFilters(onFiltersApplied: (filtered: HDBTransaction[]) => void): Promise<void> {
         // 1. Gather Filter Values
         const dateInput = document.getElementById('filter-date') as HTMLInputElement;
         const flatTypeInputs = document.querySelectorAll('#filter-flat-type input:checked');
@@ -131,23 +130,36 @@ export class FiltersCard {
             date: dateInput.value,
             flatTypes: Array.from(flatTypeInputs).map(i => (i as HTMLInputElement).value),
             leaseMin: parseInt(leaseMin.value) || 0,
-            leaseMax: parseInt(leaseMax.value) || 99,
+            leaseMax: leaseMax.value === '' ? 99 : parseInt(leaseMax.value),
             floorMin: parseInt(floorMin.value) || 1
         };
-        appState.set('globalFilters', filters);
-
-        // Persist filters to localStorage
+        const requestId = ++this.requestId;
+        const button = document.getElementById('apply-filters-btn') as HTMLButtonElement;
+        const status = document.getElementById('filter-load-status');
+        button.disabled = true;
+        button.textContent = 'Loading history…';
+        if (status) status.textContent = 'Loading required history. Previous results remain displayed until complete.';
         try {
-            localStorage.setItem('hdb_globalFilters', JSON.stringify(filters));
-        } catch (_) { /* localStorage unavailable */ }
-
-        // 2. Filter Data
-        const allData = this.dataLoader.getAllData();
-
-        const filtered = applyFilters(allData, filters);
-
-        // 3. Update Map & Callback
-        this.mapView.setFilteredData(filtered);
-        onFiltersApplied(filtered);
+            await this.dataLoader.ensureDateRange(filters.date);
+            if (requestId !== this.requestId) return;
+            const allData = this.dataLoader.getAllData();
+            const filtered = applyFilters(allData, filters);
+            // Commit filters and results only after every required year is available.
+            appState.set('allTransactions', allData);
+            appState.set('globalFilters', filters);
+            this.mapView.setFilteredData(filtered);
+            onFiltersApplied(filtered);
+            try { localStorage.setItem('hdb_globalFilters', JSON.stringify(filters)); } catch { /* unavailable */ }
+            if (status) status.textContent = filtered.length === 0 ? 'No transactions match these filters.' : '';
+        } catch (error) {
+            if (requestId !== this.requestId) return;
+            console.error('Could not load requested history:', error);
+            if (status) status.textContent = 'Could not load all requested history. Previous results are unchanged. Apply filters to retry.';
+        } finally {
+            if (requestId === this.requestId) {
+                button.disabled = false;
+                button.textContent = 'Apply Filters';
+            }
+        }
     }
 }

@@ -31,6 +31,7 @@ export class MopFiltersCard {
                     </div>
 
                     <div id="mop-controls-section" style="display: none; grid-column: span 2; border-top: 1px solid var(--color-border); padding-top: 16px; margin-top: 8px;">
+                        <div id="mop-load-status" role="status" aria-live="polite" hidden style="margin-bottom: 10px; font-size: 12px;"></div>
                         <div class="filter-grid">
                             <!-- Date Range -->
                             <div class="filter-item full-width">

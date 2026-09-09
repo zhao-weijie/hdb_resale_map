@@ -480,41 +480,6 @@ input[type="checkbox"] {
     grid-column: span 2;
 }
 
-/* --- Tabs --- */
-.tab-nav {
-    display: flex;
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: 16px;
-}
-
-.tab-btn {
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text-muted);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-}
-
-.tab-btn:hover {
-    color: var(--color-text-main);
-}
-
-.tab-btn.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
 /* --- Stats --- */
 /* --- Stats --- */
 .stats-table {
@@ -1106,3 +1071,26 @@ input[type="checkbox"] {
         max-height: calc(35vh - 80px);
     }
 }
+/* Keep map navigation available while required transaction files are loading. */
+#loading-overlay.loading-status {
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    height: auto;
+    max-width: calc(100% - 32px);
+    padding: 12px 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px #0002;
+    flex-direction: row;
+    gap: 12px;
+    pointer-events: none;
+}
+#loading-overlay.loading-status .spinner {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+}
+.filter-load-status { font-size: 12px; color: var(--color-text-muted); margin-top: 8px; }

@@ -2,6 +2,7 @@ import { interpolateViridis, interpolateTurbo } from 'd3-scale-chromatic';
 import { rgb as d3rgb } from 'd3-color';
 import type { HDBTransaction } from '../data/DataLoader';
 import { appState } from '../state/AppState';
+import { getTransactionStats, type TransactionStats } from '../utils/transactionStats';
 
 export type ColorScale = 'viridis' | 'turbo';
 
@@ -19,29 +20,6 @@ export function buildColorLookup(scale: ColorScale): [number, number, number][] 
 }
 
 // ─── Stat helpers ────────────────────────────────────────────────────────────
-
-interface Stats {
-    min: number;
-    max: number;
-    median: number;
-    std: number;
-}
-
-function computeStats(values: number[]): Stats | null {
-    if (values.length === 0) return null;
-    const sorted = [...values].sort((a, b) => a - b);
-    const n = sorted.length;
-    const min = sorted[0];
-    const max = sorted[n - 1];
-    const median =
-        n % 2 === 0
-            ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-            : sorted[Math.floor(n / 2)];
-    const mean = values.reduce((s, v) => s + v, 0) / n;
-    const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
-    const std = Math.sqrt(variance);
-    return { min, max, median, std };
-}
 
 function formatPrice(v: number, mode: 'price' | 'price_psf'): string {
     if (mode === 'price_psf') return `$${Math.round(v).toLocaleString()}/psf`;
@@ -83,10 +61,14 @@ export class ColorScaleBar {
 
     private colorScale: ColorScale = 'viridis';
     private colorMode: 'price' | 'price_psf' = 'price_psf';
-    private stats: Stats | null = null;
-    private selectionStats: Stats | null = null;
+    private stats: TransactionStats | null = null;
+    private selectionStats: TransactionStats | null = null;
     private resizeObserver: ResizeObserver | null = null;
     private panelObserver: MutationObserver | null = null;
+    private statsSource: HDBTransaction[] | null = null;
+    private statsMode: 'price' | 'price_psf' | null = null;
+    private selectionSource: HDBTransaction[] | null = null;
+    private selectionMode: 'price' | 'price_psf' | null = null;
 
     // IControl interface
     onAdd(_map: any): HTMLElement {
@@ -144,6 +126,7 @@ export class ColorScaleBar {
         appState.subscribe('colorMode', (mode) => {
             this.colorMode = mode;
             this.refreshStats();
+            this.refreshSelectionStats();
         });
 
         appState.subscribe('filteredTransactions', () => this.refreshStats());
@@ -153,6 +136,8 @@ export class ColorScaleBar {
         // ── Sync initial values ───────────────────────────────────────────
         this.colorScale = appState.get('colorScale');
         this.colorMode = appState.get('colorMode');
+        this.refreshStats();
+        this.refreshSelectionStats();
         /*this.labelEl.textContent =
             this.colorScale === 'viridis' ? 'Viridis' : 'Turbo';*/
 
@@ -179,27 +164,29 @@ export class ColorScaleBar {
     // ── Private helpers ───────────────────────────────────────────────────
 
     private refreshStats(): void {
-        const filtered = appState.get('filteredTransactions');
-        const all = appState.get('allTransactions');
-        const source = filtered.length > 0 ? filtered : all;
-        if (source.length === 0) return;
-        const values = source.map((t: HDBTransaction) =>
-            this.colorMode === 'price' ? t.resale_price : t.price_psf
-        );
-        this.stats = computeStats(values);
+        const source = appState.get('filteredTransactions');
+        if (this.statsSource === source && this.statsMode === this.colorMode) return;
+        this.statsSource = source;
+        this.statsMode = this.colorMode;
+        if (source.length === 0) {
+            this.stats = null;
+            this.renderMarkers();
+            return;
+        }
+        this.stats = getTransactionStats(source, this.colorMode);
         this.renderGradient();
         this.renderMarkers();
     }
 
     private refreshSelectionStats(): void {
         const selected = appState.get('selectedTransactions');
+        if (this.selectionSource === selected && this.selectionMode === this.colorMode) return;
+        this.selectionSource = selected;
+        this.selectionMode = this.colorMode;
         if (!selected || selected.length === 0) {
             this.selectionStats = null;
         } else {
-            const values = selected.map((t: HDBTransaction) =>
-                this.colorMode === 'price' ? t.resale_price : t.price_psf
-            );
-            this.selectionStats = computeStats(values);
+            this.selectionStats = getTransactionStats(selected, this.colorMode);
         }
         this.renderMarkers();
     }
@@ -257,7 +244,14 @@ export class ColorScaleBar {
         }
 
         const { min, max, median, std } = this.stats;
-        if (max === min) return;
+        if (max === min) {
+            this.overlayEl.innerHTML = `<div class="scale-marker" style="top:50%">
+                <div class="scale-marker-tick"></div>
+                <div class="scale-marker-label">${formatPrice(min, this.colorMode)}</div>
+            </div>`;
+            if (this.selectionOverlayEl) this.selectionOverlayEl.innerHTML = '';
+            return;
+        }
 
         const mode = this.colorMode;
         const clamp = (v: number) => Math.max(min, Math.min(max, v));

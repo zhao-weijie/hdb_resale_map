@@ -6,6 +6,7 @@ import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import maplibregl from 'maplibre-gl';
 import { appState } from '../state/AppState';
 import { buildColorLookup, type ColorScale } from '../components/ColorScaleBar';
+import { getTransactionStats } from '../utils/transactionStats';
 
 
 export type ColorMode = 'price' | 'price_psf';
@@ -13,42 +14,35 @@ export type ColorMode = 'price' | 'price_psf';
 export class MapView {
     private map: maplibregl.Map | null = null;
     private deckOverlay: MapboxOverlay | null = null;
-    private dataLoader: DataLoader;
     private containerElement: HTMLElement;
     private selectionCircle: any = null;
     private selectionRect: any = null;
     private mopData: any = null; // Store MOP GeoJSON data
+    private mopLoadPromise: Promise<void> | null = null;
+
+    private rangeData: HDBTransaction[] | null = null;
+    private rangeMode: ColorMode | null = null;
+    private rangeMin = 0;
+    private rangeMax = 0;
+    private selectedData: HDBTransaction[] | null = null;
+    private selectedItems: Set<HDBTransaction> | null = null;
 
     private isMobile: boolean;
-    private onPointClickCallback: ((lat: number, lng: number) => void) | null = null;
+    private onPointClickCallback: ((lat: number, lng: number, transaction: HDBTransaction) => void) | null = null;
     private colorLookup: [number, number, number][] = buildColorLookup('viridis');
 
-    constructor(containerId: string, dataLoader: DataLoader, isMobile: boolean) {
+    constructor(containerId: string, _dataLoader: DataLoader, isMobile: boolean) {
         const container = document.getElementById(containerId);
         if (!container) {
             throw new Error(`Container ${containerId} not found`);
         }
         this.containerElement = container;
-        this.dataLoader = dataLoader;
         this.isMobile = isMobile;
     }
 
     async initialize(): Promise<void> {
         // Singapore center coordinates
         const SINGAPORE_CENTER = { longitude: 103.8198, latitude: 1.3521 };
-
-        // Fetch MOP Data
-        try {
-            const response = await fetch('data/upcoming_mop.geojson');
-            if (response.ok) {
-                this.mopData = await response.json();
-                console.log("✓ MOP Data loaded");
-            } else {
-                console.warn("Failed to load MOP data");
-            }
-        } catch (e) {
-            console.warn("Error loading MOP data", e);
-        }
 
         // 1. Initialize MapLibre directly (owns the context)
         this.map = new maplibregl.Map({
@@ -82,7 +76,7 @@ export class MapView {
         // 2. Initialize Deck.gl Overlay
         this.deckOverlay = new MapboxOverlay({
             interleaved: true, // Optimizes rendering
-            layers: [this.createLayer()]
+            layers: this.createLayers()
         });
 
         // 3. Add Overlay to Map
@@ -94,9 +88,15 @@ export class MapView {
         });
 
         // Subscribe to MOP state changes
-        appState.subscribe('displayMopExpiries', () => this.updateLayers());
+        appState.subscribe('displayMopExpiries', (enabled) => {
+            if (enabled) void this.loadMopData();
+            else this.setMopStatus('');
+            this.updateLayers();
+        });
         appState.subscribe('mopExpiryDateRange', () => this.updateLayers());
         appState.subscribe('mopProjectTypes', () => this.updateLayers());
+
+        if (appState.get('displayMopExpiries')) void this.loadMopData();
 
         // Rebuild color lookup table when the scale changes
         appState.subscribe('colorScale', (scale: ColorScale) => {
@@ -205,6 +205,11 @@ export class MapView {
      */
     setFilteredData(transactions: import('../data/DataLoader').HDBTransaction[]): void {
         appState.set('filteredTransactions', transactions);
+        appState.set('selectedTransactions', null);
+        this.selectedData = null;
+        this.selectedItems = null;
+        this.selectionCircle = null;
+        this.selectionRect = null;
         this.updateLayers();
     }
 
@@ -216,38 +221,41 @@ export class MapView {
         this.map?.on('moveend', callback); // Ensure final state is captured
     }
 
-    setOnPointClick(callback: (lat: number, lng: number) => void): void {
+    setOnPointClick(callback: (lat: number, lng: number, transaction: HDBTransaction) => void): void {
         this.onPointClickCallback = callback;
     }
 
-    private createLayer() {
-        const fullData = this.dataLoader.getAllData();
-        const dataToRender = appState.get('filteredTransactions').length > 0
-            ? appState.get('filteredTransactions')
-            : fullData;
+    private createLayers() {
+        const dataToRender = appState.get('filteredTransactions');
 
         const layers: any[] = [];
 
 
         // Always color by the selected mode
-        const getValue = appState.get('colorMode') === 'price'
+        const colorMode = appState.get('colorMode');
+        const getValue = colorMode === 'price'
             ? (d: HDBTransaction) => d.resale_price
             : (d: HDBTransaction) => d.price_psf;
 
-        // Calculate min/max from filtered data for better contrast
-        let minValue = Infinity;
-        let maxValue = -Infinity;
-        for (const d of dataToRender) {
-            const value = getValue(d);
-            if (value < minValue) minValue = value;
-            if (value > maxValue) maxValue = value;
+        if (this.rangeData !== dataToRender || this.rangeMode !== colorMode) {
+            this.rangeData = dataToRender;
+            this.rangeMode = colorMode;
+            const stats = getTransactionStats(dataToRender, colorMode);
+            this.rangeMin = stats?.min ?? 0;
+            this.rangeMax = stats?.max ?? 0;
         }
+        const minValue = this.rangeMin;
+        const maxValue = this.rangeMax;
 
         // When there's a selection, show unselected data as faded
         const selectedTransactions = appState.get('selectedTransactions');
-        const selectedSet = selectedTransactions
-            ? new Set(selectedTransactions.map(t => `${t.latitude}-${t.longitude}-${t.resale_price}`))
-            : null;
+        if (this.selectedData !== selectedTransactions) {
+            this.selectedData = selectedTransactions;
+            this.selectedItems = selectedTransactions
+                ? new Set(selectedTransactions)
+                : null;
+        }
+        const selectedSet = this.selectedItems;
 
         const colorScale = appState.get('colorScale');
 
@@ -259,17 +267,19 @@ export class MapView {
             getRadius: this.isMobile ? 65 : 50,
             getFillColor: (d: HDBTransaction) => {
                 const value = getValue(d);
-                const normalized = (value - minValue) / (maxValue - minValue);
+                const normalized = maxValue === minValue
+                    ? 0.5
+                    : (value - minValue) / (maxValue - minValue);
                 const idx = Math.floor(Math.max(0, Math.min(0.9999, normalized)) * 255);
                 const [r, g, b] = this.colorLookup[idx];
-                const alpha = selectedSet && !selectedSet.has(`${d.latitude}-${d.longitude}-${d.resale_price}`)
+                const alpha = selectedSet && !selectedSet.has(d)
                     ? 60  // Fade out unselected points when there's a selection
                     : 255;
                 return [r, g, b, alpha] as [number, number, number, number];
             },
             // Tell Deck.gl to re-evaluate getFillColor whenever these change
             updateTriggers: {
-                getFillColor: [minValue, maxValue, colorScale, selectedTransactions]
+                getFillColor: [minValue, maxValue, colorMode, colorScale, selectedTransactions]
             },
             opacity: 1, // Use RGBA alpha instead
             pickable: true,
@@ -288,7 +298,7 @@ export class MapView {
 
                         if (!selectionActive) {
                             const d = info.object as HDBTransaction;
-                            this.onPointClickCallback(d.latitude, d.longitude);
+                            this.onPointClickCallback(d.latitude, d.longitude, d);
                             return true; // Stop propagation to map
                         }
                     }
@@ -436,6 +446,13 @@ export class MapView {
         this.updateLayers();
     }
 
+    clearSelectionGeometry(): void {
+        if (!this.selectionCircle && !this.selectionRect) return;
+        this.selectionCircle = null;
+        this.selectionRect = null;
+        this.updateLayers();
+    }
+
     setColorMode(mode: ColorMode): void {
         appState.set('colorMode', mode);
         this.updateLayers();
@@ -449,9 +466,43 @@ export class MapView {
     private updateLayers(): void {
         if (this.deckOverlay) {
             this.deckOverlay.setProps({
-                layers: [this.createLayer()],
+                layers: this.createLayers(),
             });
         }
+    }
+
+    private loadMopData(): Promise<void> {
+        if (this.mopData) {
+            this.setMopStatus('');
+            return Promise.resolve();
+        }
+        if (this.mopLoadPromise) return this.mopLoadPromise;
+
+        this.setMopStatus('Loading MOP projects…');
+        this.mopLoadPromise = fetch('data/upcoming_mop.geojson')
+            .then(async (response) => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                this.mopData = await response.json();
+                this.setMopStatus('');
+                this.updateLayers();
+                console.log('✓ MOP Data loaded');
+            })
+            .catch((error) => {
+                this.setMopStatus('Could not load MOP projects. Toggle off and on to retry.', true);
+                console.warn('Error loading MOP data', error);
+            })
+            .finally(() => {
+                this.mopLoadPromise = null;
+            });
+        return this.mopLoadPromise;
+    }
+
+    private setMopStatus(message: string, isError = false): void {
+        const status = document.getElementById('mop-load-status');
+        if (!status) return;
+        status.textContent = message;
+        status.hidden = message.length === 0;
+        status.classList.toggle('error-message', isError);
     }
 
     private activePopup: maplibregl.Popup | null = null;

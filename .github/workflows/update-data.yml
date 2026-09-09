@@ -32,17 +32,14 @@ jobs:
       - name: Download latest data and geocode new addresses
         run: python scripts/geocode_pipeline.py
 
-      - name: Build Arrow file (incremental)
+      - name: Build yearly Arrow files
         run: python scripts/build_arrow.py
-
-      - name: Train and evaluate resale model
-        run: python scripts/fit_regression_model.py
 
       - name: Commit and push if data changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/hdb_data.arrow public/data/addresses_geocoded.json public/data/HDBResalePriceIndex1Q2009100Quarterly.csv public/data/regression_coefficients.json public/data/regression_model.json
+          git add -A public/data
           if git diff --staged --quiet; then
             echo "No data changes — skipping commit"
           else

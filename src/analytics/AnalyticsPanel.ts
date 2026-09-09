@@ -5,7 +5,6 @@
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
-import { FairValueAnalysis } from './FairValueAnalysis';
 import { appState } from '../state/AppState';
 import { applyFilters } from '../utils/filters';
 
@@ -14,25 +13,22 @@ import { LocationCard } from '../components/LocationCard';
 import { FiltersCard } from '../components/FiltersCard';
 import { MopFiltersCard } from '../components/MopFiltersCard';
 import { OverviewTab } from '../components/OverviewTab';
-import { FairValueTab } from '../components/FairValueTab';
 
 export class AnalyticsPanel {
     private container: HTMLElement;
     private dataLoader: DataLoader;
     private mapView: MapView;
     private radialSelection: RadialSelection;
-    private fairValueAnalysis: FairValueAnalysis;
-    private geocodeCache: Record<string, { postal?: string; address?: string }> = {};
+    private geocodeCache: Record<string, { postal?: string; address?: string }> | null = null;
+    private geocodeCachePromise: Promise<void> | null = null;
 
     // Component instances
     private locationCard: LocationCard;
     private filtersCard: FiltersCard;
     private mopFiltersCard: MopFiltersCard;
     private overviewTab: OverviewTab;
-    private fairValueTab: FairValueTab;
 
     // Local state
-    private activeTab: 'overview' | 'fairvalue' = 'overview';
     private currentTransactions: HDBTransaction[] | null = null;
     private startDragLat: number | null = null;
     private startDragLng: number | null = null;
@@ -40,7 +36,7 @@ export class AnalyticsPanel {
     // Popup pagination state
     private readonly PAGE_SIZE = 5;
     private popupTransactions: HDBTransaction[] = [];
-    private popupMeta: { lat: number; lng: number; title: string; subtitle: string } | null = null;
+    private popupMeta: { lat: number; lng: number; title: string; subtitle: string; geocodeKey: string } | null = null;
 
     constructor(containerId: string, dataLoader: DataLoader, mapView: MapView) {
         const container = document.getElementById(containerId);
@@ -51,65 +47,35 @@ export class AnalyticsPanel {
         this.dataLoader = dataLoader;
         this.mapView = mapView;
         this.radialSelection = new RadialSelection(dataLoader);
-        this.fairValueAnalysis = new FairValueAnalysis();
 
         // Initialize components
         this.locationCard = new LocationCard(mapView, this.radialSelection);
         this.filtersCard = new FiltersCard(dataLoader, mapView);
         this.mopFiltersCard = new MopFiltersCard();
         this.overviewTab = new OverviewTab();
-        this.fairValueTab = new FairValueTab(this.fairValueAnalysis);
-    }
-
-    async init(): Promise<void> {
-        await this.fairValueAnalysis.loadCoefficients();
-        await this.loadGeocodeCache();
-        this.showDataTreatmentToast();
     }
 
     private async loadGeocodeCache(): Promise<void> {
         try {
             const response = await fetch('data/addresses_geocoded.json');
             if (response.ok) {
-                this.geocodeCache = await response.json();
-                console.log(`✓ Loaded ${Object.keys(this.geocodeCache).length} geocoded addresses`);
+                const cache = await response.json() as Record<string, { postal?: string; address?: string }>;
+                this.geocodeCache = cache;
+                console.log(`✓ Loaded ${Object.keys(cache).length} geocoded addresses`);
+            } else {
+                throw new Error(`Failed to load geocode cache: ${response.status}`);
             }
         } catch (error) {
             console.warn('Failed to load geocode cache:', error);
+            this.geocodeCache = {};
         }
     }
 
-    private showDataTreatmentToast(): void {
-        if (localStorage.getItem('hdb_data_treatment_shown')) return;
-
-        const toast = document.createElement('div');
-        toast.className = 'data-treatment-toast';
-        toast.innerHTML = `
-            <div class="toast-content">
-                <span class="toast-icon">ⓘ</span>
-                <div class="toast-text">
-                    <strong>Data Note:</strong> Historical prices are adjusted using the HDB Resale Price Index to enable fair comparison across time periods.
-                </div>
-                <button class="toast-close" aria-label="Dismiss">×</button>
-            </div>
-        `;
-        document.body.appendChild(toast);
-
-        setTimeout(() => toast.classList.add('show'), 100);
-
-        toast.querySelector('.toast-close')?.addEventListener('click', () => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-            localStorage.setItem('hdb_data_treatment_shown', 'true');
-        });
-
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-                localStorage.setItem('hdb_data_treatment_shown', 'true');
-            }
-        }, 15000);
+    private ensureGeocodeCache(): Promise<void> {
+        if (!this.geocodeCachePromise) {
+            this.geocodeCachePromise = this.loadGeocodeCache();
+        }
+        return this.geocodeCachePromise;
     }
 
     render(): void {
@@ -142,15 +108,9 @@ export class AnalyticsPanel {
              </div>
         </div>
       
-        <!-- Card 4: Stats & Charts (Tabs with Components) -->
+        <!-- Card 4: Stats & Chart -->
         <div class="card" style="flex: 1; display: flex; flex-direction: column;">
-            <div class="tab-nav">
-                <button class="tab-btn active" data-tab="overview">Overview</button>
-                <button class="tab-btn" data-tab="fairvalue">Fair Value Analysis</button>
-            </div>
-            
             ${this.overviewTab.render()}
-            ${this.fairValueTab.render()}
         </div>
 
         <!-- Panel Toggle (Absolute) -->
@@ -169,8 +129,9 @@ export class AnalyticsPanel {
         }
 
         this.attachEventListeners();
-        this.attachTabListeners();
-        this.renderStats();
+        const initialData = this.currentTransactions ?? this.getGlobalFilteredData();
+        this.renderStats(initialData);
+        this.renderChart(initialData);
     }
 
     private attachEventListeners(): void {
@@ -199,7 +160,6 @@ export class AnalyticsPanel {
         this.locationCard.bindEvents((selected) => this.updateSelectionState(selected));
         this.filtersCard.bindEvents((filtered) => this.onFiltersApplied(filtered));
         this.mopFiltersCard.bindEvents();
-        this.fairValueTab.bindEvents();
 
         // Bind remaining panel events
         this.bindMapEvents();
@@ -209,9 +169,8 @@ export class AnalyticsPanel {
 
     private onFiltersApplied(filtered: HDBTransaction[]): void {
         // Clear current user selection as it might be invalid now
+        this.currentTransactions = null;
         this.radialSelection.clearSelection();
-        this.mapView.clearSelectionCircle();
-        this.mapView.clearSelectionRect();
 
         // Update stats with filtered overview
         this.renderStats(filtered);
@@ -220,32 +179,6 @@ export class AnalyticsPanel {
         // Update status text
         const countSpan = document.getElementById('record-count');
         if (countSpan) countSpan.textContent = `(${filtered.length.toLocaleString()} records)`;
-    }
-
-    private attachTabListeners(): void {
-        const tabButtons = this.container.querySelectorAll('.tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = (btn as HTMLElement).dataset.tab as 'overview' | 'fairvalue';
-                this.activeTab = tab;
-
-                // Update UI
-                tabButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                const allTabs = this.container.querySelectorAll('.tab-content');
-                allTabs.forEach(t => t.classList.remove('active'));
-
-                const activeTabContent = document.getElementById(`tab-${tab}`);
-                activeTabContent?.classList.add('active');
-
-                // Render appropriate content
-                if (tab === 'fairvalue') {
-                    const dataToRender = this.currentTransactions || this.getGlobalFilteredData();
-                    this.fairValueTab.renderFairValue(dataToRender);
-                }
-            });
-        });
     }
 
     private updateSelectionState(selected: HDBTransaction[] | null): void {
@@ -261,11 +194,6 @@ export class AnalyticsPanel {
 
         this.renderStats(dataToRender);
         this.renderChart(dataToRender);
-
-        // Always render fair value if active
-        if (this.activeTab === 'fairvalue') {
-            this.fairValueTab.renderFairValue(dataToRender);
-        }
     }
 
     private applyFiltersToTransactions(transactions: HDBTransaction[]): HDBTransaction[] {
@@ -273,7 +201,7 @@ export class AnalyticsPanel {
     }
 
     private getGlobalFilteredData(): HDBTransaction[] {
-        return applyFilters(this.dataLoader.getAllData(), appState.get('globalFilters'));
+        return appState.get('filteredTransactions');
     }
 
     private renderStats(data?: HDBTransaction[]): void {
@@ -286,7 +214,7 @@ export class AnalyticsPanel {
 
     private renderChart(data?: HDBTransaction[]): void {
         const dataToRender = data || this.getGlobalFilteredData();
-        this.overviewTab.renderChart(dataToRender);
+        void this.overviewTab.renderChart(dataToRender);
     }
 
     private bindTooltipEvents(): void {
@@ -382,21 +310,15 @@ export class AnalyticsPanel {
         });
 
         // 2. Point Click Handler
-        this.mapView.setOnPointClick((lat, lng) => {
+        this.mapView.setOnPointClick((lat, lng, clicked) => {
             if (this.locationCard.getIsSelectionModeActive()) {
                 return;
             }
 
-            const allData = this.dataLoader.getAllData();
-            const clicked = allData.find(t =>
-                Math.abs(t.latitude - lat) < 0.00001 &&
-                Math.abs(t.longitude - lng) < 0.00001
-            );
-
             if (!clicked) return;
 
             const relevant = applyFilters(
-                allData.filter(t => t.block === clicked.block && t.street_name === clicked.street_name),
+                this.dataLoader.getTransactionsForBlock(clicked.block, clicked.street_name),
                 appState.get('globalFilters')
             );
 
@@ -405,7 +327,7 @@ export class AnalyticsPanel {
             relevant.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
 
             const geocodeKey = `${clicked.block}|${clicked.street_name}`;
-            const geocodeData = this.geocodeCache[geocodeKey];
+            const geocodeData = this.geocodeCache?.[geocodeKey];
             const postal = geocodeData?.postal || '';
             const title = postal
                 ? `Blk ${clicked.block} ${clicked.street_name} • ${postal}`
@@ -420,8 +342,18 @@ export class AnalyticsPanel {
                 : '';
 
             this.popupTransactions = relevant;
-            this.popupMeta = { lat, lng, title, subtitle };
+            this.popupMeta = { lat, lng, title, subtitle, geocodeKey };
             this.renderTransactionPopup(0);
+
+            if (!this.geocodeCache) {
+                void this.ensureGeocodeCache().then(() => {
+                    if (this.popupMeta?.geocodeKey !== geocodeKey) return;
+                    const loadedPostal = this.geocodeCache?.[geocodeKey]?.postal;
+                    if (!loadedPostal) return;
+                    this.popupMeta.title = `Blk ${clicked.block} ${clicked.street_name} • ${loadedPostal}`;
+                    this.renderTransactionPopup(0);
+                });
+            }
         });
 
         // 3. Popup pagination — single delegated listener on document
@@ -549,18 +481,11 @@ export class AnalyticsPanel {
         const bounds = this.mapView.getBounds();
         if (!bounds) return;
 
-        const allData = this.dataLoader.getAllData();
-        const inView = allData.filter((t: HDBTransaction) =>
-            t.latitude >= bounds.south && t.latitude <= bounds.north &&
-            t.longitude >= bounds.west && t.longitude <= bounds.east
-        );
+        const inView = this.dataLoader.queryRectangle(bounds.south, bounds.west, bounds.north, bounds.east);
         const filtered = this.applyFiltersToTransactions(inView);
+        this.currentTransactions = filtered;
 
         this.renderStats(filtered);
         this.renderChart(filtered);
-
-        if (this.activeTab === 'fairvalue') {
-            this.fairValueTab.renderFairValue(filtered);
-        }
     }
 }

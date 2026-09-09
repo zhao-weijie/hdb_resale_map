@@ -5,16 +5,13 @@ Joins geocoded addresses with transaction data, calculates derived fields,
 and exports to Apache Arrow format for efficient client-side loading.
 """
 
+import hashlib
 import json
-import time
-from io import StringIO
 from pathlib import Path
 from typing import Tuple, Dict
 import pandas as pd
 import numpy as np
-import requests
 import pyarrow as pa
-from datagov_client import DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS, datagov_get
 
 
 # Configuration
@@ -24,41 +21,7 @@ PUBLIC_DATA_DIR = SCRIPT_DIR.parent / "public" / "data"
 RAW_DATA_FILE = DATA_DIR / "hdb_resale_raw.csv"
 GEOCODE_CACHE = PUBLIC_DATA_DIR / "addresses_geocoded.json"
 MRT_GEOJSON = PUBLIC_DATA_DIR / "LTAMRTStationExitGEOJSON.geojson"
-PRICE_INDEX_CSV = PUBLIC_DATA_DIR / "HDBResalePriceIndex1Q2009100Quarterly.csv"
-OUTPUT_ARROW = PUBLIC_DATA_DIR / "hdb_data.arrow"
-
-DATAGOV_API_BASE = "https://api-open.data.gov.sg/v1/public/api/datasets"
-DATAGOV_PRICE_INDEX_ID = "d_14f63e595975691e7c24a27ae4c07c79"
-
-
-def download_price_index():
-    """Download the latest HDB Resale Price Index from data.gov.sg and overwrite the local CSV."""
-    print("Downloading HDB Resale Price Index from data.gov.sg...")
-
-    resp = datagov_get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/initiate-download", timeout=30)
-    resp.raise_for_status()
-    payload = resp.json()
-
-    for _ in range(30):
-        url = payload.get("data", {}).get("url")
-        if url:
-            break
-        time.sleep(DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS)
-        poll_resp = datagov_get(f"{DATAGOV_API_BASE}/{DATAGOV_PRICE_INDEX_ID}/poll-download", timeout=30)
-        poll_resp.raise_for_status()
-        payload = poll_resp.json()
-    else:
-        raise RuntimeError("Timed out waiting for price index download URL")
-
-    csv_resp = requests.get(url, timeout=30)
-    csv_resp.raise_for_status()
-
-    df = pd.read_csv(StringIO(csv_resp.text))
-    df.columns = [c.lower() for c in df.columns]
-
-    PRICE_INDEX_CSV.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(PRICE_INDEX_CSV, index=False)
-    print(f"✓ Price index updated: {len(df)} quarters, latest={df['quarter'].max()}")
+OUTPUT_MANIFEST = PUBLIC_DATA_DIR / "manifest.json"
 
 
 def load_data() -> Tuple[pd.DataFrame, Dict]:
@@ -130,34 +93,6 @@ def calculate_mrt_distance(lat: float, lon: float, mrt_stations: list) -> float:
     return min_distance
 
 
-def load_price_index() -> dict:
-    """Load HDB Resale Price Index as quarter -> index mapping."""
-    df = pd.read_csv(PRICE_INDEX_CSV)
-    return {row['quarter']: row['index'] for _, row in df.iterrows()}
-
-
-def quarter_sort_key(quarter: str) -> Tuple[int, int]:
-    """Convert YYYY-QN to a sortable tuple."""
-    year, q = quarter.split('-Q')
-    return int(year), int(q)
-
-
-def month_to_quarter(month: str) -> str:
-    """Convert YYYY-MM to YYYY-QX format."""
-    year, mon = month.split('-')
-    quarter = (int(mon) - 1) // 3 + 1
-    return f"{year}-Q{quarter}"
-
-
-def parse_storey_range(storey_range: str) -> int:
-    """Parse storey range to midpoint (e.g., '10 TO 12' -> 11)."""
-    try:
-        parts = storey_range.split(' TO ')
-        return (int(parts[0]) + int(parts[1])) // 2
-    except:
-        return 5  # Default fallback
-
-
 def calculate_remaining_lease(lease_commence_date: int, month: str) -> float:
     """
     Calculate remaining lease in years
@@ -221,8 +156,6 @@ def join_and_enrich_data(df: pd.DataFrame, geocode_cache: dict) -> pd.DataFrame:
     df['flat_type'] = df['flat_type'].astype('category')
     df['town'] = df['town'].astype('category')
     df['flat_model'] = df['flat_model'].astype('category')
-    # Parse storey midpoint before converting to category
-    df['storey_midpoint'] = df['storey_range'].apply(parse_storey_range)
     df['storey_range'] = df['storey_range'].astype('category')
     
     # Calculate MRT distance per unique location (optimized)
@@ -242,34 +175,7 @@ def join_and_enrich_data(df: pd.DataFrame, geocode_cache: dict) -> pd.DataFrame:
     )
     print(f"  ✓ MRT distances calculated")
     
-    # Add price index for time adjustment
-    print("  Adding price index...")
-    price_index = load_price_index()
-    latest_known_quarter = max(price_index.keys(), key=quarter_sort_key)
-    latest_known_index = price_index[latest_known_quarter]
-
-    def get_price_index(quarter: str) -> float:
-        if quarter in price_index:
-            return price_index[quarter]
-        if quarter_sort_key(quarter) > quarter_sort_key(latest_known_quarter):
-            return latest_known_index
-        raise ValueError(f"Missing resale price index for historical quarter: {quarter}")
-
-    df['quarter'] = df['month'].apply(month_to_quarter)
-    df['price_index'] = df['quarter'].apply(get_price_index)
-    missing_future_quarters = sorted(
-        {q for q in df['quarter'].unique() if q not in price_index},
-        key=quarter_sort_key
-    )
-    if missing_future_quarters:
-        print(
-            "  ! Price index missing for future/new quarters "
-            f"{missing_future_quarters}; using latest known index "
-            f"{latest_known_quarter}={latest_known_index}"
-        )
-    print(f"  ✓ Price index added")
-    
-    print(f"  ✓ Calculated derived fields: price_psm, price_psf, remaining_lease_years, storey_midpoint, mrt_distance_m, price_index")
+    print(f"  ✓ Calculated derived fields: price_psm, price_psf, remaining_lease_years, mrt_distance_m")
     
     return df
 
@@ -298,25 +204,13 @@ def export_to_arrow(df: pd.DataFrame):
         'price_psf',
         'latitude',
         'longitude',
-        'storey_midpoint',
-        'mrt_distance_m',
-        'price_index'
+        'mrt_distance_m'
     ]
     
     export_df = df[columns_to_export].copy()
     
     # Convert to Arrow Table
     table = pa.Table.from_pandas(export_df)
-    
-    # Write Arrow IPC file (Feather v2 format)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
-    with pa.OSFile(str(OUTPUT_ARROW), 'wb') as sink:
-        with pa.ipc.new_file(sink, table.schema) as writer:
-            writer.write_table(table)
-    
-    arrow_size_mb = OUTPUT_ARROW.stat().st_size / (1024 * 1024)
-    print(f"  ✓ Saved Arrow file: {OUTPUT_ARROW} ({arrow_size_mb:.2f} MB)")
     
     # Print statistics
     print(f"\n  Data summary:")
@@ -327,6 +221,57 @@ def export_to_arrow(df: pd.DataFrame):
     print(f"    Price range: ${export_df['resale_price'].min():,.0f} - ${export_df['resale_price'].max():,.0f}")
     print(f"    PSF range: ${export_df['price_psf'].min():.0f} - ${export_df['price_psf'].max():.0f}")
 
+    export_yearly_partitions(table)
+
+
+def export_yearly_partitions(table: pa.Table) -> None:
+    """Write one Arrow file per year and a manifest consumed by the web app."""
+    month_values = table.column("month").to_pylist()
+    if not month_values:
+        raise ValueError("Cannot partition an empty Arrow table")
+
+    years = sorted({int(str(month)[:4]) for month in month_values})
+    entries = []
+    for year in years:
+        mask = pa.array([str(month).startswith(f"{year}-") for month in month_values])
+        year_table = table.filter(mask)
+        year_months = year_table.column("month").to_pylist()
+        temporary_path = PUBLIC_DATA_DIR / f".hdb_data_{year}.arrow.tmp"
+        with pa.OSFile(str(temporary_path), "wb") as sink:
+            with pa.ipc.new_file(sink, year_table.schema) as writer:
+                writer.write_table(year_table)
+        digest = hashlib.sha256(temporary_path.read_bytes()).hexdigest()
+        filename = f"hdb_data_{year}-{digest[:12]}.arrow"
+        output_path = PUBLIC_DATA_DIR / filename
+        temporary_path.replace(output_path)
+        entries.append({
+            "year": year,
+            "url": filename,
+            "rows": year_table.num_rows,
+            "minMonth": min(year_months),
+            "maxMonth": max(year_months),
+            "sha256": digest,
+        })
+        print(f"  Saved {filename}: {year_table.num_rows:,} transactions")
+
+    manifest = {
+        "version": 1,
+        "minMonth": min(month_values),
+        "maxMonth": max(month_values),
+        "years": entries,
+    }
+    OUTPUT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    active_files = {entry["url"] for entry in entries}
+    stale_files = [
+        *PUBLIC_DATA_DIR.glob("hdb_data_????.arrow"),
+        *PUBLIC_DATA_DIR.glob("hdb_data_????-*.arrow"),
+    ]
+    for stale_file in stale_files:
+        if stale_file.name not in active_files:
+            stale_file.unlink()
+            print(f"  Removed stale partition {stale_file.name}")
+    print(f"  Saved manifest: {OUTPUT_MANIFEST}")
+
 
 def main():
     """Main build execution."""
@@ -334,14 +279,13 @@ def main():
     print("HDB Resale Arrow Builder")
     print("=" * 60)
 
-    download_price_index()
     df, geocode_cache = load_data()
     enriched_df = join_and_enrich_data(df, geocode_cache)
     export_to_arrow(enriched_df)
 
     print("\n" + "=" * 60)
     print("Build complete!")
-    print(f"Output: {OUTPUT_ARROW}")
+    print(f"Output: {OUTPUT_MANIFEST} and yearly Arrow files")
     print("=" * 60)
 
 

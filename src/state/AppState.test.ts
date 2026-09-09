@@ -11,7 +11,6 @@ describe('StateStore', () => {
     it('initializes with default state', () => {
         expect(store.get('colorMode')).toBe('price_psf');
         expect(store.get('selectionMode')).toBe('radial');
-        expect(store.get('activeTab')).toBe('overview');
         expect(store.get('selectedTransactions')).toBeNull();
         expect(store.get('globalFilters')).toEqual({
             date: '2024-01',
@@ -52,13 +51,13 @@ describe('StateStore', () => {
         let callback1Value: string | null = null;
         let callback2Value: string | null = null;
 
-        store.subscribe('activeTab', (value) => { callback1Value = value; });
-        store.subscribe('activeTab', (value) => { callback2Value = value; });
+        store.subscribe('colorScale', (value) => { callback1Value = value; });
+        store.subscribe('colorScale', (value) => { callback2Value = value; });
 
-        store.set('activeTab', 'fairvalue');
+        store.set('colorScale', 'turbo');
 
-        expect(callback1Value).toBe('fairvalue');
-        expect(callback2Value).toBe('fairvalue');
+        expect(callback1Value).toBe('turbo');
+        expect(callback2Value).toBe('turbo');
     });
 
     it('unsubscribes correctly', () => {

@@ -20,9 +20,7 @@ const createMockTransaction = (overrides: Partial<HDBTransaction>): HDBTransacti
     price_psf: 516,
     latitude: 1.3521,
     longitude: 103.8198,
-    storey_midpoint: 8,
     mrt_distance_m: 500,
-    price_index: 150,
     ...overrides
 });
 

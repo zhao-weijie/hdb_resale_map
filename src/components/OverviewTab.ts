@@ -2,19 +2,20 @@
  * OverviewTab - Displays overview statistics and price trend charts
  */
 
-import { Chart, registerables } from 'chart.js';
+import type { Chart } from 'chart.js';
 import type { HDBTransaction } from '../data/DataLoader';
-
-Chart.register(...registerables);
+import { getTransactionStats } from '../utils/transactionStats';
 
 export class OverviewTab {
     private chart: Chart | null = null;
+    private chartConstructorPromise: Promise<typeof import('chart.js').Chart> | null = null;
+    private renderVersion = 0;
 
     constructor() { }
 
     render(): string {
         return `
-        <div class="tab-content active" id="tab-overview">
+        <div id="analytics-overview">
             <div id="stats-content"></div>
             <div class="chart-container">
                 <canvas id="trend-chart"></canvas>
@@ -38,12 +39,10 @@ export class OverviewTab {
             return;
         }
 
-        // Calculate PSF-based stats for consistency with Fair Value tab
-        const prices = data.map(t => t.price_psf).sort((a, b) => a - b);
-        const n = prices.length;
-        const median = prices[Math.floor(n / 2)];
+        // Calculate shared statistics from actual transaction prices
+        const psfStats = getTransactionStats(data, 'price_psf');
+        if (!psfStats) return;
         const avgPrice = data.reduce((sum, t) => sum + t.resale_price, 0) / data.length;
-        const avgPSF = data.reduce((sum, t) => sum + t.price_psf, 0) / data.length;
 
         statsContent.innerHTML = `
             <table class="stats-table">
@@ -53,11 +52,11 @@ export class OverviewTab {
                 </tr>
                 <tr>
                     <td class="stats-label">Avg PSF</td>
-                    <td class="stats-value">$${Math.round(avgPSF)}</td>
+                    <td class="stats-value">$${Math.round(psfStats.mean)}</td>
                 </tr>
                 <tr>
                     <td class="stats-label">Median PSF</td>
-                    <td class="stats-value">$${Math.round(median)}</td>
+                    <td class="stats-value">$${Math.round(psfStats.median)}</td>
                 </tr>
                 <tr>
                     <td class="stats-label">Transactions</td>
@@ -67,7 +66,8 @@ export class OverviewTab {
         `;
     }
 
-    renderChart(data: HDBTransaction[]): void {
+    async renderChart(data: HDBTransaction[]): Promise<void> {
+        const renderVersion = ++this.renderVersion;
         const canvas = document.getElementById('trend-chart') as HTMLCanvasElement;
         const placeholder = document.getElementById('trend-chart-placeholder');
 
@@ -85,6 +85,18 @@ export class OverviewTab {
 
         placeholder.classList.add('hidden');
         canvas.style.display = 'block';
+
+        let ChartConstructor: typeof import('chart.js').Chart;
+        try {
+            ChartConstructor = await this.loadChartConstructor();
+        } catch (error) {
+            console.error('Failed to load overview chart:', error);
+            placeholder.classList.remove('hidden');
+            placeholder.querySelector('p')!.textContent = 'Unable to load chart';
+            canvas.style.display = 'none';
+            return;
+        }
+        if (renderVersion !== this.renderVersion || !canvas.isConnected) return;
 
         // Group by quarter
         const quarters = new Map<string, number[]>();
@@ -128,7 +140,7 @@ export class OverviewTab {
             this.chart.data.datasets[0].data = boxPlotData as any;
             this.chart.update('none'); // 'none' mode skips animations for faster updates
         } else {
-            this.chart = new Chart(canvas, {
+            this.chart = new ChartConstructor(canvas, {
                 type: 'boxplot',
                 data: {
                     labels: sortedQuarters,
@@ -187,11 +199,34 @@ export class OverviewTab {
         }
     }
 
+    private loadChartConstructor(): Promise<typeof import('chart.js').Chart> {
+        if (!this.chartConstructorPromise) {
+            this.chartConstructorPromise = Promise.all([
+                import('chart.js'),
+                import('@sgratzl/chartjs-chart-boxplot'),
+            ]).then(([chartModule, boxPlotModule]) => {
+                const { Chart, CategoryScale, LinearScale, Tooltip, Title } = chartModule;
+                Chart.register(
+                    CategoryScale,
+                    LinearScale,
+                    Tooltip,
+                    Title,
+                    boxPlotModule.BoxPlotController,
+                    boxPlotModule.BoxAndWiskers,
+                );
+                return Chart;
+            });
+        }
+        return this.chartConstructorPromise;
+    }
+
 
     destroy(): void {
+        this.renderVersion++;
         if (this.chart) {
             this.chart.destroy();
             this.chart = null;
         }
     }
+
 }

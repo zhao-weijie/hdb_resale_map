@@ -16,7 +16,6 @@ export interface AppState {
     globalFilters: GlobalFilters;
     selectionMode: 'radial' | 'rect';
     isSelectionModeActive: boolean;
-    activeTab: 'overview' | 'fairvalue';
     colorMode: 'price' | 'price_psf';
     colorScale: 'viridis' | 'turbo';
 
@@ -52,7 +51,6 @@ export class StateStore {
             },
             selectionMode: 'radial',
             isSelectionModeActive: false,
-            activeTab: 'overview',
             colorMode: 'price_psf',
             colorScale: 'viridis',
             selectionCenter: null,
