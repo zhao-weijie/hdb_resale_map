@@ -77031,6 +77031,38 @@
     "postal": "522627",
     "address": "627B TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 522627"
   },
+  "222A|BEDOK NTH DR": {
+    "block": "222A",
+    "street_name": "BEDOK NTH DR",
+    "latitude": 1.325004604599697,
+    "longitude": 103.9277703143595,
+    "postal": "461222",
+    "address": "222A BEDOK NORTH DRIVE BEDOK BEACON SINGAPORE 461222"
+  },
+  "152C|BEDOK STH RD": {
+    "block": "152C",
+    "street_name": "BEDOK STH RD",
+    "latitude": 1.318717037520852,
+    "longitude": 103.9470124230528,
+    "postal": "463152",
+    "address": "152C BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 463152"
+  },
+  "420A|NORTHSHORE DR": {
+    "block": "420A",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.418439113886777,
+    "longitude": 103.9015997841853,
+    "postal": "821420",
+    "address": "420A NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 821420"
+  },
+  "228B|PUNGGOL FIELD": {
+    "block": "228B",
+    "street_name": "PUNGGOL FIELD",
+    "latitude": 1.403762443386553,
+    "longitude": 103.891553728412,
+    "postal": "822228",
+    "address": "228B PUNGGOL FIELD MATILDA SUNDECK SINGAPORE 822228"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77903,36 +77935,28 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "222A|BEDOK NTH DR": {
-    "block": "222A",
-    "street_name": "BEDOK NTH DR",
-    "latitude": 1.325004604599697,
-    "longitude": 103.9277703143595,
-    "postal": "461222",
-    "address": "222A BEDOK NORTH DRIVE BEDOK BEACON SINGAPORE 461222"
+  "41A|MARGARET DR": {
+    "block": "41A",
+    "street_name": "MARGARET DR",
+    "latitude": 1.296892979042182,
+    "longitude": 103.8068218054895,
+    "postal": "143041",
+    "address": "41A MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 143041"
   },
-  "152C|BEDOK STH RD": {
-    "block": "152C",
-    "street_name": "BEDOK STH RD",
-    "latitude": 1.318717037520852,
-    "longitude": 103.9470124230528,
-    "postal": "463152",
-    "address": "152C BEDOK SOUTH ROAD BEDOK SOUTH HORIZON SINGAPORE 463152"
+  "109D|CANBERRA WALK": {
+    "block": "109D",
+    "street_name": "CANBERRA WALK",
+    "latitude": 1.449043503267156,
+    "longitude": 103.8295651615551,
+    "postal": "754109",
+    "address": "109D CANBERRA WALK EASTGLEN @ CANBERRA SINGAPORE 754109"
   },
-  "420A|NORTHSHORE DR": {
-    "block": "420A",
-    "street_name": "NORTHSHORE DR",
-    "latitude": 1.418439113886777,
-    "longitude": 103.9015997841853,
-    "postal": "821420",
-    "address": "420A NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 821420"
-  },
-  "228B|PUNGGOL FIELD": {
-    "block": "228B",
-    "street_name": "PUNGGOL FIELD",
-    "latitude": 1.403762443386553,
-    "longitude": 103.891553728412,
-    "postal": "822228",
-    "address": "228B PUNGGOL FIELD MATILDA SUNDECK SINGAPORE 822228"
+  "107A|BIDADARI PK DR": {
+    "block": "107A",
+    "street_name": "BIDADARI PK DR",
+    "latitude": 1.334779767862864,
+    "longitude": 103.872399131107,
+    "postal": "341107",
+    "address": "107A BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 341107"
   }
 }
