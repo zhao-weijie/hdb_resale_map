@@ -77063,6 +77063,30 @@
     "postal": "822228",
     "address": "228B PUNGGOL FIELD MATILDA SUNDECK SINGAPORE 822228"
   },
+  "41A|MARGARET DR": {
+    "block": "41A",
+    "street_name": "MARGARET DR",
+    "latitude": 1.296892979042182,
+    "longitude": 103.8068218054895,
+    "postal": "143041",
+    "address": "41A MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 143041"
+  },
+  "109D|CANBERRA WALK": {
+    "block": "109D",
+    "street_name": "CANBERRA WALK",
+    "latitude": 1.449043503267156,
+    "longitude": 103.8295651615551,
+    "postal": "754109",
+    "address": "109D CANBERRA WALK EASTGLEN @ CANBERRA SINGAPORE 754109"
+  },
+  "107A|BIDADARI PK DR": {
+    "block": "107A",
+    "street_name": "BIDADARI PK DR",
+    "latitude": 1.334779767862864,
+    "longitude": 103.872399131107,
+    "postal": "341107",
+    "address": "107A BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 341107"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77935,28 +77959,28 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "41A|MARGARET DR": {
-    "block": "41A",
+  "420C|NORTHSHORE DR": {
+    "block": "420C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.418926970469476,
+    "longitude": 103.9023582464964,
+    "postal": "823420",
+    "address": "420C NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 823420"
+  },
+  "30|MARGARET DR": {
+    "block": "30",
     "street_name": "MARGARET DR",
-    "latitude": 1.296892979042182,
-    "longitude": 103.8068218054895,
-    "postal": "143041",
-    "address": "41A MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 143041"
+    "latitude": 1.298726243658565,
+    "longitude": 103.8039618328686,
+    "postal": "141030",
+    "address": "30 MARGARET DRIVE SKYRESIDENCE @ DAWSON SINGAPORE 141030"
   },
-  "109D|CANBERRA WALK": {
-    "block": "109D",
-    "street_name": "CANBERRA WALK",
-    "latitude": 1.449043503267156,
-    "longitude": 103.8295651615551,
-    "postal": "754109",
-    "address": "109D CANBERRA WALK EASTGLEN @ CANBERRA SINGAPORE 754109"
-  },
-  "107A|BIDADARI PK DR": {
-    "block": "107A",
-    "street_name": "BIDADARI PK DR",
-    "latitude": 1.334779767862864,
-    "longitude": 103.872399131107,
-    "postal": "341107",
-    "address": "107A BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 341107"
+  "626A|TAMPINES ST 61": {
+    "block": "626A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.362697377987262,
+    "longitude": 103.940131457766,
+    "postal": "521626",
+    "address": "626A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521626"
   }
 }

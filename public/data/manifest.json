@@ -5,83 +5,83 @@
   "years": [
     {
       "year": 2017,
-      "url": "hdb_data_2017-5a5b55d33599.arrow",
+      "url": "hdb_data_2017-fe394664d199.arrow",
       "rows": 20337,
       "minMonth": "2017-01",
       "maxMonth": "2017-12",
-      "sha256": "5a5b55d3359928c39bc3e8e71e5535564fa17513eee5bb263246b0756e69a574"
+      "sha256": "fe394664d19971fbf2eaa53d34516c97293e725ec84b5eb621288d3da9b06bf3"
     },
     {
       "year": 2018,
-      "url": "hdb_data_2018-ebf043e4c1c2.arrow",
+      "url": "hdb_data_2018-c63659545cb1.arrow",
       "rows": 21552,
       "minMonth": "2018-01",
       "maxMonth": "2018-12",
-      "sha256": "ebf043e4c1c29858ecbe1f15ae68bb2ee1b6f55736fd945e88cacc18619c6b77"
+      "sha256": "c63659545cb19bcbe5081faaf1788e2570e9b735c8e8303f1b4d57fc3e574ef6"
     },
     {
       "year": 2019,
-      "url": "hdb_data_2019-3951887aa376.arrow",
+      "url": "hdb_data_2019-447d96169b82.arrow",
       "rows": 22168,
       "minMonth": "2019-01",
       "maxMonth": "2019-12",
-      "sha256": "3951887aa376e6e97424a4fdcdedace7e261f90fec045c6ff6e834e7d2b22f94"
+      "sha256": "447d96169b82af8c533526752b97333fd4b278de0af3bd95f5c41c82656546ec"
     },
     {
       "year": 2020,
-      "url": "hdb_data_2020-b0160df23150.arrow",
+      "url": "hdb_data_2020-0f6baffc41ea.arrow",
       "rows": 23313,
       "minMonth": "2020-01",
       "maxMonth": "2020-12",
-      "sha256": "b0160df23150e0dfbe2a8e431c90a0c77b9b3993b716aaa42dc217e397e2cbc5"
+      "sha256": "0f6baffc41eaf3e1cb356b7058e6c923aedb92d5c76c58975e05daf37367f38b"
     },
     {
       "year": 2021,
-      "url": "hdb_data_2021-06e455367793.arrow",
+      "url": "hdb_data_2021-db2c718febc3.arrow",
       "rows": 29057,
       "minMonth": "2021-01",
       "maxMonth": "2021-12",
-      "sha256": "06e455367793db9a796cd9c85d939fcf7767112c6c22a7b56544e001f442b8f3"
+      "sha256": "db2c718febc3fa86e0c82cd4803afa2d3552d86cdd743f36d4c978bedb71719f"
     },
     {
       "year": 2022,
-      "url": "hdb_data_2022-2613327fd76a.arrow",
+      "url": "hdb_data_2022-3c4a9c2e9ae7.arrow",
       "rows": 26702,
       "minMonth": "2022-01",
       "maxMonth": "2022-12",
-      "sha256": "2613327fd76a682b062f6dfc2b8726eccdf32262f30af87c875133e194636734"
+      "sha256": "3c4a9c2e9ae7cbd8324b295067909c8994926f4efb0217d6e9efb0fe1dc55d9e"
     },
     {
       "year": 2023,
-      "url": "hdb_data_2023-e875652bfb7d.arrow",
+      "url": "hdb_data_2023-546ada4624fc.arrow",
       "rows": 25740,
       "minMonth": "2023-01",
       "maxMonth": "2023-12",
-      "sha256": "e875652bfb7d66a25cbd1646ac1114fccc75a4e2206ab644c8384c5c376fae68"
+      "sha256": "546ada4624fcfe1d0a2f0dec08da3af5f204b92ac3bbade7f9efb0531b069421"
     },
     {
       "year": 2024,
-      "url": "hdb_data_2024-552a9efd5807.arrow",
+      "url": "hdb_data_2024-fc243c9ab024.arrow",
       "rows": 27817,
       "minMonth": "2024-01",
       "maxMonth": "2024-12",
-      "sha256": "552a9efd58076910a4388d495988c4042eccd3169c7d200169bfb5df0cf32f29"
+      "sha256": "fc243c9ab024e726d267e6e01d7a34737f303f80cb9e900d8f5cc43302b46c54"
     },
     {
       "year": 2025,
-      "url": "hdb_data_2025-19abb4a0df4f.arrow",
+      "url": "hdb_data_2025-db628e002cd5.arrow",
       "rows": 25072,
       "minMonth": "2025-01",
       "maxMonth": "2025-12",
-      "sha256": "19abb4a0df4f14f83d94e7772d2c9822ba46c727330f0c671973e1fdbb8601ee"
+      "sha256": "db628e002cd586126323f57ce76aa34022dc0c0e9dea59dfde5aa9c9fb759868"
     },
     {
       "year": 2026,
-      "url": "hdb_data_2026-a0a7430120ba.arrow",
-      "rows": 18169,
+      "url": "hdb_data_2026-e255789bd871.arrow",
+      "rows": 18608,
       "minMonth": "2026-01",
       "maxMonth": "2026-09",
-      "sha256": "a0a7430120ba8159b62f9d4a6367d29d57e74288a6f08fa7e86fe253d6132bd7"
+      "sha256": "e255789bd871247df8fe8c885863a21e1ee9fa13cf0f09b2a6bb0b07568f45cf"
     }
   ]
 }
