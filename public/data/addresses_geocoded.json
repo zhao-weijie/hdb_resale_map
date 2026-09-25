@@ -77087,6 +77087,30 @@
     "postal": "341107",
     "address": "107A BIDADARI PARK DRIVE ALKAFF OASIS SINGAPORE 341107"
   },
+  "420C|NORTHSHORE DR": {
+    "block": "420C",
+    "street_name": "NORTHSHORE DR",
+    "latitude": 1.418926970469476,
+    "longitude": 103.9023582464964,
+    "postal": "823420",
+    "address": "420C NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 823420"
+  },
+  "30|MARGARET DR": {
+    "block": "30",
+    "street_name": "MARGARET DR",
+    "latitude": 1.298726243658565,
+    "longitude": 103.8039618328686,
+    "postal": "141030",
+    "address": "30 MARGARET DRIVE SKYRESIDENCE @ DAWSON SINGAPORE 141030"
+  },
+  "626A|TAMPINES ST 61": {
+    "block": "626A",
+    "street_name": "TAMPINES ST 61",
+    "latitude": 1.362697377987262,
+    "longitude": 103.940131457766,
+    "postal": "521626",
+    "address": "626A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521626"
+  },
   "116|BT MERAH VIEW": {
     "block": "116",
     "street_name": "BT MERAH VIEW",
@@ -77959,28 +77983,28 @@
     "postal": "381111",
     "address": "111 LORONG 3 GEYLANG SINGAPORE 381111"
   },
-  "420C|NORTHSHORE DR": {
-    "block": "420C",
+  "10C|BEDOK STH AVE 2": {
+    "block": "10C",
+    "street_name": "BEDOK STH AVE 2",
+    "latitude": 1.322094235642828,
+    "longitude": 103.9362235860816,
+    "postal": "462010",
+    "address": "10C BEDOK SOUTH AVENUE 2 SINGAPORE 462010"
+  },
+  "419A|NORTHSHORE DR": {
+    "block": "419A",
     "street_name": "NORTHSHORE DR",
-    "latitude": 1.418926970469476,
-    "longitude": 103.9023582464964,
-    "postal": "823420",
-    "address": "420C NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 823420"
+    "latitude": 1.417711395769372,
+    "longitude": 103.9017077186526,
+    "postal": "821419",
+    "address": "419A NORTHSHORE DRIVE WATERFRONT II @ NORTHSHORE SINGAPORE 821419"
   },
-  "30|MARGARET DR": {
-    "block": "30",
+  "39A|MARGARET DR": {
+    "block": "39A",
     "street_name": "MARGARET DR",
-    "latitude": 1.298726243658565,
-    "longitude": 103.8039618328686,
-    "postal": "141030",
-    "address": "30 MARGARET DRIVE SKYRESIDENCE @ DAWSON SINGAPORE 141030"
-  },
-  "626A|TAMPINES ST 61": {
-    "block": "626A",
-    "street_name": "TAMPINES ST 61",
-    "latitude": 1.362697377987262,
-    "longitude": 103.940131457766,
-    "postal": "521626",
-    "address": "626A TAMPINES STREET 61 TAMPINES GREENVERGE SINGAPORE 521626"
+    "latitude": 1.297306016721973,
+    "longitude": 103.8063667632839,
+    "postal": "141039",
+    "address": "39A MARGARET DRIVE SKYOASIS @ DAWSON SINGAPORE 141039"
   }
 }
