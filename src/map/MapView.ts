@@ -1,5 +1,5 @@
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { ScatterplotLayer, PolygonLayer, GeoJsonLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, PolygonLayer, GeoJsonLayer, TextLayer } from '@deck.gl/layers';
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
@@ -9,7 +9,22 @@ import { buildColorLookup, type ColorScale } from '../components/ColorScaleBar';
 import { getTransactionStats } from '../utils/transactionStats';
 
 
-export type ColorMode = 'price' | 'price_psf';
+export type ColorMode = 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus';
+export interface RentalMapPoint {
+    block: string;
+    streetName: string;
+    flatType: string;
+    latitude: number;
+    longitude: number;
+    /** Values are null for a known block with insufficient rental evidence. */
+    rent: number | null;
+    rentPsf: number | null;
+    grossYield: number | null;
+    monthlySurplus: number | null;
+    provenance?: 'same_block' | 'nearby' | 'insufficient';
+    eligibility?: 'eligible' | 'restricted' | 'unknown';
+    [key: string]: unknown;
+}
 
 export class MapView {
     private map: maplibregl.Map | null = null;
@@ -30,6 +45,9 @@ export class MapView {
     private isMobile: boolean;
     private onPointClickCallback: ((lat: number, lng: number, transaction: HDBTransaction) => void) | null = null;
     private colorLookup: [number, number, number][] = buildColorLookup('viridis');
+    private rentalPoints: RentalMapPoint[] = [];
+    private rentalDomain: { min: number; max: number; extent?: number } | null = null;
+    private onRentalPointClickCallback: ((point: RentalMapPoint) => void) | null = null;
 
     constructor(containerId: string, _dataLoader: DataLoader, isMobile: boolean) {
         const container = document.getElementById(containerId);
@@ -103,6 +121,8 @@ export class MapView {
             this.colorLookup = buildColorLookup(scale);
             this.updateLayers();
         });
+        appState.subscribe('colorMode', () => this.updateLayers());
+        appState.subscribe('rentalActiveFlatType', () => this.updateLayers());
 
         console.log("✓ Map initialized with OneMap basemap");
     }
@@ -225,14 +245,33 @@ export class MapView {
         this.onPointClickCallback = callback;
     }
 
+    setOnRentalPointClick(callback: (point: RentalMapPoint) => void): void {
+        this.onRentalPointClickCallback = callback;
+    }
+
+    setRentalPoints(points: RentalMapPoint[]): void {
+        this.rentalPoints = points;
+        this.updateLayers();
+    }
+
+    setRentalDomain(domain: { min: number; max: number; extent?: number } | null): void {
+        this.rentalDomain = domain;
+        this.updateLayers();
+    }
+
     private createLayers() {
         const dataToRender = appState.get('filteredTransactions');
 
         const layers: any[] = [];
 
 
-        // Always color by the selected mode
+        // Price modes keep the original individual-transaction map. Rental modes
+        // deliberately collapse to one marker per block so overlapping records do
+        // not obscure the comparison the buyer is trying to make.
         const colorMode = appState.get('colorMode');
+        if (colorMode !== 'price' && colorMode !== 'price_psf') {
+            layers.push(...this.createRentalLayers(colorMode));
+        } else {
         const getValue = colorMode === 'price'
             ? (d: HDBTransaction) => d.resale_price
             : (d: HDBTransaction) => d.price_psf;
@@ -305,6 +344,7 @@ export class MapView {
                 }
             }
         }));
+        }
 
         // MOP Expiry Layer
         if (this.mopData && appState.get('displayMopExpiries')) {
@@ -406,6 +446,82 @@ export class MapView {
             );
         }
 
+        return layers;
+    }
+
+    private createRentalLayers(mode: Exclude<ColorMode, 'price' | 'price_psf'>): any[] {
+        const selectedType = appState.get('rentalActiveFlatType');
+        const points = this.rentalPoints.filter((point) => !selectedType || point.flatType === selectedType);
+        const getValue = (point: RentalMapPoint): number | null => {
+            if (mode === 'rent') return point.rent;
+            if (mode === 'rent_psf') return point.rentPsf;
+            if (mode === 'gross_yield') return point.grossYield;
+            return point.monthlySurplus;
+        };
+        const values = points.map(getValue).filter((value): value is number =>
+            typeof value === 'number' && Number.isFinite(value));
+        const sorted = [...values].sort((a, b) => a - b);
+        const percentile = (p: number) => {
+            if (!sorted.length) return 0;
+            const index = Math.max(0, Math.min(sorted.length - 1, (sorted.length - 1) * p));
+            const lower = Math.floor(index); const upper = Math.ceil(index);
+            return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
+        };
+        const computedLow = percentile(.05);
+        const computedHigh = percentile(.95);
+        const low = this.rentalDomain?.min ?? computedLow;
+        const high = this.rentalDomain?.max ?? computedHigh;
+        const extent = this.rentalDomain?.extent ?? Math.max(Math.abs(low), Math.abs(high), 1);
+        const color = (point: RentalMapPoint): [number, number, number, number] => {
+            const value = getValue(point);
+            if (value === null || value === undefined || !Number.isFinite(value)) return [151, 151, 151, 180];
+            if (mode === 'monthly_surplus') {
+                // Orange → neutral → blue, fixed at zero so profit/loss is legible.
+                const ratio = Math.max(-1, Math.min(1, value / extent));
+                if (ratio < 0) {
+                    const t = ratio + 1;
+                    return [Math.round(224 + 31 * t), Math.round(116 + 126 * t), Math.round(43 + 192 * t), 245];
+                }
+                return [Math.round(255 - 197 * ratio), Math.round(242 - 112 * ratio), Math.round(235 + 15 * ratio), 245];
+            }
+            const normalized = high === low ? .5 : Math.max(0, Math.min(1, (value - low) / (high - low)));
+            const [r, g, b] = this.colorLookup[Math.min(255, Math.floor(normalized * 255))];
+            return [r, g, b, 245];
+        };
+        const lineColor = (point: RentalMapPoint): [number, number, number, number] => {
+            if (point.eligibility === 'restricted') return [120, 53, 15, 255];
+            if (point.provenance === 'nearby') return [35, 35, 35, 255];
+            if (point.eligibility === 'unknown') return [87, 83, 77, 230];
+            return [255, 255, 255, 220];
+        };
+        const layers: any[] = [new ScatterplotLayer({
+            id: 'rental-block-layer', data: points, pickable: true, stroked: true,
+            getPosition: (d: RentalMapPoint) => [d.longitude, d.latitude],
+            getRadius: this.isMobile ? 85 : 68,
+            radiusMinPixels: this.isMobile ? 5 : 4, radiusMaxPixels: 28,
+            getFillColor: color, getLineColor: lineColor,
+            getLineWidth: (d: RentalMapPoint) => d.provenance === 'nearby' || d.eligibility === 'restricted' ? 2.5 : 0,
+            lineWidthUnits: 'pixels', lineWidthMinPixels: 0,
+            updateTriggers: { getFillColor: [mode, low, high, extent, this.colorLookup], getLineColor: [mode] },
+            onHover: (info: any) => { this.containerElement.style.cursor = info.object ? 'pointer' : ''; },
+            onClick: (info: any) => {
+                if (!info?.object || this.containerElement.classList.contains('selection-active')) return false;
+                this.onRentalPointClickCallback?.(info.object as RentalMapPoint);
+                return true;
+            }
+        })];
+        const restricted = points.filter((point) => point.eligibility === 'restricted');
+        if (restricted.length) layers.push(new TextLayer({
+            id: 'rental-restriction-symbols', data: restricted, pickable: false,
+            getPosition: (d: RentalMapPoint) => [d.longitude, d.latitude], getText: () => '⚠',
+            getSize: 16, getColor: [112, 54, 18, 255], getTextAnchor: 'middle', getAlignmentBaseline: 'center',
+        }));
+        const provisional = points.filter((point) => point.eligibility === 'unknown');
+        if (provisional.length) layers.push(new TextLayer({
+            id: 'rental-provisional-symbols', data: provisional, pickable: false,
+            getPosition: (d: RentalMapPoint) => [d.longitude, d.latitude], getText: () => '?',
+            getSize: 13, getColor: [75, 70, 65, 255], getTextAnchor: 'middle', getAlignmentBaseline: 'center',
+        }));
         return layers;
     }
 

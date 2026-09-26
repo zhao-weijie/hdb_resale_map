@@ -16,7 +16,12 @@ export interface AppState {
     globalFilters: GlobalFilters;
     selectionMode: 'radial' | 'rect';
     isSelectionModeActive: boolean;
-    colorMode: 'price' | 'price_psf';
+    /** `price` modes colour individual transactions; rental modes colour a block/type estimate. */
+    colorMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus';
+    /** The flat type used to colour a rental map.  The filter can still contain several types. */
+    rentalActiveFlatType: string | null;
+    /** Persisted scenario inputs are intentionally kept separate from filters. */
+    rentalScenario: Record<string, number | string>;
     colorScale: 'viridis' | 'turbo';
 
     // Selection geometry
@@ -53,6 +58,8 @@ export class StateStore {
             isSelectionModeActive: false,
             colorMode: 'price_psf',
             colorScale: 'viridis',
+            rentalActiveFlatType: null,
+            rentalScenario: {},
             selectionCenter: null,
             selectionRadius: 500,
 
