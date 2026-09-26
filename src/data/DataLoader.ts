@@ -139,16 +139,17 @@ export class DataLoader {
                 block: columns.block!.get(i) ?? '',
                 street_name: columns.street_name!.get(i) ?? '',
                 storey_range: columns.storey_range!.get(i) ?? '',
-                floor_area_sqm: columns.floor_area_sqm!.get(i) ?? 0,
+                floor_area_sqm: Number(columns.floor_area_sqm!.get(i) ?? 0),
                 flat_model: columns.flat_model!.get(i) ?? '',
-                lease_commence_date: columns.lease_commence_date!.get(i) ?? 0,
-                remaining_lease_years: columns.remaining_lease_years!.get(i) ?? 0,
-                resale_price: columns.resale_price!.get(i) ?? 0,
-                price_psm: columns.price_psm!.get(i) ?? 0,
-                price_psf: columns.price_psf!.get(i) ?? 0,
-                latitude: columns.latitude!.get(i) ?? 0,
-                longitude: columns.longitude!.get(i) ?? 0,
-                mrt_distance_m: columns.mrt_distance_m!.get(i) ?? 0,
+                // Arrow Int64 columns return bigint; the public model promises numbers.
+                lease_commence_date: Number(columns.lease_commence_date!.get(i) ?? 0),
+                remaining_lease_years: Number(columns.remaining_lease_years!.get(i) ?? 0),
+                resale_price: Number(columns.resale_price!.get(i) ?? 0),
+                price_psm: Number(columns.price_psm!.get(i) ?? 0),
+                price_psf: Number(columns.price_psf!.get(i) ?? 0),
+                latitude: Number(columns.latitude!.get(i) ?? 0),
+                longitude: Number(columns.longitude!.get(i) ?? 0),
+                mrt_distance_m: Number(columns.mrt_distance_m!.get(i) ?? 0),
             });
         }
         return loaded;
