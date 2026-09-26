@@ -1130,12 +1130,11 @@ input[type="checkbox"] {
 .rental-type-row, .rental-palette-row { margin-top: 10px; display: block; }
 .rental-type-row[hidden], .rental-window-row[hidden] { display: none !important; }
 .rental-active-type { padding: 2px 5px; border-radius: 999px; background: var(--color-primary-bg); color: var(--color-primary-hover); font-size: 11px; }
-.rental-window-row { margin: 10px 0 0; padding: 0; border: 0; font-size: 12px; color: var(--color-text-muted); }
-.rental-window-row legend, .rental-window-row label { color: var(--color-text-muted); }
+.rental-window-row { margin: 10px 0 0; font-size: 12px; color: var(--color-text-muted); }
+.rental-window-row > label { display: block; margin-bottom: 4px; color: var(--color-text-muted); }
 .rental-window-row small { display: block; margin-top: 3px; }
-.rental-window-inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 4px; margin-top: 4px; }
-.rental-window-inputs label { display: grid; gap: 2px; }
-.rental-window-row input { min-width: 0; padding: 6px; border: 1px solid var(--color-border); border-radius: 5px; }
+.rental-window-row input { min-width: 0; }
+.rental-window-apply { width: 100%; margin-top: 6px; }
 .rental-controls-menu select { width: 100%; padding: 7px; border: 1px solid var(--color-border); border-radius: 5px; background: #fff; }
 .rental-assumptions-open { width: 100%; margin-top: 12px; padding: 8px; border: 1px solid var(--color-primary); border-radius: 5px; color: var(--color-primary-hover); background: var(--color-primary-bg); cursor: pointer; }
 .rental-retry { width: 100%; margin-top: 6px; padding: 7px; border: 1px solid var(--color-danger); border-radius: 5px; background: #fff5f5; color: var(--color-danger); cursor: pointer; }

@@ -90,21 +90,23 @@ export class RentalController {
             <p class="rental-control-title">Map colour</p>
             <div class="rental-mode-options"></div>
             <div class="rental-type-row" hidden><label>Flat type <select class="rental-type-select"></select></label></div>
-            <fieldset class="rental-window-row" hidden>
-              <legend>Rental evidence window</legend>
-              <span class="rental-window-inputs">
-                <label>From<input type="month" class="rental-window-min" aria-describedby="rental-window-hint"></label>
-                <span aria-hidden="true">to</span>
-                <label>To<input type="month" class="rental-window-max" aria-describedby="rental-window-hint"></label>
-              </span>
-              <small id="rental-window-hint">Choose the start month, then the end month. Independent of the resale history view.</small>
-            </fieldset>
+            <div class="rental-window-row" hidden>
+              <label for="rental-window-start">From Month</label>
+              <div class="input-wrapper">
+                <i data-lucide="calendar" aria-hidden="true"></i>
+                <input type="month" id="rental-window-start" class="rental-window-start" aria-describedby="rental-window-hint">
+              </div>
+              <button type="button" class="btn-primary rental-window-apply">Apply</button>
+              <small id="rental-window-hint">Through the latest month shared by rental and resale data.</small>
+            </div>
             <label class="rental-palette-row">Appearance <select class="rental-palette"><option value="viridis">Viridis</option><option value="turbo">Turbo</option></select></label>
             <button type="button" class="rental-assumptions-open">Edit assumptions</button>
             <p class="rental-status" aria-live="polite"></p>
             <button type="button" class="rental-retry" hidden>Retry rental data</button>
           </div>`;
         document.body.appendChild(shell);
+        // @ts-ignore - lucide is installed globally by icons.ts at app startup.
+        if (window.lucide) window.lucide.createIcons();
         const closeMenu = () => {
             shell.querySelector<HTMLElement>('.rental-controls-menu')!.hidden = true;
             shell.querySelector('.rental-metric-trigger')!.setAttribute('aria-expanded', 'false');
@@ -127,38 +129,32 @@ export class RentalController {
         });
         shell.querySelector<HTMLSelectElement>('.rental-palette')!.addEventListener('change', (event) =>
             appState.set('colorScale', (event.target as HTMLSelectElement).value as 'viridis' | 'turbo'));
-        const minInput = shell.querySelector<HTMLInputElement>('.rental-window-min')!;
-        const maxInput = shell.querySelector<HTMLInputElement>('.rental-window-max')!;
+        const startInput = shell.querySelector<HTMLInputElement>('.rental-window-start')!;
+        const applyWindow = shell.querySelector<HTMLButtonElement>('.rental-window-apply')!;
         const updateWindow = () => {
-            const min = minInput.value;
-            const max = maxInput.value;
             const resaleLatest = this.dataLoader.getAllData().reduce((latest, row) => row.month > latest ? row.month : latest, '');
-            const latest = this.dataset && resaleLatest > this.dataset.maxMonth ? this.dataset.maxMonth : resaleLatest;
-            if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(min) || !/^\d{4}-(0[1-9]|1[0-2])$/.test(max) || min > max ||
-                !this.dataset || min < this.dataset.minMonth || max > latest) {
-                this.status = `Choose an evidence window between ${this.dataset?.minMonth ?? 'the first available month'} and ${latest}, with the start before the end.`;
+            const requestedWindow = this.dataset
+                ? rentalWindowFromStart(startInput.value, this.dataset.minMonth, this.dataset.maxMonth, resaleLatest)
+                : null;
+            if (!requestedWindow) {
+                const latest = this.dataset && resaleLatest && resaleLatest < this.dataset.maxMonth ? resaleLatest : this.dataset?.maxMonth ?? '';
+                this.status = `Choose a start month between ${this.dataset?.minMonth ?? 'the first available month'} and ${latest || 'the latest available month'}.`;
                 shell.querySelector('.rental-status')!.textContent = this.status; return;
             }
-            const requestedWindow = { minMonth: min, maxMonth: max };
             const version = ++this.windowRequestVersion;
-            void this.dataLoader.ensureDateRange(min, max).then(() => {
+            applyWindow.disabled = true;
+            this.status = `Loading evidence from ${requestedWindow.minMonth}…`;
+            shell.querySelector('.rental-status')!.textContent = this.status;
+            void this.dataLoader.ensureDateRange(requestedWindow.minMonth, requestedWindow.maxMonth).then(() => {
                 if (version !== this.windowRequestVersion) return;
                 this.analysisWindow = requestedWindow; this.estimationContext = null;
-                this.status = `Rental evidence: ${this.dataset!.minMonth}–${this.dataset!.maxMonth}`;
+                this.status = `Rental evidence: ${requestedWindow.minMonth}–${requestedWindow.maxMonth}`;
                 this.syncControls();
                 if (this.isRentalMode(appState.get('colorMode') as MapMetric)) this.renderRentalPoints();
-            }).catch(() => { if (version === this.windowRequestVersion) { this.status = 'Could not load resale comparables for that evidence window.'; this.syncControls(); } });
+            }).catch(() => { if (version === this.windowRequestVersion) { this.status = 'Could not load resale comparables from that month.'; this.syncControls(); } })
+                .finally(() => { if (version === this.windowRequestVersion) applyWindow.disabled = false; });
         };
-        minInput.addEventListener('change', () => {
-            if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(minInput.value)) { updateWindow(); return; }
-            this.status = `Start month: ${minInput.value}. Now choose the end month.`;
-            shell.querySelector('.rental-status')!.textContent = this.status;
-            maxInput.focus({ preventScroll: true });
-            // Native month controls close after one value. Advance to the end
-            // control so the next picker interaction completes the range.
-            try { maxInput.showPicker(); } catch (_) { /* keyboard and unsupported browsers keep focus on the end control */ }
-        });
-        maxInput.addEventListener('change', updateWindow);
+        applyWindow.addEventListener('click', updateWindow);
         shell.querySelector<HTMLButtonElement>('.rental-assumptions-open')!.addEventListener('click', () => this.openScenarioEditor());
         shell.querySelector<HTMLButtonElement>('.rental-retry')!.addEventListener('click', () => void this.loadAndRender());
         document.addEventListener('click', (event) => {
@@ -198,18 +194,17 @@ export class RentalController {
         shell.querySelector<HTMLSelectElement>('.rental-palette')!.value = appState.get('colorScale');
         const resaleLatest = this.dataLoader.getAllData().reduce((latest, row) => row.month > latest ? row.month : latest, '');
         const latest = this.dataset && resaleLatest > this.dataset.maxMonth ? this.dataset.maxMonth : resaleLatest;
-        const minInput = shell.querySelector<HTMLInputElement>('.rental-window-min')!;
-        const maxInput = shell.querySelector<HTMLInputElement>('.rental-window-max')!;
-        if (this.dataset) {
-            minInput.min = this.dataset.minMonth;
-            maxInput.min = this.dataset.minMonth;
-        }
-        minInput.max = latest;
-        maxInput.max = latest;
+        const startInput = shell.querySelector<HTMLInputElement>('.rental-window-start')!;
+        startInput.disabled = !this.dataset;
+        shell.querySelector<HTMLButtonElement>('.rental-window-apply')!.disabled = !this.dataset;
+        if (this.dataset) startInput.min = this.dataset.minMonth;
+        startInput.max = latest;
         if (this.analysisWindow) {
-            minInput.value = this.analysisWindow.minMonth;
-            maxInput.value = this.analysisWindow.maxMonth;
+            startInput.value = this.analysisWindow.minMonth;
         }
+        shell.querySelector<HTMLElement>('#rental-window-hint')!.textContent = this.analysisWindow
+            ? `Through ${formatMonth(this.analysisWindow.maxMonth)}, the latest month shared by rental and resale data.`
+            : 'Through the latest month shared by rental and resale data.';
         const status = shell.querySelector('.rental-status')!;
         status.textContent = this.status;
         shell.querySelector<HTMLButtonElement>('.rental-retry')!.hidden = !this.status.startsWith('Rental data unavailable');
@@ -498,6 +493,11 @@ function areaSummaryText(summary: { count: number; min: number; max: number; med
     return summary ? `n=${summary.count}, median ${summary.median.toFixed(1)} sqm, range ${summary.min.toFixed(1)}–${summary.max.toFixed(1)} sqm, IQR ${summary.q1.toFixed(1)}–${summary.q3.toFixed(1)} sqm` : 'none';
 }
 function escapeAttribute(value: string): string { return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+export function rentalWindowFromStart(startMonth: string, datasetMin: string, datasetMax: string, resaleLatest: string): RentalAnalysisWindow | null {
+    const latest = resaleLatest && resaleLatest < datasetMax ? resaleLatest : datasetMax;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(startMonth) || startMonth < datasetMin || startMonth > latest) return null;
+    return { minMonth: startMonth, maxMonth: latest };
+}
 export function sanitizeScenario(raw: Record<string, unknown> | null): Record<string, number | string> {
     if (!raw || typeof raw !== 'object') return {};
     const result: Record<string, number | string> = {};

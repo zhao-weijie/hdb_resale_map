@@ -17,7 +17,7 @@ Verified on 25 September 2026 against the production Vite build in an isolated C
 - Panning retains the gross-yield scale (5.7%–9.7% for the tested 3-room scenario). Monthly-surplus colours have a symmetric scale centred on zero.
 - Rental assets are lazy-loaded; subsequent metric switches do not refetch them.
 - Blocking the rental manifest shows a visible failure and retry action. Resale mode remains available. Removing the network block and pressing Retry restores the rental map.
-- An evidence end month beyond the latest shared data is rejected without changing the active calculations; a valid window restores the normal status. Month values were committed through DOM change events because the automation client's native month-input fill cleared the field.
+- Rental evidence uses the same single **From Month** control pattern as Global Filters. Applying a valid start month keeps the end fixed to the latest month shared by rental and resale data; unavailable start months are rejected without changing the active calculations.
 - Selection geometry remains visible in rental mode. Icons render in the production build.
 - Dialog dismissal, input validation, and scenario recalculation were exercised. Negative rent is rejected; an explicit Annual Value of zero is retained.
 
