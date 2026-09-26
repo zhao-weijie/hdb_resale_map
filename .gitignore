@@ -12,7 +12,6 @@ scripts/data/
 # Deployment-generated rental snapshots
 /public/data/rental_data-*.json
 /public/data/rental_manifest.json
-/public/data/rental_classifications.json
 
 # Python
 __pycache__/

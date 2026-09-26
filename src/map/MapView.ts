@@ -1,5 +1,5 @@
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { ScatterplotLayer, PolygonLayer, GeoJsonLayer, TextLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, PolygonLayer, GeoJsonLayer } from '@deck.gl/layers';
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 // import { HeatmapLayer } from '@deck.gl/aggregation-layers'; // Removed
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
@@ -22,7 +22,6 @@ export interface RentalMapPoint {
     grossYield: number | null;
     monthlySurplus: number | null;
     provenance?: 'same_block' | 'nearby' | 'insufficient';
-    eligibility?: 'eligible' | 'restricted' | 'unknown';
     [key: string]: unknown;
 }
 
@@ -488,21 +487,13 @@ export class MapView {
             const [r, g, b] = this.colorLookup[Math.min(255, Math.floor(normalized * 255))];
             return [r, g, b, 245];
         };
-        const lineColor = (point: RentalMapPoint): [number, number, number, number] => {
-            if (point.eligibility === 'restricted') return [120, 53, 15, 255];
-            if (point.provenance === 'nearby') return [35, 35, 35, 255];
-            if (point.eligibility === 'unknown') return [87, 83, 77, 230];
-            return [255, 255, 255, 220];
-        };
         const layers: any[] = [new ScatterplotLayer({
-            id: 'rental-block-layer', data: points, pickable: true, stroked: true,
+            id: 'rental-block-layer', data: points, pickable: true, stroked: false,
             getPosition: (d: RentalMapPoint) => [d.longitude, d.latitude],
             getRadius: this.isMobile ? 85 : 68,
             radiusMinPixels: this.isMobile ? 5 : 4, radiusMaxPixels: 28,
-            getFillColor: color, getLineColor: lineColor,
-            getLineWidth: (d: RentalMapPoint) => d.provenance === 'nearby' || d.eligibility === 'restricted' ? 2.5 : 0,
-            lineWidthUnits: 'pixels', lineWidthMinPixels: 0,
-            updateTriggers: { getFillColor: [mode, low, high, extent, this.colorLookup], getLineColor: [mode] },
+            getFillColor: color,
+            updateTriggers: { getFillColor: [mode, low, high, extent, this.colorLookup] },
             onHover: (info: any) => { this.containerElement.style.cursor = info.object ? 'pointer' : ''; },
             onClick: (info: any) => {
                 if (!info?.object || this.containerElement.classList.contains('selection-active')) return false;
@@ -510,18 +501,6 @@ export class MapView {
                 return true;
             }
         })];
-        const restricted = points.filter((point) => point.eligibility === 'restricted');
-        if (restricted.length) layers.push(new TextLayer({
-            id: 'rental-restriction-symbols', data: restricted, pickable: false,
-            getPosition: (d: RentalMapPoint) => [d.longitude, d.latitude], getText: () => '⚠',
-            getSize: 16, getColor: [112, 54, 18, 255], getTextAnchor: 'middle', getAlignmentBaseline: 'center',
-        }));
-        const provisional = points.filter((point) => point.eligibility === 'unknown');
-        if (provisional.length) layers.push(new TextLayer({
-            id: 'rental-provisional-symbols', data: provisional, pickable: false,
-            getPosition: (d: RentalMapPoint) => [d.longitude, d.latitude], getText: () => '?',
-            getSize: 13, getColor: [75, 70, 65, 255], getTextAnchor: 'middle', getAlignmentBaseline: 'center',
-        }));
         return layers;
     }
 

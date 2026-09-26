@@ -117,8 +117,6 @@ The default is a purchase today, five years of qualifying occupation, 75% LTV, a
 
 The scenario assumes an eligible Singapore-citizen household and no Additional Buyer's Stamp Duty. It excludes personal income tax, CPF funding mechanics, renovation/legal costs, and alternative accommodation. The 10% reserve covers vacancy, agent fees, S&CC and repairs in aggregate; it is not a property-specific expense forecast.
 
-Whole-flat rental depends on the buyer's own MOP and HDB approval. Plus, Prime and PLH flats prohibit whole-flat rental even after MOP. Unknown project classifications remain explicitly unverified; past rental observations are not proof of eligibility. The existing upcoming-MOP overlay is not used to determine a new buyer's rental start date.
-
 Sources: [HDB resale MOP](https://www.hdb.gov.sg/managing-my-home/selling-a-flat/eligibility), [HDB rental restrictions](https://www.hdb.gov.sg/buying-a-flat/bto-sbf-and-open-booking-of-flats/conditions-after-buying-a-new-flat), [IRAS property tax](https://www.iras.gov.sg/quick-links/tax-rates/property-tax-rates), [BSD](https://www.iras.gov.sg/taxes/stamp-duty/for-property/buying-or-acquiring-property/buyer's-stamp-duty-(bsd)), [mortgage duty](https://www.iras.gov.sg/taxes/stamp-duty/for-property/buying-or-acquiring-property/mortgage-duty).
 
 ## Data Updates

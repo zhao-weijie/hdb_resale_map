@@ -1,7 +1,7 @@
 import { haversineDistance } from '../utils/geo';
 import type {
     BlockTypeTarget, EstimationContextInput, EstimationInput, MetricValue, Month, NumericSummary, PaletteDomain,
-    MapMetric, ProjectClassification, RentalAnalysisWindow, RentalEligibility, RentalEstimate,
+    MapMetric, RentalAnalysisWindow, RentalEstimate,
     RentalEvidence, RentalMetric, RentalRecord, RentalScenario, ResaleComparable,
     ResaleEstimate, ResaleFilters, ScenarioAssumptions, ScenarioInput,
 } from './types';
@@ -38,7 +38,6 @@ export interface RentalEstimationContext {
     analysisWindow: RentalAnalysisWindow | null;
     resaleComparables: ResaleComparable[];
     resaleFilters: ResaleFilters;
-    classifications: ProjectClassification[];
     filteredRentalRecords: RentalRecord[];
     rentalByBlockType: ReadonlyMap<string, RentalRecord[]>;
     rawRentalByBlockType: ReadonlyMap<string, RentalRecord[]>;
@@ -46,7 +45,6 @@ export interface RentalEstimationContext {
     blockProfiles: ReadonlyMap<string, BlockProfile>;
     nearbyBlockTypes: ReadonlyMap<string, ReadonlyMap<string, RentalRecord[]>>;
     nearbyGrid: ReadonlyMap<string, string[]>;
-    classificationByBlock: ReadonlyMap<string, ProjectClassification>;
 }
 
 export function normalizeAddressPart(value: string | null | undefined): string {
@@ -143,23 +141,6 @@ function resaleEstimateForMatching(matching: ResaleComparable[], target: BlockTy
     return { summary, areaSummary, qualifiedForMap: (summary?.count ?? 0) >= 3, nearestMrtExitMeters: mrt };
 }
 
-export function resolveRentalEligibility(
-    target: BlockTypeTarget,
-    classifications: ProjectClassification[] = [],
-): { eligibility: RentalEligibility; classification: ProjectClassification | null; provisional: boolean } {
-    const key = blockKey(target.block, target.streetName);
-    const classification = classifications.find((candidate) => blockKey(candidate.block, candidate.street_name) === key) ?? null;
-    if (!classification) return { eligibility: 'unknown', classification: null, provisional: true };
-    if (classification.wholeFlatRental === 'prohibited' ||
-        classification.category === 'plus' || classification.category === 'prime' || classification.category === 'plh') {
-        return { eligibility: 'prohibited', classification, provisional: false };
-    }
-    if (classification.wholeFlatRental === 'unknown' || classification.category === 'unknown') {
-        return { eligibility: 'unknown', classification, provisional: true };
-    }
-    return { eligibility: 'allowed', classification, provisional: false };
-}
-
 export function estimateRent(input: EstimationInput): RentalEstimate {
     const context = createRentalEstimationContext(input);
     return estimateRentForTarget(context, input.target);
@@ -191,9 +172,9 @@ export function createRentalEstimationContext(input: EstimationContextInput): Re
     }
     return {
         analysisWindow, resaleComparables: input.resaleComparables, resaleFilters: input.resaleFilters ?? {},
-        classifications: input.classifications ?? [], filteredRentalRecords, rentalByBlockType,
+        filteredRentalRecords, rentalByBlockType,
         rawRentalByBlockType, resaleByBlockType, blockProfiles: profiles, nearbyBlockTypes,
-        nearbyGrid, classificationByBlock: new Map((input.classifications ?? []).map((item) => [blockKey(item.block, item.street_name), item])),
+        nearbyGrid,
     };
 }
 
@@ -205,21 +186,17 @@ export function estimateRentForTarget(context: RentalEstimationContext, target: 
     const directRecords = context.rentalByBlockType.get(typeKey) ?? [];
     const direct = evidenceFor(directRecords, rawDirect, window);
     const resale = getResaleEstimateFromRecords(context.resaleByBlockType.get(typeKey) ?? [], target, context.resaleFilters);
-    const eligibility = resolveRentalEligibility(target, context.classifications);
-    if (eligibility.eligibility === 'prohibited') {
-        return unavailableEstimate(direct, resale, eligibility, window);
-    }
     if ((direct.summary?.count ?? 0) >= 5) {
-        return selectedEstimate('same_block', direct, null, resale, eligibility, window);
+        return selectedEstimate('same_block', direct, null, resale, window);
     }
 
     const nearbyRecords = nearbyRentalRecordsFromContext(context, target, flatType, false);
     const rawNearby = nearbyRentalRecordsFromContext(context, target, flatType, true);
     const nearby = evidenceFor(nearbyRecords, rawNearby, window);
     if ((nearby.summary?.count ?? 0) >= 10 && nearby.blockCount >= 3) {
-        return selectedEstimate('nearby_blocks', direct, nearby, resale, eligibility, window);
+        return selectedEstimate('nearby_blocks', direct, nearby, resale, window);
     }
-    return unavailableEstimate(direct, resale, eligibility, window, nearby);
+    return unavailableEstimate(direct, resale, window, nearby);
 }
 
 export function calculateScenario(input: ScenarioInput): RentalScenario {
@@ -317,23 +294,19 @@ export function calculateNonOwnerPropertyTax(annualValue: number): number {
 export function getRentalMetric(
     metric: RentalMetric, estimate: RentalEstimate, scenario?: RentalScenario | null,
 ): MetricValue {
-    const unavailable = (unit: MetricValue['unit']): MetricValue => ({ value: null, unit, available: false, provisional: estimate.provisional });
-    if (estimate.eligibility === 'prohibited') {
-        return unavailable(metric === 'gross_yield' ? '%' : metric === 'estimated_rent_psf' ? '$/psf/month' :
-            metric === 'monthly_surplus' ? '$/month after reserve and tax' : '$/month');
-    }
+    const unavailable = (unit: MetricValue['unit']): MetricValue => ({ value: null, unit, available: false });
     switch (metric) {
         case 'monthly_rent':
             return estimate.monthlyRent === null ? unavailable('$/month') :
-                { value: estimate.monthlyRent, unit: '$/month', available: true, provisional: estimate.provisional };
+                { value: estimate.monthlyRent, unit: '$/month', available: true };
         case 'estimated_rent_psf':
             return estimate.rentPsf === null ? unavailable('$/psf/month') :
-                { value: estimate.rentPsf, unit: '$/psf/month', available: true, provisional: estimate.provisional };
+                { value: estimate.rentPsf, unit: '$/psf/month', available: true };
         case 'gross_yield':
-            return !scenario ? unavailable('%') : { value: scenario.grossYield * 100, unit: '%', available: true, provisional: estimate.provisional };
+            return !scenario ? unavailable('%') : { value: scenario.grossYield * 100, unit: '%', available: true };
         case 'monthly_surplus':
             return !scenario ? unavailable('$/month after reserve and tax') :
-                { value: scenario.propertyMonthlySurplus, unit: '$/month after reserve and tax', available: true, provisional: estimate.provisional };
+                { value: scenario.propertyMonthlySurplus, unit: '$/month after reserve and tax', available: true };
     }
 }
 
@@ -360,23 +333,21 @@ export function paletteScalar(value: number | null | undefined, domain: PaletteD
 }
 
 function selectedEstimate(source: 'same_block' | 'nearby_blocks', direct: RentalEvidence, nearby: RentalEvidence | null,
-    resale: ResaleEstimate, eligibility: ReturnType<typeof resolveRentalEligibility>, window: RentalAnalysisWindow | null): RentalEstimate {
+    resale: ResaleEstimate, window: RentalAnalysisWindow | null): RentalEstimate {
     const selected = source === 'same_block' ? direct : nearby;
     const monthlyRent = selected?.summary?.median ?? null;
     const areaSqft = resale.areaSummary?.median ? resale.areaSummary.median * SQM_TO_SQFT : 0;
     return {
         source, monthlyRent, rentPsf: monthlyRent !== null && areaSqft > 0 ? monthlyRent / areaSqft : null,
-        direct, nearby, selected: selected ?? null, resale, eligibility: eligibility.eligibility,
-        eligibilityClassification: eligibility.classification, provisional: eligibility.provisional, analysisWindow: window,
+        direct, nearby, selected: selected ?? null, resale, analysisWindow: window,
     };
 }
 
-function unavailableEstimate(direct: RentalEvidence, resale: ResaleEstimate, eligibility: ReturnType<typeof resolveRentalEligibility>,
+function unavailableEstimate(direct: RentalEvidence, resale: ResaleEstimate,
     window: RentalAnalysisWindow | null, nearby: RentalEvidence | null = null): RentalEstimate {
     return {
         source: 'unavailable', monthlyRent: null, rentPsf: null, direct, nearby, selected: null, resale,
-        eligibility: eligibility.eligibility, eligibilityClassification: eligibility.classification,
-        provisional: eligibility.provisional, analysisWindow: window,
+        analysisWindow: window,
     };
 }
 

@@ -4,7 +4,7 @@
  * request therefore never prevents the resale map from being explored.
  */
 
-import type { ProjectClassification, RentalDataset, RentalRecord } from '../rental/types';
+import type { RentalDataset, RentalRecord } from '../rental/types';
 
 interface RentalManifest {
     version: 1;
@@ -21,7 +21,6 @@ interface RentalPayload {
     generatedAt: string;
     columns: string[];
     records: unknown[];
-    classifications: unknown[];
 }
 
 const RECORD_COLUMNS = ['month', 'town', 'block', 'street_name', 'flat_type', 'monthly_rent'] as const;
@@ -69,7 +68,6 @@ export class RentalDataLoader {
         }
         const payload = this.validatePayload(await assetResponse.json());
         const records = payload.records.map((row) => this.decodeRecord(row));
-        const classifications = payload.classifications.map((item) => this.decodeClassification(item));
 
         const months = records.map((record) => record.month);
         const minMonth = months.reduce((min, month) => month < min ? month : min, months[0] ?? '');
@@ -84,7 +82,6 @@ export class RentalDataLoader {
             minMonth,
             maxMonth,
             records,
-            classifications,
         };
     }
 
@@ -106,7 +103,7 @@ export class RentalDataLoader {
         if (payload.version !== 1 || !this.isDate(payload.generatedAt) ||
             !Array.isArray(payload.columns) || payload.columns.length !== RECORD_COLUMNS.length ||
             payload.columns.some((column, index) => column !== RECORD_COLUMNS[index]) ||
-            !Array.isArray(payload.records) || !Array.isArray(payload.classifications)) {
+            !Array.isArray(payload.records)) {
             throw new Error('Invalid rental data');
         }
         return payload as RentalPayload;
@@ -127,21 +124,6 @@ export class RentalDataLoader {
             flat_type: value[4],
             monthly_rent: value[5],
         };
-    }
-
-    private decodeClassification(value: unknown): ProjectClassification {
-        if (!value || typeof value !== 'object') throw new Error('Invalid rental classification');
-        const item = value as Partial<ProjectClassification>;
-        const categories = new Set(['legacy', 'standard', 'plus', 'prime', 'plh', 'unknown']);
-        const eligibility = new Set(['allowed', 'prohibited', 'unknown']);
-        if (!this.isNonEmptyString(item.block) || !this.isNonEmptyString(item.street_name) ||
-            !categories.has(item.category ?? '') || !eligibility.has(item.wholeFlatRental ?? '') ||
-            !this.isNonEmptyString(item.sourceUrl) || !this.isDate(item.reviewedAt) ||
-            (item.projectName !== undefined && !this.isNonEmptyString(item.projectName)) ||
-            (item.mopDate !== undefined && !this.isDate(item.mopDate))) {
-            throw new Error('Invalid rental classification');
-        }
-        return item as ProjectClassification;
     }
 
     private isMonth(value: unknown): value is string {

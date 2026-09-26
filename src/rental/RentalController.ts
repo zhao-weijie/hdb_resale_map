@@ -3,6 +3,7 @@ import { RentalDataLoader } from '../data/RentalDataLoader';
 import type { ColorScaleBar } from '../components/ColorScaleBar';
 import type { MapView, RentalMapPoint } from '../map/MapView';
 import { appState } from '../state/AppState';
+import { applyFilters } from '../utils/filters';
 import {
     calculateScenario, createRentalEstimationContext, estimateRentForTarget, getMapRentalMetric, getPaletteDomain, singaporeToday,
     type RentalEstimate, type RentalScenario, type RentalEstimationContext,
@@ -87,7 +88,6 @@ export class RentalController {
             <span class="rental-metric-label">Colour by: Price per sqft</span><span class="rental-active-type" hidden></span><span aria-hidden="true">▾</span>
           </button>
           <div class="rental-controls-menu" hidden>
-            <p class="rental-control-title">Map colour</p>
             <div class="rental-mode-options"></div>
             <div class="rental-type-row" hidden><label>Flat type <select class="rental-type-select"></select></label></div>
             <div class="rental-window-row" hidden>
@@ -148,7 +148,7 @@ export class RentalController {
             void this.dataLoader.ensureDateRange(requestedWindow.minMonth, requestedWindow.maxMonth).then(() => {
                 if (version !== this.windowRequestVersion) return;
                 this.analysisWindow = requestedWindow; this.estimationContext = null;
-                this.status = `Rental evidence: ${requestedWindow.minMonth}–${requestedWindow.maxMonth}`;
+                this.status = '';
                 this.syncControls();
                 if (this.isRentalMode(appState.get('colorMode') as MapMetric)) this.renderRentalPoints();
             }).catch(() => { if (version === this.windowRequestVersion) { this.status = 'Could not load resale comparables from that month.'; this.syncControls(); } })
@@ -228,7 +228,7 @@ export class RentalController {
                     const year = Number(sharedLatest.slice(0, 4));
                     this.analysisWindow = { minMonth: `${year - 1}-01`, maxMonth: sharedLatest };
                 }
-                this.status = `Rental evidence: ${dataset.minMonth}–${dataset.maxMonth}`;
+                this.status = '';
             })().catch((error: unknown) => {
                 this.status = `Rental data unavailable. Retry: ${error instanceof Error ? error.message : 'request failed'}`;
                 this.dataset = null;
@@ -243,12 +243,9 @@ export class RentalController {
         const request = ++this.requestVersion;
         const all = this.dataLoader.getAllData();
         const filters = appState.get('globalFilters');
-        const selectedTypes = filters.flatTypes;
-        const minMonth = this.analysisWindow?.minMonth ?? '2025-01';
-        const maxMonth = this.analysisWindow?.maxMonth ?? '9999-12';
-        const recent = all.filter((transaction) => transaction.month >= minMonth && transaction.month <= maxMonth && selectedTypes.includes(transaction.flat_type));
+        const filteredTransactions = applyFilters(all, filters);
         const targets = new Map<string, HDBTransaction>();
-        for (const transaction of recent) {
+        for (const transaction of filteredTransactions) {
             const key = `${transaction.block}|${transaction.street_name}|${transaction.flat_type}`;
             const existing = targets.get(key);
             if (!existing || transaction.month > existing.month) targets.set(key, transaction);
@@ -258,7 +255,7 @@ export class RentalController {
         const contextKey = `${this.dataset.generatedAt}|${all.length}|${resaleFilters.floorMin}|${resaleFilters.leaseMin}|${resaleFilters.leaseMax}|${this.analysisWindow?.minMonth}|${this.analysisWindow?.maxMonth}`;
         if (!this.estimationContext || this.estimationContextKey !== contextKey) {
             this.estimationContext = createRentalEstimationContext({ rentalRecords: this.dataset.records, resaleComparables: all,
-                classifications: this.dataset.classifications, resaleFilters, analysisWindow: this.analysisWindow ?? undefined });
+                resaleFilters, analysisWindow: this.analysisWindow ?? undefined });
             this.estimationContextKey = contextKey;
         }
         const context = this.estimationContext;
@@ -277,7 +274,7 @@ export class RentalController {
             const purchasePrice = override?.price ?? estimate.resale.summary?.median ?? 0;
             const currentMonthlyRent = effectiveRent ?? 0;
             const canModelPurchase = override?.price !== undefined || estimate.resale.qualifiedForMap;
-            const scenario = estimate.eligibility !== 'prohibited' && canModelPurchase && purchasePrice > 0 && currentMonthlyRent > 0
+            const scenario = canModelPurchase && purchasePrice > 0 && currentMonthlyRent > 0
                 ? calculateScenario({ purchasePrice, currentMonthlyRent, evidenceAsOf: estimate.analysisWindow?.maxMonth,
                     marketValue: override?.marketValue, annualValueOverride: override?.annualValue, assumptions: scenarioInputs }) : null;
             const metric = getMapRentalMetric(appState.get('colorMode') as RentalMode, estimate, scenario);
@@ -286,7 +283,6 @@ export class RentalController {
                 rent: getMapRentalMetric('rent', estimate, scenario).value, rentPsf: getMapRentalMetric('rent_psf', estimate, scenario).value,
                 grossYield: getMapRentalMetric('gross_yield', estimate, scenario).value, monthlySurplus: getMapRentalMetric('monthly_surplus', estimate, scenario).value,
                 provenance: estimate.source === 'nearby_blocks' ? 'nearby' : estimate.source === 'same_block' ? 'same_block' : 'insufficient',
-                eligibility: estimate.eligibility === 'prohibited' ? 'restricted' : estimate.eligibility === 'unknown' ? 'unknown' : 'eligible',
                 metricValue: metric.value, estimate, scenario };
             return { point, estimate, scenario, transaction };
         });
@@ -298,8 +294,10 @@ export class RentalController {
     private updateLegend(): void {
         const mode = appState.get('colorMode') as RentalMode;
         const descriptor = RENTAL_MODES.find((item) => item.value === mode)!;
-        const values = this.rows.filter((row) => row.point.flatType === appState.get('rentalActiveFlatType'))
-            .map((row) => row.point.metricValue as number | null);
+        const values = this.rows
+            .filter((row) => row.point.flatType === appState.get('rentalActiveFlatType'))
+            .map((row) => row.point.metricValue as number | null)
+            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
         const domain = getPaletteDomain(values);
         const format = (value: number) => mode === 'gross_yield' ? `${value.toFixed(1)}%` :
             mode === 'rent_psf' ? `$${value.toFixed(2)}/psf` : money(value);
@@ -309,7 +307,7 @@ export class RentalController {
         this.colorScale.setRentalLegend({ label: `${descriptor.label}${domain.lowClipped || domain.highClipped ? ' (5–95%)' : ''}`,
             low: format(mode === 'monthly_surplus' ? -extent : domain.min), high: format(mode === 'monthly_surplus' ? extent : domain.max),
             midpoint: mode === 'monthly_surplus' ? '$0' : undefined,
-            key: 'Solid: same block · outlined: nearby · grey: insufficient · ?: eligibility unverified · ⚠: restricted', divergent: mode === 'monthly_surplus' });
+            key: 'Grey: no usable estimate.', divergent: mode === 'monthly_surplus' });
     }
 
     private openDetails(point: RentalMapPoint): void {
@@ -347,13 +345,11 @@ export class RentalController {
         const activeOverride = this.overrides.get(this.overrideKey(active.transaction));
         const evidenceCount = active.estimate.selected?.summary?.count;
         const evidenceSource = active.estimate.source === 'same_block' ? 'Same-block evidence' : active.estimate.source === 'nearby_blocks' ? 'Nearby-block estimate' : 'Insufficient rental evidence';
-        const eligibility = active.estimate.eligibility === 'prohibited' ? 'Whole-flat rental prohibited' : active.estimate.provisional ? 'Eligibility unverified' : 'Rental eligibility verified';
         const purchaseEstimate = activeOverride?.price ?? active.estimate.resale.summary?.median ?? null;
         const surplusTone = s ? (s.propertyMonthlySurplus < 0 ? ' negative' : ' positive') : '';
         modal.querySelector('.rental-modal-body')!.innerHTML = `<div class="rental-detail-meta">
             <span class="rental-type-chip">${escapeHtml(active.point.flatType)}</span>
             <span>${evidenceSource}${evidenceCount ? ` · ${evidenceCount} rents` : ''}</span>
-            <span class="rental-eligibility${active.estimate.eligibility === 'prohibited' ? ' restricted' : ''}">${eligibility}</span>
           </div>
           <section class="rental-outcome" aria-labelledby="rental-outcome-title">
             <div class="rental-section-heading"><h3 id="rental-outcome-title">Rental outcome</h3>${s ? `<span>Rental starts ${formatMonth(s.rentalStartDate.slice(0, 7))}</span>` : ''}</div>
@@ -391,7 +387,6 @@ export class RentalController {
                 ${active.estimate.source === 'nearby_blocks' ? `<div><dt>Nearby fallback</dt><dd>${summaryText(active.estimate.nearby?.summary)} across ${active.estimate.nearby?.blockCount ?? 0} blocks</dd></div>` : ''}
                 <div><dt>Resale comparables</dt><dd>${summaryText(active.estimate.resale.summary)}; area ${areaSummaryText(active.estimate.resale.areaSummary)}</dd></div>
                 <div><dt>Nearest MRT exit</dt><dd>${active.estimate.resale.nearestMrtExitMeters === null ? 'Unavailable' : `${Math.round(active.estimate.resale.nearestMrtExitMeters)} m straight-line`}</dd></div>
-                <div><dt>Classification</dt><dd>${active.estimate.eligibilityClassification ? `${escapeHtml(active.estimate.eligibilityClassification.category)} / ${escapeHtml(active.estimate.eligibilityClassification.projectName ?? 'unnamed project')} (${escapeHtml(active.estimate.eligibilityClassification.reviewedAt)}) · <a href="${escapeHtml(active.estimate.eligibilityClassification.sourceUrl)}" target="_blank" rel="noreferrer">Source</a>` : 'Unknown; rental eligibility unverified'}</dd></div>
               </dl>
               <p class="rental-method-note">Rental records are whole-flat figures. Floor and lease filters apply only to resale comparables. Cash flow includes the operating reserve, mortgage payment and estimated non-owner property tax. It excludes income tax, CPF funding, ABSD, renovation, legal costs and the five-year holding period. Principal repayment is equity accumulation, not an expense.</p>
             </details>
@@ -429,12 +424,7 @@ export class RentalController {
     private openScenarioEditor(): void {
         const existing = appState.get('rentalScenario');
         const modal = this.modal('rental-scenario-modal', 'Rental scenario assumptions');
-        modal.querySelector('.rental-modal-body')!.innerHTML = `
-          ${numberField('purchaseDate', 'Purchase date', null, 'date', String(existing.purchaseDate ?? singaporeToday()))}
-          ${numberField('ltv', 'LTV (%)', Number(existing.ltv ?? .75) * 100)} ${numberField('mortgageYears', 'Mortgage tenure (years)', Number(existing.mortgageYears ?? 25))}
-          ${numberField('initialRate', 'Rate before MOP (%)', Number(existing.initialRate ?? .03) * 100)} ${numberField('rentalRate', 'Rate at rental start (%)', Number(existing.rentalRate ?? .03) * 100)}
-          ${numberField('annualRentGrowth', 'Annual rent growth (%)', Number(existing.annualRentGrowth ?? 0) * 100)} ${numberField('operatingReserve', 'Operating reserve (%)', Number(existing.operatingReserve ?? .10) * 100)}
-          <button>Apply scenario</button></form>`;
+        modal.querySelector('.rental-modal-body')!.innerHTML = scenarioFormMarkup(existing);
         modal.querySelector('form')!.addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget as HTMLFormElement;
             const number = (name: string) => Number((form.elements.namedItem(name) as HTMLInputElement).value);
             const candidate: Record<string, unknown> = { purchaseDate: (form.elements.namedItem('purchaseDate') as HTMLInputElement).value, ltv: number('ltv') / 100,
@@ -486,6 +476,14 @@ function numberField(name: string, label: string, value: number | null, type = '
     const rendered = stringValue ?? (value === null || value === undefined || !Number.isFinite(value) ? '' : String(Math.round(value * 100) / 100));
     return `<label>${label}<input name="${name}" type="${type}" ${type === 'number' ? 'step="any"' : ''} value="${escapeAttribute(rendered)}"></label>`;
 }
+export function scenarioFormMarkup(existing: Record<string, number | string>): string {
+    return `<form class="rental-scenario-form">
+          ${numberField('purchaseDate', 'Purchase date', null, 'date', String(existing.purchaseDate ?? singaporeToday()))}
+          ${numberField('ltv', 'LTV (%)', Number(existing.ltv ?? .75) * 100)} ${numberField('mortgageYears', 'Mortgage tenure (years)', Number(existing.mortgageYears ?? 25))}
+          ${numberField('initialRate', 'Rate before MOP (%)', Number(existing.initialRate ?? .03) * 100)} ${numberField('rentalRate', 'Rate at rental start (%)', Number(existing.rentalRate ?? .03) * 100)}
+          ${numberField('annualRentGrowth', 'Annual rent growth (%)', Number(existing.annualRentGrowth ?? 0) * 100)} ${numberField('operatingReserve', 'Operating reserve (%)', Number(existing.operatingReserve ?? .10) * 100)}
+          <button>Apply scenario</button></form>`;
+}
 function summaryText(summary: { count: number; min: number; max: number; median: number; q1: number; q3: number } | null | undefined): string {
     return summary ? `n=${summary.count}, median ${money(summary.median)}, range ${money(summary.min)}–${money(summary.max)}, IQR ${money(summary.q1)}–${money(summary.q3)}` : 'none';
 }
@@ -516,7 +514,6 @@ function isRealIsoDate(value: string): boolean {
     return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 function missingScenarioText(estimate: RentalEstimate, hasTargetPrice = false, compact = false): string {
-    if (estimate.eligibility === 'prohibited') return compact ? 'Whole-flat rental prohibited' : '⚠ Whole-flat rental is prohibited for this block. No rental projection is shown.';
     const missingRent = estimate.monthlyRent === null;
     const missingPrice = !hasTargetPrice && !estimate.resale.qualifiedForMap;
     if (compact) return missingRent && missingPrice ? 'Rent and price unavailable' : missingRent ? 'Rental estimate unavailable' : 'Purchase estimate unavailable';

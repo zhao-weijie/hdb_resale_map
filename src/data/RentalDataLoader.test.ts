@@ -19,7 +19,6 @@ const payload = {
         ['2025-01', 'TOWN', '123', 'TEST ROAD', '4 ROOM', 3200],
         ['2025-02', 'TOWN', '123', 'TEST ROAD', '4 ROOM', 3300],
     ],
-    classifications: [],
 };
 
 function response(body: unknown, url: string, ok = true): Response {

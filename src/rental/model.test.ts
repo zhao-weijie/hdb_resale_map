@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     calculateBSD, calculateMortgageDuty, calculateNonOwnerPropertyTax, calculateScenario,
-    estimateRent, filterRentalRecords, getMapRentalMetric, getPaletteDomain, resolveRentalEligibility,
+    estimateRent, filterRentalRecords, getMapRentalMetric, getPaletteDomain,
     getSharedRentalAnalysisWindow, normalizeAddressPart, normalizeFlatType, paletteScalar,
     singaporeToday,
 } from './model';
@@ -25,13 +25,6 @@ const rent = (overrides: Partial<RentalRecord> = {}): RentalRecord => ({
 });
 
 describe('rental evidence estimation', () => {
-    it('matches official full street names to abbreviated transaction addresses for restrictions', () => {
-        const eligibility = resolveRentalEligibility({ block: '36A', streetName: 'KELANTAN RD', flatType: '4 ROOM' }, [{
-            block: '36A', street_name: 'KELANTAN ROAD', category: 'plh', wholeFlatRental: 'prohibited',
-            sourceUrl: 'https://www.hdb.gov.sg/', reviewedAt: '2026-09-25',
-        }]);
-        expect(eligibility.eligibility).toBe('prohibited');
-    });
     it('normalizes address and flat-type joins and keeps equal observations', () => {
         expect(normalizeAddressPart('  123a,  Example   Road ')).toBe('123A EXAMPLE ROAD');
         expect(normalizeFlatType('4 rooms')).toBe('4 ROOM');
@@ -131,16 +124,6 @@ describe('rental evidence estimation', () => {
         expect(result.monthlyRent).toBe(3_000);
     });
 
-    it('suppresses projections for source-backed Plus/Prime/PLH and marks missing classifications provisional', () => {
-        const base = { target, rentalRecords: Array.from({ length: 5 }, () => rent()), resaleComparables: [resale(), resale(), resale()] };
-        expect(estimateRent({ ...base, classifications: [{
-            block: '123A', street_name: 'Example Road', category: 'plus', wholeFlatRental: 'allowed',
-            sourceUrl: 'https://example.test', reviewedAt: '2026-09-01',
-        }] }).eligibility).toBe('prohibited');
-        const unknown = estimateRent(base);
-        expect(unknown.eligibility).toBe('unknown');
-        expect(unknown.provisional).toBe(true);
-    });
 });
 
 describe('scenario finance model', () => {

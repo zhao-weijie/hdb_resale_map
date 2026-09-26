@@ -36,7 +36,7 @@ Evidence window: January 2025–August 2026. Default scenario: purchase 25 Septe
 
 ## Boundaries
 
-The shipped rental snapshot contains 209,852 records through August 2026. These are block/type estimates, not identified units. Rent PSF uses resale floor area as a proxy. The classification registry currently verifies eight River Peaks/PLH blocks; other blocks display unverified eligibility. Model tests cover prohibited classifications and full/abbreviated street-name matching; the current resale snapshot does not provide a real restricted-project marker for browser testing.
+The shipped rental snapshot contains 209,852 records through August 2026. These are block/type estimates, not identified units. Rent PSF uses resale floor area as a proxy.
 
 Interest rates and five-year growth are editable assumptions, not forecasts. Annual Value defaults to a rent-based proxy. Personal income tax, CPF mechanics and the first five years' holding costs are outside the displayed cash-flow return. See the main README for sources and calculation boundaries.
 

@@ -28,30 +28,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PUBLIC_DATA_DIR = SCRIPT_DIR.parent / "public" / "data"
 RAW_DATA_FILE = SCRIPT_DIR / "data" / "hdb_rental_raw.csv"
 MANIFEST_FILE = PUBLIC_DATA_DIR / "rental_manifest.json"
-CLASSIFICATION_REGISTRY_FILE = PUBLIC_DATA_DIR / "rental_classifications.json"
 DATASET_ID = "d_c9f57187485a850908655db0e8cfe651"
 DATAGOV_API_BASE = "https://api-open.data.gov.sg/v1/public/api/datasets"
 SOURCE_URL = f"https://data.gov.sg/datasets/{DATASET_ID}/view"
-
-# These are policy references only.  The registry starts deliberately empty:
-# project names or classifications must never be guessed from transaction data
-# or fuzzy-matched against the upcoming-MOP overlay.
-CLASSIFICATION_SOURCES = [
-    "https://www.hdb.gov.sg/managing-my-home/selling-a-flat/eligibility",
-    "https://www.hdb.gov.sg/buying-a-flat/bto-sbf-and-open-booking-of-flats/conditions-after-buying-a-new-flat",
-]
-
-RIVER_PEAKS_PROJECT_SOURCE = (
-    "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2021/"
-    "hdb-launches-6299-flats-in-november-2021-bto-and-sbf-exercises/17112021-Annex-A1.pdf"
-)
-RIVER_PEAKS_ADDRESS_SOURCE = (
-    "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2022/"
-    "hdb-awards-2022-oct22/09102022---Corp-PR---Annex---HDB-Awards-2022.pdf"
-)
-SOURCE_REVIEWED_AT = "2026-09-25T00:00:00Z"
-CLASSIFICATION_SOURCES.extend([RIVER_PEAKS_PROJECT_SOURCE, RIVER_PEAKS_ADDRESS_SOURCE])
-CLASSIFICATION_COVERAGE = "Partial: verified River Peaks I and II PLH blocks only; all other blocks are unknown."
 
 MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 FLAT_TYPE_RE = re.compile(r"^(1|2|3|4|5)\s*(?:-|\s)?(?:ROOM|RM)$", re.IGNORECASE)
@@ -168,57 +147,6 @@ def normalise_rentals(source: pd.DataFrame, start_month: str) -> tuple[list[list
     return rows, rejected
 
 
-def known_classifications() -> list[dict[str, str]]:
-    """Return only projects whose exact blocks and policy were checked at source.
-
-    River Peaks I and II are specifically named as PLH in HDB's November 2021
-    launch annex. HDB's Design Awards annex supplies the exact block/street
-    addresses.  No completion or MOP date is inferred for the project.
-    """
-    entries = []
-    for block in ("36", "36A", "36B", "36C"):
-        entries.append({
-            "block": block,
-            "street_name": "KELANTAN ROAD",
-            "projectName": "River Peaks I and II",
-            "category": "plh",
-            "wholeFlatRental": "prohibited",
-            "sourceUrl": RIVER_PEAKS_PROJECT_SOURCE,
-            "reviewedAt": SOURCE_REVIEWED_AT,
-            "evidenceUrls": [RIVER_PEAKS_PROJECT_SOURCE, RIVER_PEAKS_ADDRESS_SOURCE],
-        })
-    for block in ("37", "37A", "37B", "37C"):
-        entries.append({
-            "block": block,
-            "street_name": "WELD ROAD",
-            "projectName": "River Peaks I and II",
-            "category": "plh",
-            "wholeFlatRental": "prohibited",
-            "sourceUrl": RIVER_PEAKS_PROJECT_SOURCE,
-            "reviewedAt": SOURCE_REVIEWED_AT,
-            "evidenceUrls": [RIVER_PEAKS_PROJECT_SOURCE, RIVER_PEAKS_ADDRESS_SOURCE],
-        })
-    return entries
-
-
-def write_classification_registry(classifications: list[dict[str, str]]) -> None:
-    """Publish explicit policy provenance and the current partial coverage.
-
-    Unlisted blocks remain unknown. The registry must never treat a project
-    name, MOP prediction, or historic rental as eligibility evidence.
-    """
-    registry = {
-        "version": 1,
-        "reviewedAt": SOURCE_REVIEWED_AT,
-        "sourceUrls": CLASSIFICATION_SOURCES,
-        "coverage": CLASSIFICATION_COVERAGE,
-        "classifications": classifications,
-    }
-    CLASSIFICATION_REGISTRY_FILE.write_text(
-        json.dumps(registry, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8"
-    )
-
-
 def _canonical_payload(payload: dict[str, Any]) -> str:
     """Serialize source content without the wall-clock build timestamp."""
     canonical = dict(payload)
@@ -260,8 +188,6 @@ def build_dataset(source: pd.DataFrame, start_month: str) -> tuple[dict[str, Any
     rows, rejected = normalise_rentals(source, start_month)
     if not rows:
         raise ValueError("No valid rental records remain after normalisation")
-    classifications = known_classifications()
-    write_classification_registry(classifications)
     payload = {
         "version": 1,
         # The timestamp is selected after content is assembled so an unchanged
@@ -271,13 +197,6 @@ def build_dataset(source: pd.DataFrame, start_month: str) -> tuple[dict[str, Any
         "source": {"datasetId": DATASET_ID, "url": SOURCE_URL},
         "columns": ["month", "town", "block", "street_name", "flat_type", "monthly_rent"],
         "records": rows,
-        "classifications": classifications,
-        "classificationRegistry": {
-            "url": CLASSIFICATION_REGISTRY_FILE.name,
-            "reviewedAt": SOURCE_REVIEWED_AT,
-            "sourceUrls": CLASSIFICATION_SOURCES,
-            "coverage": CLASSIFICATION_COVERAGE,
-        },
     }
     generated_at = generated_at_for_payload(payload)
     payload["generatedAt"] = generated_at

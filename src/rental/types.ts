@@ -12,31 +12,12 @@ export interface RentalRecord {
     monthly_rent: number;
 }
 
-export type ProjectCategory = 'legacy' | 'standard' | 'plus' | 'prime' | 'plh' | 'unknown';
-export type RentalEligibility = 'allowed' | 'prohibited' | 'unknown';
-
-/**
- * A deliberately source-backed classification.  `unknown` means the source did
- * not establish an eligibility decision; it must not be inferred from rentals.
- */
-export interface ProjectClassification {
-    block: string;
-    street_name: string;
-    projectName?: string;
-    category: ProjectCategory;
-    wholeFlatRental: RentalEligibility;
-    mopDate?: string;
-    sourceUrl: string;
-    reviewedAt: string;
-}
-
 export interface RentalDataset {
     version: 1;
     generatedAt: string;
     minMonth: Month;
     maxMonth: Month;
     records: RentalRecord[];
-    classifications: ProjectClassification[];
 }
 
 /** The resale fields used by the rental estimator.  They intentionally mirror HDBTransaction. */
@@ -117,10 +98,6 @@ export interface RentalEstimate {
     nearby: RentalEvidence | null;
     selected: RentalEvidence | null;
     resale: ResaleEstimate;
-    eligibility: RentalEligibility;
-    eligibilityClassification: ProjectClassification | null;
-    /** True only for a source-backed unknown classification. */
-    provisional: boolean;
     analysisWindow: RentalAnalysisWindow | null;
 }
 
@@ -128,7 +105,6 @@ export interface EstimationInput {
     target: BlockTypeTarget;
     rentalRecords: RentalRecord[];
     resaleComparables: ResaleComparable[];
-    classifications?: ProjectClassification[];
     analysisWindow?: RentalAnalysisWindow;
     resaleFilters?: ResaleFilters;
 }
@@ -137,7 +113,6 @@ export interface EstimationInput {
 export interface EstimationContextInput {
     rentalRecords: RentalRecord[];
     resaleComparables: ResaleComparable[];
-    classifications?: ProjectClassification[];
     analysisWindow?: RentalAnalysisWindow;
     resaleFilters?: ResaleFilters;
 }
@@ -198,7 +173,6 @@ export interface MetricValue {
     value: number | null;
     unit: '$/month' | '$/psf/month' | '%' | '$/month after reserve and tax';
     available: boolean;
-    provisional: boolean;
 }
 
 export interface PaletteDomain {

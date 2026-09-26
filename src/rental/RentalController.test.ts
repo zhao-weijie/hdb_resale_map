@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { rentalWindowFromStart, sanitizeScenario } from './RentalController';
+import { rentalWindowFromStart, sanitizeScenario, scenarioFormMarkup } from './RentalController';
 
 describe('rental evidence month UI', () => {
     it('uses one start month through the latest month shared by both datasets', () => {
@@ -15,6 +16,17 @@ describe('rental evidence month UI', () => {
 });
 
 describe('rental scenario UI validation', () => {
+    it('anchors date and month picker hit targets to their own inputs', () => {
+        const stylesheet = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+        expect(stylesheet).toMatch(/input\[type="date"\],\s*input\[type="month"\]\s*\{\s*position:\s*relative;/);
+    });
+
+    it('renders its inputs inside the scenario form', () => {
+        const markup = scenarioFormMarkup({ purchaseDate: '2026-09-25' });
+        expect(markup).toContain('<form class="rental-scenario-form">');
+        expect(markup).toMatch(/<button>Apply scenario<\/button><\/form>$/);
+    });
+
     it('keeps only model-valid, serializable assumptions', () => {
         expect(sanitizeScenario({
             purchaseDate: '2026-09-25', ltv: .75, mortgageYears: 25,
