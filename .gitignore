@@ -7,8 +7,11 @@ dist/
 # Data files (large)
 /data/
 scripts/data/
-# *.arrow # Allow arrow files
 *.parquet
+
+# Deployment-generated rental snapshots
+/public/data/rental_data-*.json
+/public/data/rental_manifest.json
 
 # Python
 __pycache__/

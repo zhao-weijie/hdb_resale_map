@@ -16,8 +16,8 @@ function arrow(month: string, block: string, street: string): Uint8Array {
     return tableToIPC(tableFromArrays({
         month: [month], transaction_date: [new Date(`${month}-01`).getTime()], town: ['TOWN'],
         flat_type: ['4 ROOM'], block: [block], street_name: [street], storey_range: ['07 TO 09'],
-        floor_area_sqm: [90], flat_model: ['Improved'], lease_commence_date: [1990],
-        remaining_lease_years: [70], resale_price: [500000], price_psm: [5555], price_psf: [516],
+        floor_area_sqm: [90], flat_model: ['Improved'], lease_commence_date: new BigInt64Array([1990n]),
+        remaining_lease_years: new BigInt64Array([70n]), resale_price: [500000], price_psm: [5555], price_psf: [516],
         latitude: [1.35], longitude: [103.8], mrt_distance_m: [500],
     }), 'file');
 }
@@ -53,6 +53,9 @@ describe('DataLoader partition loading', () => {
         expect(fetchMock).toHaveBeenCalledWith('https://example.test/data/2024.arrow');
         expect(loader.getTransactionsForBlock(' 123 ', 'test road')).toHaveLength(1);
         expect(loader.queryRectangle(1.3, 103.7, 1.4, 103.9)).toHaveLength(1);
+        expect(loader.getAllData()[0].lease_commence_date).toBe(1990);
+        expect(loader.getAllData()[0].remaining_lease_years).toBe(70);
+        expect(Number.isFinite(loader.getAllData()[0].remaining_lease_years)).toBe(true);
     });
 
     it('deduplicates concurrent year requests', async () => {

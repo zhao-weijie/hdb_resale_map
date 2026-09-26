@@ -3,11 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: ["main"]
+  schedule:
+    - cron: '0 0 * * 5'  # Every Friday at 00:00 UTC
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Update HDB Resale Data"]
-    types: [completed]
-    branches: ["main"]
 
 permissions:
   contents: read
@@ -23,11 +21,49 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Restore generated data cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/data/addresses_geocoded.json
+            public/data/rental_manifest.json
+            public/data/rental_data-*.json
+          key: generated-data-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            generated-data-${{ runner.os }}-
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Test data builders
+        run: python -m unittest discover -s scripts -p "test_*.py"
+
+      - name: Download latest data and geocode new addresses
+        env:
+          DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
+          ONEMAP_EMAIL: ${{ secrets.ONEMAP_EMAIL }}
+          ONEMAP_PASSWORD: ${{ secrets.ONEMAP_PASSWORD }}
+        run: python scripts/geocode_pipeline.py
+
+      - name: Build yearly Arrow files
+        run: python scripts/build_arrow.py
+
+      - name: Build HDB whole-flat rental asset
+        env:
+          DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
+        run: python scripts/build_rental.py
       
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -37,6 +73,9 @@ jobs:
           
       - name: Install dependencies
         run: npm ci
+
+      - name: Test web application
+        run: npm test
         
       - name: Build
         run: npm run build
@@ -47,7 +86,6 @@ jobs:
           path: ./dist
 
   deploy:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

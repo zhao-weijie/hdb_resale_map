@@ -60,15 +60,17 @@ export class ColorScaleBar {
     //private labelEl: HTMLElement | null = null;
 
     private colorScale: ColorScale = 'viridis';
-    private colorMode: 'price' | 'price_psf' = 'price_psf';
+    private colorMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus' = 'price_psf';
     private stats: TransactionStats | null = null;
     private selectionStats: TransactionStats | null = null;
     private resizeObserver: ResizeObserver | null = null;
     private panelObserver: MutationObserver | null = null;
     private statsSource: HDBTransaction[] | null = null;
-    private statsMode: 'price' | 'price_psf' | null = null;
+    private statsMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus' | null = null;
     private selectionSource: HDBTransaction[] | null = null;
-    private selectionMode: 'price' | 'price_psf' | null = null;
+    private selectionMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus' | null = null;
+    private legendSummaryEl: HTMLElement | null = null;
+    private rentalLegend: { label: string; low: string; high: string; midpoint?: string; key?: string; divergent?: boolean } | null = null;
 
     // IControl interface
     onAdd(_map: any): HTMLElement {
@@ -101,15 +103,17 @@ export class ColorScaleBar {
         this.gradientEl.appendChild(this.canvasEl);
         this.gradientEl.appendChild(this.overlayEl);
         this.gradientEl.appendChild(this.selectionOverlayEl);
+        this.legendSummaryEl = document.createElement('div');
+        this.legendSummaryEl.className = 'color-scale-summary';
+        // Put labels inside the gradient's positioned box so 0%, 50% and
+        // 100% always follow its actual (responsive) height.
+        this.gradientEl.appendChild(this.legendSummaryEl);
         this.outerEl.appendChild(this.gradientEl);
         //this.outerEl.appendChild(this.labelEl);
 
         // ── Click: toggle color scale ─────────────────────────────────────
-        this.gradientEl.addEventListener('click', () => {
-            const next: ColorScale =
-                this.colorScale === 'viridis' ? 'turbo' : 'viridis';
-            appState.set('colorScale', next);
-        });
+        // Palette is selected in the visible map appearance setting.  The
+        // legend should explain values, never behave like an undiscoverable control.
 
         // ── Hover: show / hide tick markers ───────────────────────────────
         this.gradientEl.addEventListener('mouseenter', () => this.showMarkers());
@@ -164,6 +168,12 @@ export class ColorScaleBar {
     // ── Private helpers ───────────────────────────────────────────────────
 
     private refreshStats(): void {
+        if (this.colorMode !== 'price' && this.colorMode !== 'price_psf') {
+            this.stats = null;
+            this.renderGradient();
+            this.renderMarkers();
+            return;
+        }
         const source = appState.get('filteredTransactions');
         if (this.statsSource === source && this.statsMode === this.colorMode) return;
         this.statsSource = source;
@@ -179,6 +189,11 @@ export class ColorScaleBar {
     }
 
     private refreshSelectionStats(): void {
+        if (this.colorMode !== 'price' && this.colorMode !== 'price_psf') {
+            this.selectionStats = null;
+            this.renderMarkers();
+            return;
+        }
         const selected = appState.get('selectedTransactions');
         if (this.selectionSource === selected && this.selectionMode === this.colorMode) return;
         this.selectionSource = selected;
@@ -217,7 +232,12 @@ export class ColorScaleBar {
         for (let i = 0; i <= steps; i++) {
             const stopPos = i / steps;      // 0 = top, 1 = bottom
             const t = 1 - stopPos;          // t=1 at top (max), t=0 at bottom (min)
-            grad.addColorStop(stopPos, fn(t));
+            if (this.rentalLegend?.divergent) {
+                const c = t < .5
+                    ? `rgb(${Math.round(224 + 31 * (t * 2))}, ${Math.round(116 + 126 * (t * 2))}, ${Math.round(43 + 192 * (t * 2))})`
+                    : `rgb(${Math.round(255 - 197 * ((t - .5) * 2))}, ${Math.round(242 - 112 * ((t - .5) * 2))}, ${Math.round(235 + 15 * ((t - .5) * 2))})`;
+                grad.addColorStop(stopPos, c);
+            } else grad.addColorStop(stopPos, fn(t));
         }
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
@@ -237,6 +257,11 @@ export class ColorScaleBar {
 
     /** Rebuild marker HTML for both overlays (but keep them hidden until hover). */
     private renderMarkers(): void {
+        if (this.legendSummaryEl) {
+            this.legendSummaryEl.innerHTML = this.rentalLegend
+                ? `<span class="scale-legend-title">${this.rentalLegend.label}</span><span class="scale-legend-high">${this.rentalLegend.high}</span>${this.rentalLegend.midpoint ? `<span class="scale-legend-mid">${this.rentalLegend.midpoint}</span>` : ''}<span class="scale-legend-low">${this.rentalLegend.low}</span>${this.rentalLegend.key ? `<span class="scale-legend-key">${this.rentalLegend.key}</span>` : ''}`
+                : '';
+        }
         if (!this.overlayEl || !this.stats) {
             if (this.overlayEl) this.overlayEl.innerHTML = '';
             if (this.selectionOverlayEl) this.selectionOverlayEl.innerHTML = '';
@@ -247,13 +272,13 @@ export class ColorScaleBar {
         if (max === min) {
             this.overlayEl.innerHTML = `<div class="scale-marker" style="top:50%">
                 <div class="scale-marker-tick"></div>
-                <div class="scale-marker-label">${formatPrice(min, this.colorMode)}</div>
+                <div class="scale-marker-label">${formatPrice(min, this.colorMode as 'price' | 'price_psf')}</div>
             </div>`;
             if (this.selectionOverlayEl) this.selectionOverlayEl.innerHTML = '';
             return;
         }
 
-        const mode = this.colorMode;
+        const mode = this.colorMode as 'price' | 'price_psf';
         const clamp = (v: number) => Math.max(min, Math.min(max, v));
 
         // ── Global markers ──────────────────────────────────────────────
@@ -308,6 +333,13 @@ export class ColorScaleBar {
                 </div>`;
             })
             .join('');
+    }
+
+    /** Rental domains are global, clipped and supplied by the controller. */
+    setRentalLegend(legend: { label: string; low: string; high: string; midpoint?: string; key?: string; divergent?: boolean } | null): void {
+        this.rentalLegend = legend;
+        this.renderGradient();
+        this.renderMarkers();
     }
 
     /**

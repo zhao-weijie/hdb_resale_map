@@ -1,10 +1,11 @@
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { refreshIcons } from './icons';
+import './icons';
 import { DataLoader } from './data/DataLoader';
 import { MapView } from './map/MapView';
 import { AnalyticsPanel } from './analytics/AnalyticsPanel';
 import { ColorScaleBar } from './components/ColorScaleBar';
+import { RentalController } from './rental/RentalController';
 import { appState } from './state/AppState';
 import { applyFilters } from './utils/filters';
 import { readSavedFilters } from './utils/savedFilters';
@@ -16,28 +17,15 @@ async function initApp() {
     // A compact status leaves the basemap usable while transaction history loads.
     loading?.classList.add('loading-status');
     performance.mark('app-start');
-    if (isMobile) {
-        const banner = document.getElementById('mobile-banner');
-        if (banner) {
-            banner.style.display = 'flex';
-            const closeBtn = document.createElement('button');
-            closeBtn.id = 'mobile-banner-close';
-            closeBtn.setAttribute('aria-label', 'Dismiss mobile banner');
-            closeBtn.innerHTML = '<i data-lucide="x"></i>';
-            closeBtn.onclick = () => { banner.style.display = 'none'; };
-            banner.appendChild(closeBtn);
-            refreshIcons();
-        }
-    }
-
     try {
         const filters = readSavedFilters(appState.get('globalFilters'));
         appState.set('globalFilters', filters);
         const dataLoader = new DataLoader();
         const mapView = new MapView('map-container', dataLoader, isMobile);
+        const colorScale = new ColorScaleBar();
         const mapReady = mapView.initialize().then(() => {
             performance.mark('basemap-ready');
-            mapView.addControl(new ColorScaleBar(), 'top-right');
+            mapView.addControl(colorScale, 'top-right');
         });
         const dataReady = (async () => {
             await dataLoader.loadManifest();
@@ -49,6 +37,8 @@ async function initApp() {
         mapView.setFilteredData(appState.get('filteredTransactions'));
         const analyticsPanel = new AnalyticsPanel('analytics-panel', dataLoader, mapView);
         analyticsPanel.render();
+        // Rental evidence is loaded only after the buyer selects a rental metric.
+        new RentalController(dataLoader, mapView, colorScale);
         loading?.remove();
         requestAnimationFrame(() => {
             performance.mark('transactions-ready');

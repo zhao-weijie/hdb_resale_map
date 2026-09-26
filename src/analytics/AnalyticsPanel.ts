@@ -104,6 +104,10 @@ export class AnalyticsPanel {
                  <select id="color-mode-select">
                     <option value="price_psf">Price per SqFt</option>
                     <option value="price">Resale Price</option>
+                    <option value="rent">Monthly Rent</option>
+                    <option value="rent_psf">Estimated Rent per SqFt</option>
+                    <option value="gross_yield">Gross Yield</option>
+                    <option value="monthly_surplus">Monthly Surplus</option>
                  </select>
              </div>
         </div>
@@ -140,7 +144,7 @@ export class AnalyticsPanel {
         // Restore saved color mode
         try {
             const savedColorMode = localStorage.getItem('hdb_colorMode');
-            if (savedColorMode && colorModeSelect) {
+            if (savedColorMode && colorModeSelect && [...colorModeSelect.options].some((option) => option.value === savedColorMode)) {
                 colorModeSelect.value = savedColorMode;
                 this.mapView.setColorMode(savedColorMode as any);
             }
@@ -148,6 +152,9 @@ export class AnalyticsPanel {
         colorModeSelect?.addEventListener('change', () => {
             this.mapView.setColorMode(colorModeSelect.value as any);
             try { localStorage.setItem('hdb_colorMode', colorModeSelect.value); } catch (_) {}
+        });
+        appState.subscribe('colorMode', (mode) => {
+            if (colorModeSelect && colorModeSelect.value !== mode) colorModeSelect.value = mode;
         });
 
         // Panel Toggle

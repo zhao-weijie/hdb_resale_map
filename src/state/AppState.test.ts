@@ -29,6 +29,16 @@ describe('StateStore', () => {
         expect(store.get('selectionRadius')).toBe(1000);
     });
 
+    it('keeps rental map selection and scenario state independent of resale filters', () => {
+        store.set('colorMode', 'gross_yield');
+        store.set('rentalActiveFlatType', '4 ROOM');
+        store.set('rentalScenario', { ltv: 0.75, initialRate: 0.03 });
+        expect(store.get('colorMode')).toBe('gross_yield');
+        expect(store.get('rentalActiveFlatType')).toBe('4 ROOM');
+        expect(store.get('rentalScenario')).toEqual({ ltv: 0.75, initialRate: 0.03 });
+        expect(store.get('globalFilters').date).toBe('2024-01');
+    });
+
     it('notifies subscribers when state changes', () => {
         let callbackValue: string | null = null;
         let callCount = 0;
