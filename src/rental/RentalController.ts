@@ -434,7 +434,7 @@ export class RentalController {
     private openScenarioEditor(): void {
         const existing = appState.get('rentalScenario');
         const modal = this.modal('rental-scenario-modal', 'Rental scenario assumptions');
-        modal.querySelector('.rental-modal-body')!.innerHTML = `<p>Uses an illustrative 3% rate by default, not a current bank quote. Enter your bank quotation before relying on the result. <a href="https://www.dbs.com.sg/personal/loans/homeloans/hdb-loan" target="_blank" rel="noreferrer">Bank package information</a>.</p><form class="rental-scenario-form">
+        modal.querySelector('.rental-modal-body')!.innerHTML = `
           ${numberField('purchaseDate', 'Purchase date', null, 'date', String(existing.purchaseDate ?? singaporeToday()))}
           ${numberField('ltv', 'LTV (%)', Number(existing.ltv ?? .75) * 100)} ${numberField('mortgageYears', 'Mortgage tenure (years)', Number(existing.mortgageYears ?? 25))}
           ${numberField('initialRate', 'Rate before MOP (%)', Number(existing.initialRate ?? .03) * 100)} ${numberField('rentalRate', 'Rate at rental start (%)', Number(existing.rentalRate ?? .03) * 100)}

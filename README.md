@@ -107,7 +107,7 @@ The default sample window starts in January of the preceding calendar year and e
 
 ### Scenario assumptions
 
-The default is a purchase today, five years of qualifying occupation, 75% LTV, a 25-year mortgage, illustrative 3% interest, no rent growth, and a 10% operating reserve. Assumptions are editable. The rental-period mortgage payment uses the balance after 60 payments and the remaining loan term, with a separate future interest rate. The 3% rate is a modelling assumption, not a bank quotation or a five-year forecast. Consult [bank package information](https://www.dbs.com.sg/personal/loans/homeloans/hdb-loan) and substitute your own quotation.
+The default is a purchase today, five years of qualifying occupation, 75% LTV, a 25-year mortgage, illustrative 3% interest, no rent growth, and a 10% operating reserve. Assumptions are editable. The rental-period mortgage payment uses the balance after 60 payments and the remaining loan term, with a separate future interest rate. The 3% rate is a modelling assumption, not a bank quotation or a five-year forecast. 
 
 - Gross yield on purchase cost is annual projected rent divided by the target price.
 - Monthly property surplus deducts the full mortgage payment, operating reserve, and estimated non-owner-occupier property tax.
