@@ -63,6 +63,8 @@ python build_rental.py
 
 It downloads the official [HDB rental transactions dataset](https://data.gov.sg/datasets/d_c9f57187485a850908655db0e8cfe651/view), keeps records from 2021 onward by default, and writes a content-hashed tuple JSON file plus `rental_manifest.json`. `generatedAt` records the UTC build time when canonical content changes; an unchanged source reuses the prior timestamp and asset. Set `HDB_RENTAL_CSV` for a local fixture or `HDB_RENTAL_START_MONTH` to change the retained range. It does not deduplicate source rental observations because the publication has no unit identifier.
 
+The rental snapshot, manifest, and generated classification registry are deployment outputs and are ignored by Git. The Pages workflow builds them before Vite packages `public/data`; run this script locally before starting the development server when testing rental mode.
+
 `rental_classifications.json` is deliberately incomplete. It currently includes only the verified River Peaks I and II PLH blocks from HDB's [launch annex](https://www.hdb.gov.sg/-/media/hdb-pulse/news/2021/hdb-launches-6299-flats-in-november-2021-bto-and-sbf-exercises/17112021-Annex-A1.pdf) and [address annex](https://www.hdb.gov.sg/-/media/hdb-pulse/news/2022/hdb-awards-2022-oct22/09102022---Corp-PR---Annex---HDB-Awards-2022.pdf). Consumers must treat all unlisted homes as rental eligibility unknown; rental history and fuzzy project matching are not eligibility evidence.
 
 **Duration:** ~1 minute

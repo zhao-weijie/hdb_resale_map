@@ -34,6 +34,9 @@ python scripts/geocode_pipeline.py
 
 # Build yearly Arrow data files
 python scripts/build_arrow.py
+
+# Build whole-flat rental evidence
+python scripts/build_rental.py
 ```
 
 This creates `public/data/manifest.json` and content-hashed yearly Arrow files. The app loads only years required by the default or saved date filter, fetching older history when requested. Prices shown are actual transaction prices, without regression estimates or price-index adjustment.
@@ -61,8 +64,7 @@ Output will be in `dist/` directory, ready for deployment.
 ```
 hdb_resale_map/
 ├── .github/workflows/
-│   ├── deploy.yml        # Deploy to GitHub Pages on push to main
-│   └── update-data.yml   # Auto-update data every Friday 00:00 UTC
+│   └── deploy.yml        # Refresh data and deploy GitHub Pages
 ├── scripts/              # Data pipeline (Python)
 │   ├── geocode_pipeline.py   # Downloads data + geocodes addresses
 │   ├── build_arrow.py        # Joins geocodes + exports yearly Arrow files
@@ -121,13 +123,15 @@ Sources: [HDB resale MOP](https://www.hdb.gov.sg/managing-my-home/selling-a-flat
 
 ## Data Updates
 
-Data is automatically refreshed every Friday via GitHub Actions (`update-data.yml`). The workflow:
+Data is automatically refreshed every Friday via GitHub Actions (`deploy.yml`). Pushes to `main` and manual dispatches run the same fresh-data deployment, preventing a code deployment from restoring an older snapshot. The workflow:
 
 1. Downloads the latest HDB resale transactions from [data.gov.sg](https://data.gov.sg)
 2. Geocodes any new addresses via the OneMap API (typically none — all HDB blocks are already cached)
 3. Rebuilds yearly Arrow files and the manifest from the full dataset, removing obsolete partitions
 4. Downloads whole-flat rental approvals and rebuilds the content-hashed rental snapshot and manifest
-5. Commits generated data changes to `main`; the deployment workflow runs after a successful update
+5. Runs the Python and TypeScript test suites, builds the site, and uploads the generated files directly in the GitHub Pages artifact
+
+Generated rental snapshots are ignored by Git and never committed. GitHub Actions caches the latest geocode lookup and rental asset between runs as a performance optimization; the tracked geocode lookup remains a fallback if that cache expires. A failed refresh does not replace the currently deployed Pages site.
 
 To trigger a manual update, use the **workflow_dispatch** option in the GitHub Actions tab.
 
