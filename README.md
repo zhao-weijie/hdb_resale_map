@@ -95,6 +95,30 @@ hdb_resale_map/
 - **Charts**: Chart.js
 - **Build**: Vite + TypeScript
 
+## Rental yield and cash flow
+
+The map's **Colour by** control supports monthly whole-flat rent, estimated rent per square foot, gross rental yield, and monthly property cash surplus alongside the existing resale price modes. Rental comparisons use one active flat type at a time. Open a block to compare its selected flat types and substitute a target purchase price, rent, floor area, or Annual Value.
+
+Rental evidence comes from [HDB's owner-declared rental approvals](https://data.gov.sg/datasets/d_c9f57187485a850908655db0e8cfe651/view), joined to resale transactions by block, street and flat type. These are block/type estimates, not matches to individual units. The rental source contains neither floor area nor storey. Estimated rent PSF uses the median area of resale comparables; floor and lease filters affect purchase-price comparables only.
+
+The default sample window starts in January of the preceding calendar year and ends in the latest month shared by resale and rental data. A same-block rental estimate needs five observations. Where evidence is thin, a labelled estimate may use the same flat type within 500 metres and a ten-year lease-commencement difference, with at least ten observations across three blocks. Identical rental rows are retained because the source has no unit identifiers. Invalid rents and extreme town/type outliers are excluded; evidence counts and ranges remain visible.
+
+### Scenario assumptions
+
+The default is a purchase today, five years of qualifying occupation, 75% LTV, a 25-year mortgage, illustrative 3% interest, no rent growth, and a 10% operating reserve. Assumptions are editable. The rental-period mortgage payment uses the balance after 60 payments and the remaining loan term, with a separate future interest rate. The 3% rate is a modelling assumption, not a bank quotation or a five-year forecast. Consult [bank package information](https://www.dbs.com.sg/personal/loans/homeloans/hdb-loan) and substitute your own quotation.
+
+- Gross yield on purchase cost is annual projected rent divided by the target price.
+- Monthly property surplus deducts the full mortgage payment, operating reserve, and estimated non-owner-occupier property tax.
+- Property tax uses current IRAS bands and an editable Annual Value; twelve times projected monthly rent is only a default proxy for Annual Value.
+- Initial capital includes the equity contribution, Buyer's Stamp Duty and mortgage duty. Cash-flow return on initial capital excludes the first five years' holding cash flows and is not a total investment return.
+- Mortgage principal repayment is shown separately as equity accumulation. It remains part of the cash payment but is not treated as an economic expense when describing returns.
+
+The scenario assumes an eligible Singapore-citizen household and no Additional Buyer's Stamp Duty. It excludes personal income tax, CPF funding mechanics, renovation/legal costs, and alternative accommodation. The 10% reserve covers vacancy, agent fees, S&CC and repairs in aggregate; it is not a property-specific expense forecast.
+
+Whole-flat rental depends on the buyer's own MOP and HDB approval. Plus, Prime and PLH flats prohibit whole-flat rental even after MOP. Unknown project classifications remain explicitly unverified; past rental observations are not proof of eligibility. The existing upcoming-MOP overlay is not used to determine a new buyer's rental start date.
+
+Sources: [HDB resale MOP](https://www.hdb.gov.sg/managing-my-home/selling-a-flat/eligibility), [HDB rental restrictions](https://www.hdb.gov.sg/buying-a-flat/bto-sbf-and-open-booking-of-flats/conditions-after-buying-a-new-flat), [IRAS property tax](https://www.iras.gov.sg/quick-links/tax-rates/property-tax-rates), [BSD](https://www.iras.gov.sg/taxes/stamp-duty/for-property/buying-or-acquiring-property/buyer's-stamp-duty-(bsd)), [mortgage duty](https://www.iras.gov.sg/taxes/stamp-duty/for-property/buying-or-acquiring-property/mortgage-duty).
+
 ## Data Updates
 
 Data is automatically refreshed every Friday via GitHub Actions (`update-data.yml`). The workflow:
@@ -102,7 +126,8 @@ Data is automatically refreshed every Friday via GitHub Actions (`update-data.ym
 1. Downloads the latest HDB resale transactions from [data.gov.sg](https://data.gov.sg)
 2. Geocodes any new addresses via the OneMap API (typically none — all HDB blocks are already cached)
 3. Rebuilds yearly Arrow files and the manifest from the full dataset, removing obsolete partitions
-4. Commits generated data changes to `main`; the deployment workflow runs after a successful update
+4. Downloads whole-flat rental approvals and rebuilds the content-hashed rental snapshot and manifest
+5. Commits generated data changes to `main`; the deployment workflow runs after a successful update
 
 To trigger a manual update, use the **workflow_dispatch** option in the GitHub Actions tab.
 
