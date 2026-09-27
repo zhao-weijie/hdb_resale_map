@@ -13,7 +13,6 @@ import { LocationCard } from '../components/LocationCard';
 import { FiltersCard } from '../components/FiltersCard';
 import { MopFiltersCard } from '../components/MopFiltersCard';
 import { OverviewTab } from '../components/OverviewTab';
-import { metricOptionsMarkup } from '../components/MapMetricOptions';
 import { TransactionTable } from '../components/TransactionTable';
 
 export class AnalyticsPanel {
@@ -89,31 +88,21 @@ export class AnalyticsPanel {
             <h2><i data-lucide="bar-chart-2"></i> Analytics <span style="font-size: 14px; font-weight: normal; color: var(--color-text-muted); margin-left: auto;" id="record-count"></span></h2>
         </div>
       
-        <!-- Card 1: Location (Component) -->
+        <!-- Location (Component) -->
         ${this.locationCard.render()}
 
-        <!-- Card 2: Global Filters (Component) -->
+        <!-- Global Filters (Component) -->
         ${this.filtersCard.render()}
 
-        <!-- Card 2b: MOP Filters -->
+        <!-- MOP Filters -->
         ${this.mopFiltersCard.render()}
-
-        <!-- Card 3: Color Mode -->
-        <div class="card">
-             <div class="input-wrapper">
-                 <label style="margin-bottom: 4px; display:block;">Color Map By</label>
-                 <select id="color-mode-select">
-                    ${metricOptionsMarkup()}
-                 </select>
-             </div>
-        </div>
       
-        <!-- Card 4: Stats & Chart -->
+        <div id="rental-analysis-slot"></div>
+
+        <!-- Stats & Chart -->
         <div class="card" style="flex: 1; display: flex; flex-direction: column;">
             ${this.overviewTab.render()}
         </div>
-
-        <div id="rental-analysis-slot"></div>
 
         <!-- Panel Toggle (Absolute) -->
         <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Panel">
