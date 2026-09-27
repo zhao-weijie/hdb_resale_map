@@ -402,15 +402,19 @@ export class ColorScaleBar {
         const panel = document.getElementById('analytics-panel');
         const mobile = window.innerWidth < 768;
         const panelExpanded = Boolean(mobile && panel && !panel.classList.contains('collapsed'));
+        const rootStyles = getComputedStyle(document.documentElement);
+        const drawerPeekHeight = Number.parseFloat(
+            rootStyles.getPropertyValue('--mobile-drawer-peek-height'),
+        ) || 0;
         const panelHeight = mobile && panel
-            ? (panelExpanded ? panel.getBoundingClientRect().height : 60)
+            ? (panelExpanded ? panel.getBoundingClientRect().height : drawerPeekHeight)
             : 0;
         const panelClearance = 12;
         document.documentElement.style.setProperty('--map-control-bottom', `${panelHeight + panelClearance}px`);
         this.outerEl?.classList.toggle('panel-expanded', panelExpanded);
         if (panelExpanded) {
             const controlSize = Number.parseFloat(
-                getComputedStyle(document.documentElement).getPropertyValue('--map-control-size'),
+                rootStyles.getPropertyValue('--map-control-size'),
             ) || 36;
             const fixedRailHeight = (controlSize * 3) + 12;
             const availableScaleHeight = Math.max(

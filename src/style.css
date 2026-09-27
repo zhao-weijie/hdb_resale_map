@@ -35,6 +35,7 @@
 
     --map-control-bottom: 12px;
     --map-control-size: 30px;
+    --mobile-drawer-peek-height: 60px;
 
     /* Typography */
     /* Typography */
@@ -651,16 +652,16 @@ input[type="checkbox"] {
     }
 
     #analytics-panel.collapsed {
-        transform: translateY(calc(100% - 60px));
+        transform: translateY(calc(100% - var(--mobile-drawer-peek-height)));
         /* Peek out */
     }
 
     #analytics-panel .panel-toggle {
         top: -1px;
         /* Sit inside the collapsed header instead of floating above the drawer. */
-        right: 50%;
-        transform: translateX(50%) rotate(-90deg);
-        /* Center horizontally, rotate for up/down */
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
         width: 48px;
         /* Larger touch target */
         height: 48px;
@@ -669,8 +670,16 @@ input[type="checkbox"] {
     }
 
     #analytics-panel.collapsed .panel-toggle {
-        transform: translateX(50%) rotate(90deg);
-        /* Rotate back */
+        transform: translateX(-50%);
+    }
+
+    #analytics-panel .panel-toggle svg {
+        transform: rotate(-90deg);
+        transition: transform 0.2s ease;
+    }
+
+    #analytics-panel.collapsed .panel-toggle svg {
+        transform: rotate(90deg);
     }
 
     .mobile-only {
