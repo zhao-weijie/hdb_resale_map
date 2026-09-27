@@ -14,13 +14,13 @@ pip install -r requirements.txt
 
 ### Step 1: Geocode Pipeline
 
-Fetches HDB resale data from data.gov.sg and geocodes addresses via OneMap API.
+Fetches HDB resale and whole-flat rental data from data.gov.sg, then geocodes their address union via OneMap API.
 
 ```bash
 python geocode_pipeline.py
 ```
-- Downloads the latest HDB resale CSV from data.gov.sg
-- Extracts unique `block + street_name` combinations (~12,000 addresses)
+- Downloads both source CSVs before geocoding
+- Extracts unique canonical `block + street_name` combinations from both sources
 - Geocodes via OneMap API with rate limiting
 - Caches results to avoid re-geocoding on updates
 - **Optional**: Use OneMap API credentials for 250 requests/minute (vs default rate limit)
@@ -61,7 +61,7 @@ Build the separate HDB rental asset when rental evidence changes:
 python build_rental.py
 ```
 
-It downloads the official [HDB rental transactions dataset](https://data.gov.sg/datasets/d_c9f57187485a850908655db0e8cfe651/view), keeps records from 2021 onward by default, and writes a content-hashed tuple JSON file plus `rental_manifest.json`. `generatedAt` records the UTC build time when canonical content changes; an unchanged source reuses the prior timestamp and asset. Set `HDB_RENTAL_CSV` for a local fixture or `HDB_RENTAL_START_MONTH` to change the retained range. It does not deduplicate source rental observations because the publication has no unit identifier.
+It downloads the official [HDB rental transactions dataset](https://data.gov.sg/datasets/d_c9f57187485a850908655db0e8cfe651/view), keeps records from 2021 onward by default, and writes a schema-v2 content-hashed tuple JSON file plus `rental_manifest.json`. The asset stores coordinates once in a location dictionary and gives each source row a location reference (or `null` when unresolved). The manifest reports address and row coverage by resolution status. Publication fails unless more than 99.5% of valid rental rows resolve. `generatedAt` records the UTC build time when canonical content changes; an unchanged source reuses the prior timestamp and asset. Set `HDB_RENTAL_CSV` for a local fixture or `HDB_RENTAL_START_MONTH` to change the retained range. It does not deduplicate source rental observations because the publication has no unit identifier.
 
 The rental snapshot and manifest are deployment outputs and are ignored by Git. The Pages workflow builds them before Vite packages `public/data`; run this script locally before starting the development server when testing rental mode.
 
@@ -85,9 +85,10 @@ Prices remain nominal transaction prices; model predictions and price-index adju
 To refresh with the latest data from data.gov.sg:
 
 ```bash
-# Re-run both scripts
+# Fetch both sources/geocode, then build both assets
 python geocode_pipeline.py
 python build_arrow.py
+HDB_RENTAL_CSV=scripts/data/hdb_rental_raw.csv python build_rental.py
 ```
 
 The geocoding cache will ensure only new addresses are geocoded.

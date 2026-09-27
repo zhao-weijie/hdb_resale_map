@@ -13,6 +13,8 @@ import pandas as pd
 import numpy as np
 import pyarrow as pa
 
+from addressing import canonical_address_key
+
 
 # Configuration
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -48,11 +50,6 @@ def load_data() -> Tuple[pd.DataFrame, Dict]:
     print(f"  ✓ Loaded {len(geocode_cache)} geocoded addresses")
     
     return df, geocode_cache
-
-
-def make_address_key(block: str, street_name: str) -> str:
-    """Create consistent address key"""
-    return f"{block}|{street_name}"
 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -120,7 +117,7 @@ def join_and_enrich_data(df: pd.DataFrame, geocode_cache: dict) -> pd.DataFrame:
     
     # Add geocoding
     df['address_key'] = df.apply(
-        lambda row: make_address_key(row['block'], row['street_name']), 
+        lambda row: canonical_address_key(row['block'], row['street_name']),
         axis=1
     )
     

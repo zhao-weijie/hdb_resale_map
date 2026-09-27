@@ -21,12 +21,14 @@ from typing import Any
 import pandas as pd
 import requests
 
+from addressing import canonical_address_key
 from datagov_client import DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS, datagov_get
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PUBLIC_DATA_DIR = SCRIPT_DIR.parent / "public" / "data"
 RAW_DATA_FILE = SCRIPT_DIR / "data" / "hdb_rental_raw.csv"
+GEOCODE_CACHE_FILE = PUBLIC_DATA_DIR / "addresses_geocoded.json"
 MANIFEST_FILE = PUBLIC_DATA_DIR / "rental_manifest.json"
 DATASET_ID = "d_c9f57187485a850908655db0e8cfe651"
 DATAGOV_API_BASE = "https://api-open.data.gov.sg/v1/public/api/datasets"
@@ -184,19 +186,86 @@ def generated_at_for_payload(payload: dict[str, Any]) -> str:
     return utc_now()
 
 
-def build_dataset(source: pd.DataFrame, start_month: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def load_address_registry() -> dict[str, dict[str, Any]]:
+    if not GEOCODE_CACHE_FILE.exists():
+        raise FileNotFoundError(f"Address registry not found: {GEOCODE_CACHE_FILE}")
+    value = json.loads(GEOCODE_CACHE_FILE.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("Address registry must be an object")
+    return value
+
+
+def _resolved(entry: Any) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    lat, lng = entry.get("latitude"), entry.get("longitude")
+    return (entry.get("status", "resolved") == "resolved" and isinstance(lat, (int, float))
+            and isinstance(lng, (int, float)) and -90 <= lat <= 90 and -180 <= lng <= 180)
+
+
+def build_dataset(
+    source: pd.DataFrame,
+    start_month: str,
+    address_registry: dict[str, dict[str, Any]] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     rows, rejected = normalise_rentals(source, start_month)
     if not rows:
         raise ValueError("No valid rental records remain after normalisation")
+    registry = address_registry if address_registry is not None else load_address_registry()
+    keys = sorted({canonical_address_key(row[2], row[3]) for row in rows})
+    resolved_keys = [key for key in keys if _resolved(registry.get(key))]
+    location_ids = {key: index for index, key in enumerate(resolved_keys)}
+    locations = [
+        [key, float(registry[key]["latitude"]), float(registry[key]["longitude"])]
+        for key in resolved_keys
+    ]
+    emitted_rows: list[list[Any]] = []
+    status_counts: dict[str, int] = {}
+    reason_counts: dict[str, int] = {}
+    resolved_rows = 0
+    for row in rows:
+        key = canonical_address_key(row[2], row[3])
+        entry = registry.get(key)
+        status = "resolved" if key in location_ids else (
+            str(entry.get("status", "unresolved")) if isinstance(entry, dict) else "not_found"
+        )
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if status != "resolved":
+            reason = str(entry.get("reason", status)) if isinstance(entry, dict) else "missing_registry_entry"
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        location_id = location_ids.get(key)
+        if location_id is not None:
+            resolved_rows += 1
+        emitted_rows.append([*row, location_id])
+
+    coverage = resolved_rows / len(rows)
+    if coverage <= 0.995:
+        raise ValueError(
+            f"Resolved rental-row coverage must be >99.5%; got {coverage * 100:.3f}% "
+            f"({resolved_rows}/{len(rows)})"
+        )
+    address_status_counts: dict[str, int] = {}
+    address_reason_counts: dict[str, int] = {}
+    for key in keys:
+        entry = registry.get(key)
+        status = "resolved" if _resolved(entry) else (
+            str(entry.get("status", "unresolved")) if isinstance(entry, dict) else "not_found"
+        )
+        address_status_counts[status] = address_status_counts.get(status, 0) + 1
+        if status != "resolved":
+            reason = str(entry.get("reason", status)) if isinstance(entry, dict) else "missing_registry_entry"
+            address_reason_counts[reason] = address_reason_counts.get(reason, 0) + 1
     payload = {
-        "version": 1,
+        "version": 2,
         # The timestamp is selected after content is assembled so an unchanged
         # source reuses its prior asset and a changed source records build time.
         "generatedAt": "",
         "generatedAtKind": "build",
         "source": {"datasetId": DATASET_ID, "url": SOURCE_URL},
-        "columns": ["month", "town", "block", "street_name", "flat_type", "monthly_rent"],
-        "records": rows,
+        "columns": ["month", "town", "block", "street_name", "flat_type", "monthly_rent", "location_id"],
+        "locationColumns": ["address_key", "latitude", "longitude"],
+        "locations": locations,
+        "records": emitted_rows,
     }
     generated_at = generated_at_for_payload(payload)
     payload["generatedAt"] = generated_at
@@ -206,7 +275,7 @@ def build_dataset(source: pd.DataFrame, start_month: str) -> tuple[dict[str, Any
     output_path = PUBLIC_DATA_DIR / filename
     output_path.write_bytes(encoded)
     manifest = {
-        "version": 1,
+        "version": 2,
         "generatedAt": generated_at,
         "minMonth": rows[0][0],
         "maxMonth": rows[-1][0],
@@ -215,6 +284,21 @@ def build_dataset(source: pd.DataFrame, start_month: str) -> tuple[dict[str, Any
         "sha256": digest,
         "source": {"datasetId": DATASET_ID, "url": SOURCE_URL},
         "rejected": rejected,
+        "coverage": {
+            "validRows": len(rows),
+            "resolvedRows": resolved_rows,
+            "unresolvedRows": len(rows) - resolved_rows,
+            "resolvedPercent": round(coverage * 100, 6),
+            "byStatus": status_counts,
+            "unresolvedByReason": reason_counts,
+        },
+        "addressCoverage": {
+            "uniqueAddresses": len(keys),
+            "resolvedAddresses": len(resolved_keys),
+            "unresolvedAddresses": len(keys) - len(resolved_keys),
+            "byStatus": address_status_counts,
+            "unresolvedByReason": address_reason_counts,
+        },
     }
     return payload, manifest
 
@@ -227,6 +311,11 @@ def write_outputs(manifest: dict[str, Any]) -> None:
             stale.unlink()
             print(f"Removed stale rental asset {stale.name}")
     print(f"Saved {active}: {manifest['rows']:,} records ({manifest['minMonth']} to {manifest['maxMonth']})")
+    coverage = manifest["coverage"]
+    print(f"Rental row geocoding: {coverage['resolvedRows']:,}/{coverage['validRows']:,} ({coverage['resolvedPercent']:.3f}%)")
+    unresolved = coverage["unresolvedByReason"]
+    if unresolved:
+        print(f"Unresolved rental rows by reason: {unresolved}")
     print(f"Saved {MANIFEST_FILE.name}")
 
 

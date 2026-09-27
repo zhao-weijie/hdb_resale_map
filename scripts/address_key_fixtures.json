@@ -1,0 +1,5 @@
+[
+  {"block": " 123 ", "street": " Test  Road ", "key": "123|TEST ROAD"},
+  {"block": "12a", "street": "Jln Membina", "key": "12A|JLN MEMBINA"},
+  {"block": 7, "street": " commonwealth ave ", "key": "7|COMMONWEALTH AVE"}
+]

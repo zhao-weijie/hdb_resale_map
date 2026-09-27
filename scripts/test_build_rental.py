@@ -9,6 +9,16 @@ import build_rental
 from build_rental import normalise_flat_type, normalise_month, normalise_rentals
 
 
+def resolved_registry(*addresses):
+    return {
+        address: {
+            'status': 'resolved', 'latitude': 1.3, 'longitude': 103.8,
+            'block': address.split('|')[0], 'street_name': address.split('|')[1],
+        }
+        for address in addresses
+    }
+
+
 class RentalBuilderTests(unittest.TestCase):
     def test_normalises_documented_month_and_flat_type_forms(self):
         self.assertEqual(normalise_month('2025-02'), '2025-02')
@@ -44,13 +54,14 @@ class RentalBuilderTests(unittest.TestCase):
             with patch.object(build_rental, 'PUBLIC_DATA_DIR', public_dir), \
                     patch.object(build_rental, 'MANIFEST_FILE', public_dir / 'rental_manifest.json'), \
                     patch.object(build_rental, 'utc_now', side_effect=['2026-09-25T01:02:03Z', '2026-09-25T04:05:06Z']):
-                first_payload, first_manifest = build_rental.build_dataset(source, '2021-01')
+                registry = resolved_registry('123|TEST ROAD')
+                first_payload, first_manifest = build_rental.build_dataset(source, '2021-01', registry)
                 build_rental.write_outputs(first_manifest)
-                second_payload, second_manifest = build_rental.build_dataset(source, '2021-01')
+                second_payload, second_manifest = build_rental.build_dataset(source, '2021-01', registry)
 
                 changed_source = source.copy()
                 changed_source.loc[0, 'monthly_rent'] = 3300
-                changed_payload, _ = build_rental.build_dataset(changed_source, '2021-01')
+                changed_payload, _ = build_rental.build_dataset(changed_source, '2021-01', registry)
 
         self.assertEqual(first_payload['generatedAt'], '2026-09-25T01:02:03Z')
         self.assertNotIn('classifications', first_payload)
@@ -58,6 +69,44 @@ class RentalBuilderTests(unittest.TestCase):
         self.assertEqual(second_payload['generatedAt'], first_payload['generatedAt'])
         self.assertEqual(second_manifest['sha256'], first_manifest['sha256'])
         self.assertEqual(changed_payload['generatedAt'], '2026-09-25T04:05:06Z')
+        self.assertEqual(first_payload['version'], 2)
+        self.assertEqual(first_payload['records'][0][-1], 0)
+        self.assertEqual(first_manifest['coverage']['resolvedPercent'], 100)
+
+    def test_coverage_gate_is_strictly_greater_than_99_5_percent(self):
+        rows = []
+        for index in range(200):
+            rows.append({
+                'rent_approval_date': '2025-01', 'town': 'Town', 'block': str(index),
+                'street_name': 'Test Road', 'flat_type': '4 Room', 'monthly_rent': 3200,
+            })
+        source = pd.DataFrame(rows)
+        registry = resolved_registry(*(f'{index}|TEST ROAD' for index in range(199)))
+        registry['199|TEST ROAD'] = {'status': 'ambiguous', 'reason': 'no_postal_match'}
+
+        with self.assertRaisesRegex(ValueError, r'>99\.5%'):
+            build_rental.build_dataset(source, '2021-01', registry)
+
+        source = pd.concat([source, pd.DataFrame([{
+            'rent_approval_date': '2025-01', 'town': 'Town', 'block': '0',
+            'street_name': 'Test Road', 'flat_type': '4 Room', 'monthly_rent': 3300,
+        }])], ignore_index=True)
+        payload, manifest = build_rental.build_dataset(source, '2021-01', registry)
+        self.assertEqual(len(payload['records']), 201)
+        self.assertEqual(manifest['coverage']['resolvedRows'], 200)
+        self.assertEqual(manifest['coverage']['byStatus'], {'resolved': 200, 'ambiguous': 1})
+        self.assertEqual(manifest['coverage']['unresolvedByReason'], {'no_postal_match': 1})
+
+    def test_location_dictionary_preserves_duplicate_observations(self):
+        source = pd.DataFrame([
+            {'rent_approval_date': '2025-01', 'town': 'Town', 'block': '123', 'street_name': 'Test Road', 'flat_type': '4 Room', 'monthly_rent': 3200},
+            {'rent_approval_date': '2025-01', 'town': 'Town', 'block': '123', 'street_name': 'Test Road', 'flat_type': '4 Room', 'monthly_rent': 3200},
+        ])
+        payload, manifest = build_rental.build_dataset(source, '2021-01', resolved_registry('123|TEST ROAD'))
+        self.assertEqual(len(payload['locations']), 1)
+        self.assertEqual(len(payload['records']), 2)
+        self.assertEqual(payload['records'][0], payload['records'][1])
+        self.assertEqual(manifest['addressCoverage']['uniqueAddresses'], 1)
 
 
 if __name__ == '__main__':

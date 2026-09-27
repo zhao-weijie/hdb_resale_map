@@ -50,7 +50,7 @@ jobs:
       - name: Test data builders
         run: python -m unittest discover -s scripts -p "test_*.py"
 
-      - name: Download latest data and geocode new addresses
+      - name: Download both sources and geocode their address union
         env:
           DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
           ONEMAP_EMAIL: ${{ secrets.ONEMAP_EMAIL }}
@@ -63,6 +63,7 @@ jobs:
       - name: Build HDB whole-flat rental asset
         env:
           DATAGOV_API_KEY: ${{ secrets.DATAGOV_API_KEY }}
+          HDB_RENTAL_CSV: scripts/data/hdb_rental_raw.csv
         run: python scripts/build_rental.py
       
       - name: Setup Node

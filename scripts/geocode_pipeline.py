@@ -15,6 +15,8 @@ from typing import Dict, List, Tuple, Optional
 import requests
 import pandas as pd
 from dotenv import load_dotenv
+from addressing import canonical_address_key, canonical_address_part
+from build_rental import load_source_data as load_rental_source_data
 from datagov_client import DATAGOV_DOWNLOAD_POLL_DELAY_SECONDS, datagov_get
 
 
@@ -177,12 +179,13 @@ def extract_unique_addresses(df: pd.DataFrame) -> List[Tuple[str, str]]:
     # Combine block and street_name
     unique_addresses = df[["block", "street_name"]].drop_duplicates()
     
-    addresses = [
-        (row["block"], row["street_name"]) 
+    addresses = sorted({
+        (canonical_address_part(row["block"]), canonical_address_part(row["street_name"]))
         for _, row in unique_addresses.iterrows()
-    ]
+        if canonical_address_part(row["block"]) and canonical_address_part(row["street_name"])
+    })
     
-    print(f"✓ Found {len(addresses)} unique addresses to geocode")
+    print(f"Found {len(addresses)} unique addresses to geocode")
     return addresses
 
 
@@ -195,8 +198,22 @@ def load_geocode_cache() -> Dict[str, Dict]:
     """
     if CACHE_FILE.exists():
         with open(CACHE_FILE, 'r', encoding='utf-8') as f:
-            cache = json.load(f)
-            print(f"✓ Loaded {len(cache)} cached geocodes from {CACHE_FILE}")
+            raw_cache = json.load(f)
+            if not isinstance(raw_cache, dict):
+                raise ValueError("Address registry must be an object")
+            cache = {}
+            for old_key, raw_entry in raw_cache.items():
+                if not isinstance(raw_entry, dict):
+                    continue
+                block = canonical_address_part(raw_entry.get("block", str(old_key).split("|", 1)[0]))
+                street = canonical_address_part(raw_entry.get("street_name", str(old_key).partition("|")[2]))
+                if not block or not street:
+                    continue
+                entry = dict(raw_entry, block=block, street_name=street)
+                if "status" not in entry:
+                    entry["status"] = "resolved" if entry.get("latitude") is not None and entry.get("longitude") is not None else "not_found"
+                cache[canonical_address_key(block, street)] = entry
+            print(f"Loaded {len(cache)} cached geocodes from {CACHE_FILE}")
             return cache
     return {}
 
@@ -211,7 +228,7 @@ def save_geocode_cache(cache: Dict[str, Dict]):
 
 def make_address_key(block: str, street_name: str) -> str:
     """Create a consistent key for address lookup"""
-    return f"{block}|{street_name}"
+    return canonical_address_key(block, street_name)
 
 
 def validate_postal_code(block: str, postal: str) -> bool:
@@ -295,23 +312,30 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
                 "street_name": street_name,
                 "latitude": None,
                 "longitude": None,
-                "error": "No results found"
+                "status": "not_found",
+                "reason": "no_results"
             }
             
         # Validate results using heuristic
-        valid_result = None
+        valid_results = []
         
         # 1. Try to find a result that matches the postal code heuristic
         for result in results:
             postal = result.get("POSTAL", "")
             if validate_postal_code(block, postal):
-                valid_result = result
-                break
+                valid_results.append(result)
         
-        # 2. If no valid matching result found, default to the first one (best effort)
-        #    but maybe we can log this case if needed.
-        if not valid_result:
-            valid_result = results[0]
+        if len(valid_results) != 1:
+            return {
+                "block": block,
+                "street_name": street_name,
+                "latitude": None,
+                "longitude": None,
+                "status": "ambiguous",
+                "reason": "multiple_valid_results" if valid_results else "no_postal_match",
+                "candidate_count": len(results),
+            }
+        valid_result = valid_results[0]
             
         return {
             "block": block,
@@ -319,7 +343,9 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
             "latitude": float(valid_result["LATITUDE"]),
             "longitude": float(valid_result["LONGITUDE"]),
             "postal": valid_result.get("POSTAL", ""),
-            "address": valid_result.get("ADDRESS", "")
+            "address": valid_result.get("ADDRESS", ""),
+            "status": "resolved",
+            "reason": "postal_match",
         }
             
     except Exception as e:
@@ -328,6 +354,8 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
             "street_name": street_name,
             "latitude": None,
             "longitude": None,
+            "status": "transient_failure",
+            "reason": type(e).__name__,
             "error": str(e)
         }
 
@@ -338,11 +366,13 @@ def verify_cache(cache: Dict[str, Dict]):
     Removes entries that fail validation so they can be re-geocoded.
     """
     print("\nVerifying cached addresses against heuristic...")
-    invalid_keys = []
-    
+    changed = 0
     for key, data in cache.items():
+        if data.get("status") != "resolved":
+            continue
         if data.get("latitude") is None or data.get("longitude") is None:
-            invalid_keys.append(key)
+            data.update(status="transient_failure", reason="invalid_cached_coordinates")
+            changed += 1
             continue
             
         block = data.get("block")
@@ -350,14 +380,13 @@ def verify_cache(cache: Dict[str, Dict]):
         
         if not validate_postal_code(block, postal):
             # print(f"  Invalid cache entry: {key} (Postal: {postal}) - Marking for re-geocoding")
-            invalid_keys.append(key)
-            
-    if invalid_keys:
-        print(f"Found {len(invalid_keys)} invalid entries in cache. Removing them...")
-        for key in invalid_keys:
-            del cache[key]
+            data.update(status="ambiguous", reason="cached_postal_mismatch", latitude=None, longitude=None)
+            changed += 1
+
+    if changed:
+        print(f"Marked {changed} cached entries unresolved after validation")
     else:
-        print("✓ All cached entries passed validation")
+        print("All cached entries passed validation")
 
 
 def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
@@ -375,12 +404,13 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
     verify_cache(cache)
     
     to_geocode = [
-        addr for addr in addresses 
+        addr for addr in addresses
         if make_address_key(addr[0], addr[1]) not in cache
+        or cache[make_address_key(addr[0], addr[1])].get("status") == "transient_failure"
     ]
     
     if not to_geocode:
-        print("✓ All addresses already cached and verified!")
+        print("All addresses already cached and verified!")
         return cache
     
     print(f"  {len(to_geocode)} addresses to geocode (new or re-verify)")
@@ -395,7 +425,7 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
         
         # Progress update every 100 addresses
         if i % 100 == 0:
-            total_success = sum(1 for v in cache.values() if v.get("latitude") is not None)
+            total_success = sum(1 for v in cache.values() if v.get("status") == "resolved")
             print(f"  Current batch: {i}/{len(to_geocode)} processed")
             print(f"  Total cache: {total_success}/{len(cache)} addresses ({100*total_success/len(cache):.1f}% success)")
             # Save intermediate results
@@ -408,8 +438,8 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
     save_geocode_cache(cache)
     
     # Summary
-    success_count = sum(1 for v in cache.values() if v.get("latitude") is not None)
-    print(f"\n✓ Geocoding complete: {success_count}/{len(cache)} addresses successfully geocoded ({100*success_count/len(cache):.1f}%)")
+    success_count = sum(1 for v in cache.values() if v.get("status") == "resolved")
+    print(f"\nGeocoding complete: {success_count}/{len(cache)} addresses successfully geocoded ({100*success_count/len(cache):.1f}%)")
     
     return cache
 
@@ -417,14 +447,16 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
 def main():
     """Main pipeline execution"""
     print("=" * 60)
-    print("HDB Resale Geocoding Pipeline")
+    print("HDB Address Geocoding Pipeline")
     print("=" * 60)
     
     # Step 1: Fetch transaction data
     df = fetch_hdb_data()
+    rental_df = load_rental_source_data()
     
     # Step 2: Extract unique addresses
-    addresses = extract_unique_addresses(df)
+    addresses = sorted(set(extract_unique_addresses(df)) | set(extract_unique_addresses(rental_df)))
+    print(f"Union contains {len(addresses)} unique resale/rental addresses")
 
     # Step 3: Geocode addresses
     geocode_cache = geocode_addresses(addresses)
