@@ -405,8 +405,8 @@ export class ColorScaleBar {
         const panelHeight = mobile && panel
             ? (panelExpanded ? panel.getBoundingClientRect().height : 60)
             : 0;
-        const panelToggleClearance = mobile ? 36 : 12;
-        document.documentElement.style.setProperty('--map-control-bottom', `${panelHeight + panelToggleClearance}px`);
+        const panelClearance = 12;
+        document.documentElement.style.setProperty('--map-control-bottom', `${panelHeight + panelClearance}px`);
         this.outerEl?.classList.toggle('panel-expanded', panelExpanded);
         if (panelExpanded) {
             const controlSize = Number.parseFloat(
@@ -415,7 +415,7 @@ export class ColorScaleBar {
             const fixedRailHeight = (controlSize * 3) + 12;
             const availableScaleHeight = Math.max(
                 48,
-                window.innerHeight - panelHeight - panelToggleClearance - fixedRailHeight - 12,
+                window.innerHeight - panelHeight - panelClearance - fixedRailHeight - 12,
             );
             this.gradientEl.style.minHeight = `${availableScaleHeight}px`;
             this.gradientEl.style.maxHeight = `${availableScaleHeight}px`;
