@@ -25,7 +25,7 @@ async function initApp() {
         const colorScale = new ColorScaleBar();
         const mapReady = mapView.initialize().then(() => {
             performance.mark('basemap-ready');
-            mapView.addControl(colorScale, 'top-right');
+            mapView.addControl(colorScale, 'bottom-right');
         });
         const dataReady = (async () => {
             await dataLoader.loadManifest();

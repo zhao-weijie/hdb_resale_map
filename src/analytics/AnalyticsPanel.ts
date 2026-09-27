@@ -7,6 +7,12 @@ import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
 import { appState } from '../state/AppState';
 import { applyFilters } from '../utils/filters';
+import { rectangleSelection } from '../spatial/selection';
+import {
+    buildRentalOverviewModel,
+    getRentalOverviewSource,
+    subscribeRentalOverviewSource,
+} from './rentalOverview';
 
 // Import component classes
 import { LocationCard } from '../components/LocationCard';
@@ -121,8 +127,7 @@ export class AnalyticsPanel {
 
         this.attachEventListeners();
         const initialData = this.currentTransactions ?? this.getGlobalFilteredData();
-        this.renderStats(initialData);
-        this.renderChart(initialData);
+        this.renderOverview(initialData);
     }
 
     private attachEventListeners(): void {
@@ -142,7 +147,11 @@ export class AnalyticsPanel {
         });
         appState.subscribe('colorMode', (mode) => {
             if (colorModeSelect && colorModeSelect.value !== mode) colorModeSelect.value = mode;
+            this.renderOverview();
         });
+        appState.subscribe('rentalActiveFlatType', () => this.renderOverview());
+        appState.subscribe('spatialSelection', () => this.renderOverview());
+        subscribeRentalOverviewSource(() => this.renderOverview());
 
         // Panel Toggle
         const toggleBtn = document.getElementById('panel-toggle');
@@ -151,7 +160,7 @@ export class AnalyticsPanel {
         });
 
         // Bind component events
-        this.locationCard.bindEvents((selected) => this.updateSelectionState(selected));
+        this.locationCard.bindEvents(() => this.updateSelectionState());
         this.filtersCard.bindEvents((filtered) => this.onFiltersApplied(filtered));
         this.mopFiltersCard.bindEvents();
 
@@ -167,27 +176,19 @@ export class AnalyticsPanel {
         this.radialSelection.clearSelection();
 
         // Update stats with filtered overview
-        this.renderStats(filtered);
-        this.renderChart(filtered);
-
-        // Update status text
-        const countSpan = document.getElementById('record-count');
-        if (countSpan) countSpan.textContent = `(${filtered.length.toLocaleString()} records)`;
+        this.renderOverview(filtered);
     }
 
-    private updateSelectionState(selected: HDBTransaction[] | null): void {
-        // Apply global filters to the selection for consistency
-        const filteredSelection = selected ? this.applyFiltersToTransactions(selected) : null;
-        this.currentTransactions = filteredSelection;
-        this.mapView.setSelectedTransactions(filteredSelection);
+    private updateSelectionState(): void {
+        const selected = appState.get('selectedTransactions');
+        this.currentTransactions = selected;
 
-        let dataToRender = filteredSelection;
+        let dataToRender = selected;
         if (!dataToRender) {
             dataToRender = this.getGlobalFilteredData();
         }
 
-        this.renderStats(dataToRender);
-        this.renderChart(dataToRender);
+        this.renderOverview(dataToRender);
     }
 
     private applyFiltersToTransactions(transactions: HDBTransaction[]): HDBTransaction[] {
@@ -198,17 +199,31 @@ export class AnalyticsPanel {
         return appState.get('filteredTransactions');
     }
 
-    private renderStats(data?: HDBTransaction[]): void {
-        const dataToRender = data || this.getGlobalFilteredData();
+    private renderOverview(data?: HDBTransaction[]): void {
+        const mode = appState.get('colorMode');
+        if (mode !== 'price' && mode !== 'price_psf') {
+            const model = buildRentalOverviewModel(
+                getRentalOverviewSource(),
+                appState.get('rentalActiveFlatType'),
+                appState.get('spatialSelection'),
+            );
+            this.overviewTab.renderRentalStats(model);
+            void this.overviewTab.renderRentalChart(model);
+            this.updateRecordCount(model.records.length);
+            return;
+        }
+        const dataToRender = data
+            ?? appState.get('selectedTransactions')
+            ?? this.currentTransactions
+            ?? this.getGlobalFilteredData();
         this.overviewTab.renderStats(dataToRender);
-
-        const countSpan = document.getElementById('record-count');
-        if (countSpan) countSpan.textContent = `(${dataToRender.length.toLocaleString()} records)`;
+        void this.overviewTab.renderChart(dataToRender);
+        this.updateRecordCount(dataToRender.length);
     }
 
-    private renderChart(data?: HDBTransaction[]): void {
-        const dataToRender = data || this.getGlobalFilteredData();
-        void this.overviewTab.renderChart(dataToRender);
+    private updateRecordCount(count: number): void {
+        const countSpan = document.getElementById('record-count');
+        if (countSpan) countSpan.textContent = `(${count.toLocaleString()} records)`;
     }
 
     private bindTooltipEvents(): void {
@@ -372,28 +387,26 @@ export class AnalyticsPanel {
             },
             onEnd: (lat, lng) => {
                 if (this.startDragLat !== null && this.startDragLng !== null) {
-                    let selected: HDBTransaction[] | null = null;
-
                     if (appState.get('selectionMode') === 'radial') {
                         const radius = this.calculateDistance(this.startDragLat, this.startDragLng, lat, lng);
                         this.radialSelection.setSelection(this.startDragLat, this.startDragLng, radius);
-                        selected = this.radialSelection.getSelectedTransactions();
 
                         const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
                         if (radiusInput) radiusInput.value = Math.round(radius).toString();
                     } else {
-                        const minLat = Math.min(this.startDragLat, lat);
-                        const maxLat = Math.max(this.startDragLat, lat);
-                        const minLng = Math.min(this.startDragLng, lng);
-                        const maxLng = Math.max(this.startDragLng, lng);
-                        selected = this.dataLoader.queryRectangle(minLat, minLng, maxLat, maxLng);
+                        appState.setSpatialSelection(rectangleSelection(
+                            this.startDragLat,
+                            this.startDragLng,
+                            lat,
+                            lng
+                        ));
                     }
 
                     // Clear postal input since user drew a selection manually
                     const postalInput = document.getElementById('postal-input') as HTMLInputElement;
                     if (postalInput) postalInput.value = '';
 
-                    this.updateSelectionState(selected);
+                    this.updateSelectionState();
                     this.locationCard.setSelectionMode(false);
                 }
             }
@@ -432,7 +445,6 @@ export class AnalyticsPanel {
         const filtered = this.applyFiltersToTransactions(inView);
         this.currentTransactions = filtered;
 
-        this.renderStats(filtered);
-        this.renderChart(filtered);
+        this.renderOverview(filtered);
     }
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StateStore } from './AppState';
+import type { HDBTransaction } from '../data/DataLoader';
 
 describe('StateStore', () => {
     let store: StateStore;
@@ -12,6 +13,7 @@ describe('StateStore', () => {
         expect(store.get('colorMode')).toBe('price_psf');
         expect(store.get('selectionMode')).toBe('radial');
         expect(store.get('selectedTransactions')).toBeNull();
+        expect(store.get('spatialSelection')).toEqual({ kind: 'none' });
         expect(store.get('globalFilters')).toEqual({
             date: '2024-01',
             flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
@@ -25,8 +27,10 @@ describe('StateStore', () => {
         store.set('colorMode', 'price');
         expect(store.get('colorMode')).toBe('price');
 
-        store.set('selectionRadius', 1000);
-        expect(store.get('selectionRadius')).toBe(1000);
+        store.setSpatialSelection({ kind: 'circle', center: { latitude: 1.3, longitude: 103.8 }, radiusMeters: 1000 });
+        expect(store.get('spatialSelection')).toEqual({
+            kind: 'circle', center: { latitude: 1.3, longitude: 103.8 }, radiusMeters: 1000
+        });
     });
 
     it('keeps rental map selection and scenario state independent of resale filters', () => {
@@ -91,5 +95,32 @@ describe('StateStore', () => {
         expect(state).toHaveProperty('colorMode');
         expect(state).toHaveProperty('globalFilters');
         expect(state).toHaveProperty('selectedTransactions');
+        expect(state).toHaveProperty('spatialSelection');
+    });
+
+    it('derives selected transactions from the authoritative geometry', () => {
+        const inside = { latitude: 1.3, longitude: 103.8 } as HDBTransaction;
+        const outside = { latitude: 1.5, longitude: 104 } as HDBTransaction;
+        store.set('filteredTransactions', [inside, outside]);
+        store.setSpatialSelection({ kind: 'rectangle', south: 1.29, west: 103.79, north: 1.31, east: 103.81 });
+        expect(store.get('selectedTransactions')).toEqual([inside]);
+    });
+
+    it('preserves geometry for metric and rental flat-type changes', () => {
+        const selection = { kind: 'circle', center: { latitude: 1.3, longitude: 103.8 }, radiusMeters: 500 } as const;
+        store.setSpatialSelection(selection);
+        store.set('colorMode', 'rent');
+        store.set('rentalActiveFlatType', '4 ROOM');
+        expect(store.get('spatialSelection')).toEqual(selection);
+    });
+
+    it('clears geometry and derived rows when global filters change', () => {
+        const inside = { latitude: 1.3, longitude: 103.8 } as HDBTransaction;
+        store.set('filteredTransactions', [inside]);
+        store.setSpatialSelection({ kind: 'circle', center: { latitude: 1.3, longitude: 103.8 }, radiusMeters: 500 });
+        expect(store.get('selectedTransactions')).toEqual([inside]);
+        store.set('globalFilters', { ...store.get('globalFilters'), floorMin: 5 });
+        expect(store.get('spatialSelection')).toEqual({ kind: 'none' });
+        expect(store.get('selectedTransactions')).toBeNull();
     });
 });

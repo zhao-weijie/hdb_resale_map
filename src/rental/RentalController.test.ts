@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { rentalWindowFromStart, sanitizeScenario, scenarioFormMarkup } from './RentalController';
+import { buildRentalScalePresentation, rentalWindowFromStart, sanitizeScenario, scenarioFormMarkup } from './RentalController';
+import { circleSelection } from '../spatial/selection';
 
 describe('rental evidence month UI', () => {
     it('uses one start month through the latest month shared by both datasets', () => {
@@ -40,5 +41,31 @@ describe('rental scenario UI validation', () => {
 
     it('rejects invalid calendar dates and values the model would clamp', () => {
         expect(sanitizeScenario({ purchaseDate: '2025-02-30', ltv: 2, annualRentGrowth: 1.5 })).toEqual({});
+    });
+});
+
+describe('rental scale presentation', () => {
+    const points = [
+        { block: '1', streetName: 'A', flatType: '4 ROOM', latitude: 1.3, longitude: 103.8,
+            rent: 2_000, rentPsf: null, grossYield: null, monthlySurplus: null },
+        { block: '2', streetName: 'B', flatType: '4 ROOM', latitude: 1.301, longitude: 103.8,
+            rent: 4_000, rentPsf: null, grossYield: null, monthlySurplus: null },
+        { block: '3', streetName: 'C', flatType: '5 ROOM', latitude: 1.3, longitude: 103.8,
+            rent: 9_000, rentPsf: null, grossYield: null, monthlySurplus: null },
+    ];
+
+    it('keeps the global domain while selection changes only selected statistics', () => {
+        const none = buildRentalScalePresentation('rent', points, '4 ROOM', { kind: 'none' });
+        const selected = buildRentalScalePresentation('rent', points, '4 ROOM', circleSelection(1.3, 103.8, 20));
+        expect(selected.domain).toEqual(none.domain);
+        expect(selected.all.summary?.count).toBe(2);
+        expect(selected.selected?.summary?.count).toBe(1);
+        expect(selected.selected?.summary?.median).toBe(2_000);
+    });
+
+    it('represents an active empty selection and unsupported values as no data', () => {
+        const selected = buildRentalScalePresentation('rent_psf', points, '4 ROOM', circleSelection(1.4, 103.9, 10));
+        expect(selected.domain).toBeNull();
+        expect(selected.selected).toEqual({ summary: null });
     });
 });

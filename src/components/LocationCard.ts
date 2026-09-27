@@ -100,7 +100,6 @@ export class LocationCard {
                     const radiusInput = document.getElementById('radius-input') as HTMLInputElement;
                     const radius = parseInt(radiusInput.value) || 500;
 
-                    this.mapView.updateSelectionCircle(lat, lng, radius);
                     this.radialSelection.setSelection(lat, lng, radius);
 
                     // Update stats
@@ -188,10 +187,7 @@ export class LocationCard {
             if (val > 0 && this.radialSelection.hasSelection()) {
                 const current = this.radialSelection.getCurrentCenter();
                 if (current) {
-                    this.mapView.updateSelectionCircle(current.lat, current.lng, val);
                     this.radialSelection.setSelection(current.lat, current.lng, val);
-                    const selected = this.radialSelection.getSelectedTransactions();
-                    appState.set('selectedTransactions', selected);
                 }
             }
         });
@@ -201,9 +197,6 @@ export class LocationCard {
         const clearBtn = document.getElementById('clear-selection-btn');
         clearBtn?.addEventListener('click', () => {
             this.radialSelection.clearSelection();
-            this.mapView.setSelectedTransactions(null);
-            this.mapView.clearSelectionCircle();
-            this.mapView.clearSelectionRect();
 
             // Clear Postal Input BUT KEEP Radius
             const postalInput = document.getElementById('postal-input') as HTMLInputElement;

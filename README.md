@@ -35,13 +35,13 @@ python scripts/geocode_pipeline.py
 # Build yearly Arrow data files
 python scripts/build_arrow.py
 
-# Build whole-flat rental evidence
-python scripts/build_rental.py
+# Build whole-flat rental evidence from the source already downloaded above
+HDB_RENTAL_CSV=scripts/data/hdb_rental_raw.csv python scripts/build_rental.py
 ```
 
 This creates `public/data/manifest.json` and content-hashed yearly Arrow files. The app loads only years required by the default or saved date filter, fetching older history when requested. Prices shown are actual transaction prices, without regression estimates or price-index adjustment.
 
-**Note:** `geocode_pipeline.py` downloads the latest HDB resale CSV from data.gov.sg by default. To test with a local CSV instead, set `HDB_RESALE_CSV=/path/to/file.csv`.
+**Note:** `geocode_pipeline.py` downloads the latest resale and rental CSVs from data.gov.sg by default. To test with local files, set `HDB_RESALE_CSV` and `HDB_RENTAL_CSV`.
 
 ### 3. Run Development Server
 
@@ -101,9 +101,11 @@ hdb_resale_map/
 
 The map's **Colour by** control supports monthly whole-flat rent, estimated rent per square foot, gross rental yield, and monthly property cash surplus alongside the existing resale price modes. Rental comparisons use one active flat type at a time. Open a block to compare its selected flat types and substitute a target purchase price, rent, floor area, or Annual Value.
 
+All map metrics use a 5th–95th percentile color domain; monthly surplus is symmetric around zero. The scale-bar statistics toggle compares the global median, IQR, and count with the selected circle or rectangle without changing the color domain. Rental scale counts represent unique block/type estimates, while the rental Analytics overview summarizes the underlying source records.
+
 Rental evidence comes from [HDB's owner-declared rental approvals](https://data.gov.sg/datasets/d_c9f57187485a850908655db0e8cfe651/view), joined to resale transactions by block, street and flat type. These are block/type estimates, not matches to individual units. The rental source contains neither floor area nor storey. Estimated rent PSF uses the median area of resale comparables; floor and lease filters affect purchase-price comparables only.
 
-The default sample window starts in January of the preceding calendar year and ends in the latest month shared by resale and rental data. A same-block rental estimate needs five observations. Where evidence is thin, a labelled estimate may use the same flat type within 500 metres and a ten-year lease-commencement difference, with at least ten observations across three blocks. Identical rental rows are retained because the source has no unit identifiers. Invalid rents and extreme town/type outliers are excluded; evidence counts and ranges remain visible.
+The default sample window starts in January of the preceding calendar year and ends in the latest month shared by resale and rental data. A same-block rental estimate needs five observations. Where evidence is thin, an estimate may use the same flat type within 500 metres and, when lease metadata exists for both blocks, a ten-year lease-commencement difference, with at least ten observations across three blocks. Identical rental rows are retained because the source has no unit identifiers. Invalid rents and extreme town/type outliers are excluded from estimates; the Analytics overview retains valid positive source rents without statistical outlier removal.
 
 ### Scenario assumptions
 
@@ -123,10 +125,10 @@ Sources: [HDB resale MOP](https://www.hdb.gov.sg/managing-my-home/selling-a-flat
 
 Data is automatically refreshed every Friday via GitHub Actions (`deploy.yml`). Pushes to `main` and manual dispatches run the same fresh-data deployment, preventing a code deployment from restoring an older snapshot. The workflow:
 
-1. Downloads the latest HDB resale transactions from [data.gov.sg](https://data.gov.sg)
-2. Geocodes any new addresses via the OneMap API (typically none — all HDB blocks are already cached)
+1. Downloads the latest HDB resale and whole-flat rental transactions from [data.gov.sg](https://data.gov.sg)
+2. Geocodes the union of new resale and rental addresses via the OneMap API
 3. Rebuilds yearly Arrow files and the manifest from the full dataset, removing obsolete partitions
-4. Downloads whole-flat rental approvals and rebuilds the content-hashed rental snapshot and manifest
+4. Reuses the downloaded approvals to rebuild the schema-v2 rental location dictionary, snapshot, and manifest; publication requires greater than 99.5% resolved row coverage
 5. Runs the Python and TypeScript test suites, builds the site, and uploads the generated files directly in the GitHub Pages artifact
 
 Generated rental snapshots are ignored by Git and never committed. GitHub Actions caches the latest geocode lookup and rental asset between runs as a performance optimization; the tracked geocode lookup remains a fallback if that cache expires. A failed refresh does not replace the currently deployed Pages site.

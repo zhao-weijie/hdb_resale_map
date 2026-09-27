@@ -4,29 +4,32 @@
  */
 
 import type { HDBTransaction } from '../data/DataLoader';
+import type { MapMetric } from '../metrics';
 import type { GlobalFilters } from '../utils/filters';
+import {
+    NO_SPATIAL_SELECTION,
+    filterBySpatialSelection,
+    type SpatialSelection
+} from '../spatial/selection';
 
 export interface AppState {
     // Data
     allTransactions: HDBTransaction[];
     filteredTransactions: HDBTransaction[];
     selectedTransactions: HDBTransaction[] | null;
+    spatialSelection: SpatialSelection;
 
     // UI State
     globalFilters: GlobalFilters;
     selectionMode: 'radial' | 'rect';
     isSelectionModeActive: boolean;
     /** `price` modes colour individual transactions; rental modes colour a block/type estimate. */
-    colorMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus';
+    colorMode: MapMetric;
     /** The flat type used to colour a rental map.  The filter can still contain several types. */
     rentalActiveFlatType: string | null;
     /** Persisted scenario inputs are intentionally kept separate from filters. */
     rentalScenario: Record<string, number | string>;
     colorScale: 'viridis' | 'turbo';
-
-    // Selection geometry
-    selectionCenter: { lat: number; lng: number } | null;
-    selectionRadius: number;
 
     // MOP Expiry Feature
     displayMopExpiries: boolean;
@@ -47,6 +50,7 @@ export class StateStore {
             allTransactions: [],
             filteredTransactions: [],
             selectedTransactions: null,
+            spatialSelection: NO_SPATIAL_SELECTION,
             globalFilters: {
                 date: '2024-01',
                 flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
@@ -60,8 +64,6 @@ export class StateStore {
             colorScale: 'viridis',
             rentalActiveFlatType: null,
             rentalScenario: {},
-            selectionCenter: null,
-            selectionRadius: 500,
 
             // MOP Expiry Feature
             displayMopExpiries: false,
@@ -87,6 +89,30 @@ export class StateStore {
     set<K extends StateKey>(key: K, value: AppState[K]): void {
         this.state[key] = value;
         this.notify(key);
+        if (key === 'globalFilters') {
+            this.setSpatialSelection(NO_SPATIAL_SELECTION);
+        } else if (key === 'spatialSelection' || key === 'filteredTransactions') {
+            this.refreshSelectedTransactions();
+        }
+    }
+
+    setSpatialSelection(selection: SpatialSelection): void {
+        this.state.spatialSelection = selection;
+        this.notify('spatialSelection');
+        this.refreshSelectedTransactions();
+    }
+
+    clearSpatialSelection(): void {
+        this.setSpatialSelection(NO_SPATIAL_SELECTION);
+    }
+
+    private refreshSelectedTransactions(): void {
+        this.state.selectedTransactions = filterBySpatialSelection(
+            this.state.filteredTransactions,
+            this.state.spatialSelection,
+            (transaction) => ({ latitude: transaction.latitude, longitude: transaction.longitude })
+        );
+        this.notify('selectedTransactions');
     }
 
     /**

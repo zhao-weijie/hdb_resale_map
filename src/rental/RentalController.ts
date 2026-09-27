@@ -5,17 +5,23 @@ import type { MapView, RentalMapPoint } from '../map/MapView';
 import { appState } from '../state/AppState';
 import { applyFilters } from '../utils/filters';
 import {
-    calculateScenario, createRentalEstimationContext, estimateRentForTarget, getBlockResaleEvidence, getMapRentalMetric, getPaletteDomain, singaporeToday,
+    blockKey, buildRentalMapTargets, calculateScenario, createRentalEstimationContext, estimateRentForTarget, getBlockResaleEvidence, getMapRentalMetric,
+    normalizeFlatType, singaporeToday,
     type RentalEstimate, type RentalScenario, type RentalEstimationContext,
 } from './model';
-import type { MapMetric, RentalAnalysisWindow, RentalDataset, ScenarioAssumptions } from './types';
-import { MAP_METRICS } from '../components/MapMetricOptions';
+import type { BlockTypeTarget, RentalAnalysisWindow, RentalDataset, ScenarioAssumptions } from './types';
+import type { MapMetric } from '../metrics';
+import { createScalePresentation, metricValue } from '../metrics';
+import type { ScalePresentation } from '../metrics';
+import { containsCoordinate } from '../spatial/selection';
+import type { SpatialSelection } from '../spatial/selection';
+import { publishRentalOverviewSource } from '../analytics/rentalOverview';
 import { RentalControls } from './RentalControls';
 import { TransactionTable } from '../components/TransactionTable';
 
 type RentalMode = Exclude<MapMetric, 'price' | 'price_psf'>;
 
-interface EstimateRow { point: RentalMapPoint; estimate: RentalEstimate; scenario: RentalScenario | null; transaction: HDBTransaction; }
+interface EstimateRow { point: RentalMapPoint; estimate: RentalEstimate; scenario: RentalScenario | null; target: BlockTypeTarget; }
 
 /** Coordinates lazy rental loading and calculations with separate rental views. */
 export class RentalController {
@@ -59,7 +65,6 @@ export class RentalController {
         appState.subscribe('colorMode', (mode) => {
             this.syncControls();
             if (this.isRentalMode(mode)) void this.loadAndRender();
-            else this.colorScale.setRentalLegend(null);
         });
         appState.subscribe('globalFilters', () => {
             this.ensureActiveType();
@@ -75,7 +80,10 @@ export class RentalController {
                 const type = appState.get('rentalActiveFlatType');
                 if (type) localStorage.setItem('hdb_rentalActiveFlatType', type);
             } catch (_) { /* optional preference */ }
-            if (this.isRentalMode(appState.get('colorMode'))) this.updateLegend();
+            if (this.isRentalMode(appState.get('colorMode'))) this.updatePresentation();
+        });
+        appState.subscribe('spatialSelection', () => {
+            if (this.isRentalMode(appState.get('colorMode'))) this.updatePresentation();
         });
         this.ensureActiveType();
         this.syncControls();
@@ -94,6 +102,7 @@ export class RentalController {
             if (version !== this.windowRequestVersion) return;
             this.analysisWindow = requestedWindow;
             this.estimationContext = null;
+            publishRentalOverviewSource(this.dataset, this.analysisWindow);
             this.windowLoading = false; this.status = '';
             this.syncControls();
             if (this.isRentalMode(appState.get('colorMode') as MapMetric)) this.renderRentalPoints();
@@ -135,10 +144,12 @@ export class RentalController {
                     const year = Number(sharedLatest.slice(0, 4));
                     this.analysisWindow = { minMonth: `${year - 1}-01`, maxMonth: sharedLatest };
                 }
+                publishRentalOverviewSource(this.dataset, this.analysisWindow);
                 this.status = '';
             })().catch((error: unknown) => {
                 this.status = `Rental data unavailable. Retry: ${error instanceof Error ? error.message : 'request failed'}`;
                 this.dataset = null;
+                publishRentalOverviewSource(null, null);
             }).finally(() => { this.loadPromise = null; this.syncControls(); });
         }
         await this.loadPromise;
@@ -151,26 +162,34 @@ export class RentalController {
         const all = this.dataLoader.getAllData();
         const filters = appState.get('globalFilters');
         const filteredTransactions = applyFilters(all, filters);
-        const targets = new Map<string, HDBTransaction>();
+        const latestResale = new Map<string, (typeof filteredTransactions)[number]>();
         for (const transaction of filteredTransactions) {
-            const key = `${transaction.block}|${transaction.street_name}|${transaction.flat_type}`;
-            const existing = targets.get(key);
-            if (!existing || transaction.month > existing.month) targets.set(key, transaction);
+            const key = `${blockKey(transaction.block, transaction.street_name)}|${normalizeFlatType(transaction.flat_type)}`;
+            const existing = latestResale.get(key);
+            if (!existing || transaction.month > existing.month) latestResale.set(key, transaction);
         }
+        const targets = buildRentalMapTargets(this.dataset, this.analysisWindow, filters.flatTypes);
         const scenarioInputs = appState.get('rentalScenario') as Partial<ScenarioAssumptions>;
         const resaleFilters = { floorMin: filters.floorMin, leaseMin: filters.leaseMin, leaseMax: filters.leaseMax };
         const contextKey = `${this.dataset.generatedAt}|${all.length}|${resaleFilters.floorMin}|${resaleFilters.leaseMin}|${resaleFilters.leaseMax}|${this.analysisWindow?.minMonth}|${this.analysisWindow?.maxMonth}`;
         if (!this.estimationContext || this.estimationContextKey !== contextKey) {
-            this.estimationContext = createRentalEstimationContext({ rentalRecords: this.dataset.records, resaleComparables: all,
+            this.estimationContext = createRentalEstimationContext({ rentalRecords: this.dataset.records, rentalLocations: this.dataset.locations, resaleComparables: all,
                 resaleFilters, analysisWindow: this.analysisWindow ?? undefined });
             this.estimationContextKey = contextKey;
         }
         const context = this.estimationContext;
-        this.rows = [...targets.values()].map((transaction) => {
-            const key = this.overrideKey(transaction);
+        this.rows = targets.map((rentalTarget) => {
+            const targetKey = `${blockKey(rentalTarget.block, rentalTarget.streetName)}|${normalizeFlatType(rentalTarget.flatType)}`;
+            const transaction = latestResale.get(targetKey);
+            const target: BlockTypeTarget = transaction ? {
+                ...rentalTarget,
+                town: transaction.town,
+                leaseCommencement: transaction.lease_commence_date,
+                nearestMrtExitMeters: transaction.mrt_distance_m,
+            } : rentalTarget;
+            const key = this.overrideKey(target);
             const override = this.overrides.get(key);
-            const estimate = estimateRentForTarget(context, { block: transaction.block, streetName: transaction.street_name, flatType: transaction.flat_type, town: transaction.town,
-                latitude: transaction.latitude, longitude: transaction.longitude, leaseCommencement: transaction.lease_commence_date, nearestMrtExitMeters: transaction.mrt_distance_m });
+            const estimate = estimateRentForTarget(context, target);
             const effectiveRent = override?.rent ?? estimate.monthlyRent;
             const effectiveArea = override?.area ?? estimate.resale.areaSummary?.median;
             if (effectiveArea && effectiveRent) {
@@ -185,36 +204,29 @@ export class RentalController {
                 ? calculateScenario({ purchasePrice, currentMonthlyRent, evidenceAsOf: estimate.analysisWindow?.maxMonth,
                     marketValue: override?.marketValue, annualValueOverride: override?.annualValue, assumptions: scenarioInputs }) : null;
             const metric = getMapRentalMetric(appState.get('colorMode') as RentalMode, estimate, scenario);
-            const point: RentalMapPoint = { block: transaction.block, streetName: transaction.street_name, flatType: transaction.flat_type,
-                latitude: transaction.latitude, longitude: transaction.longitude,
+            const point: RentalMapPoint = { block: target.block, streetName: target.streetName, flatType: target.flatType,
+                latitude: target.latitude!, longitude: target.longitude!,
                 rent: getMapRentalMetric('rent', estimate, scenario).value, rentPsf: getMapRentalMetric('rent_psf', estimate, scenario).value,
                 grossYield: getMapRentalMetric('gross_yield', estimate, scenario).value, monthlySurplus: getMapRentalMetric('monthly_surplus', estimate, scenario).value,
                 provenance: estimate.source === 'nearby_blocks' ? 'nearby' : estimate.source === 'same_block' ? 'same_block' : 'insufficient',
                 metricValue: metric.value, estimate, scenario };
-            return { point, estimate, scenario, transaction };
+            return { point, estimate, scenario, target };
         });
         if (request !== this.requestVersion) return;
         this.mapView.setRentalPoints(this.rows.map((row) => row.point));
-        this.updateLegend();
+        this.updatePresentation();
     }
 
-    private updateLegend(): void {
+    private updatePresentation(): void {
         const mode = appState.get('colorMode') as RentalMode;
-        const descriptor = MAP_METRICS.find((item) => item.value === mode)!;
-        const values = this.rows
-            .filter((row) => row.point.flatType === appState.get('rentalActiveFlatType'))
-            .map((row) => row.point.metricValue as number | null)
-            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-        const domain = getPaletteDomain(values);
-        const format = (value: number) => mode === 'gross_yield' ? `${value.toFixed(1)}%` :
-            mode === 'rent_psf' ? `$${value.toFixed(2)}/psf` : money(value);
-        if (!domain) { this.mapView.setRentalDomain(null); this.colorScale.setRentalLegend(null); return; }
-        const extent = mode === 'monthly_surplus' ? Math.max(Math.abs(domain.min), Math.abs(domain.max), 1) : 0;
-        this.mapView.setRentalDomain(mode === 'monthly_surplus' ? { min: -extent, max: extent, extent } : { min: domain.min, max: domain.max });
-        this.colorScale.setRentalLegend({ label: `${descriptor.label}${domain.lowClipped || domain.highClipped ? ' (5–95%)' : ''}`,
-            low: format(mode === 'monthly_surplus' ? -extent : domain.min), high: format(mode === 'monthly_surplus' ? extent : domain.max),
-            midpoint: mode === 'monthly_surplus' ? '$0' : undefined,
-            key: 'Grey: no usable estimate.', divergent: mode === 'monthly_surplus' });
+        const presentation = buildRentalScalePresentation(
+            mode,
+            this.rows.map((row) => row.point),
+            appState.get('rentalActiveFlatType'),
+            appState.get('spatialSelection'),
+        );
+        this.mapView.setRentalDomain(presentation.domain);
+        this.colorScale.setPresentation(presentation);
     }
 
     private openDetails(point: RentalMapPoint): void {
@@ -236,7 +248,7 @@ export class RentalController {
         const position = (value: number) => Math.max(0, Math.min(100, ((value - scaleMin) / (scaleMax - scaleMin)) * 100));
         const distributionRows = matching.map((row) => {
             const selected = row.point.flatType === point.flatType;
-            const override = this.overrides.get(this.overrideKey(row.transaction));
+            const override = this.overrides.get(this.overrideKey(row.target));
             const evidenceModel = displayEvidence(row);
             const evidence = evidenceModel.summary;
             const source = row.estimate.source === 'same_block' ? 'same block' : row.estimate.source === 'nearby_blocks' ? 'nearby' : 'insufficient';
@@ -259,7 +271,7 @@ export class RentalController {
             </div>`;
         }).join('');
         const s = active.scenario;
-        const activeOverride = this.overrides.get(this.overrideKey(active.transaction));
+        const activeOverride = this.overrides.get(this.overrideKey(active.target));
         const evidenceCount = active.estimate.selected?.summary?.count;
         const evidenceSource = active.estimate.source === 'same_block' ? 'Same-block evidence' : active.estimate.source === 'nearby_blocks' ? 'Nearby-block estimate' : 'Insufficient rental evidence';
         const purchaseEstimate = activeOverride?.price ?? active.estimate.resale.summary?.median ?? null;
@@ -300,11 +312,11 @@ export class RentalController {
             <details class="rental-disclosure">
               <summary><i data-lucide="chevron-down" aria-hidden="true"></i><span>Adjust inputs</span><small>Price, rent, area and Annual Value</small></summary>
               <form class="rental-overrides"><p>Changes apply only to this block and flat type.</p>
-          ${numberField('price', 'Target price', this.overrides.get(this.overrideKey(active.transaction))?.price ?? active.estimate.resale.summary?.median ?? null)}
-          ${numberField('marketValue', 'Market value for BSD (optional)', this.overrides.get(this.overrideKey(active.transaction))?.marketValue ?? null)}
-          ${numberField('rent', 'Current rent', this.overrides.get(this.overrideKey(active.transaction))?.rent ?? active.estimate.monthlyRent)}
-          ${numberField('area', 'Area (sqm)', this.overrides.get(this.overrideKey(active.transaction))?.area ?? active.estimate.resale.areaSummary?.median ?? null)}
-          ${numberField('annualValue', 'Annual Value', this.overrides.get(this.overrideKey(active.transaction))?.annualValue ?? null)}
+          ${numberField('price', 'Target price', this.overrides.get(this.overrideKey(active.target))?.price ?? active.estimate.resale.summary?.median ?? null)}
+          ${numberField('marketValue', 'Market value for BSD (optional)', this.overrides.get(this.overrideKey(active.target))?.marketValue ?? null)}
+          ${numberField('rent', 'Current rent', this.overrides.get(this.overrideKey(active.target))?.rent ?? active.estimate.monthlyRent)}
+          ${numberField('area', 'Area (sqm)', this.overrides.get(this.overrideKey(active.target))?.area ?? active.estimate.resale.areaSummary?.median ?? null)}
+          ${numberField('annualValue', 'Annual Value', this.overrides.get(this.overrideKey(active.target))?.annualValue ?? null)}
                 <div class="rental-override-actions"><button>Apply changes</button><button type="button" class="rental-reset" ${activeOverride ? '' : 'disabled'}>Reset</button></div>
               </form>
             </details>
@@ -330,9 +342,9 @@ export class RentalController {
                 if (!error) { error = document.createElement('p'); error.className = 'rental-form-error'; form.prepend(error); }
                 error.textContent = 'Price, market value, rent and area must be greater than zero. Annual Value may be zero.'; return;
             }
-            this.overrides.set(this.overrideKey(active.transaction), { price: price.value, marketValue: marketValue.value, rent: rent.value, area: area.value, annualValue: annualValue.value });
+            this.overrides.set(this.overrideKey(active.target), { price: price.value, marketValue: marketValue.value, rent: rent.value, area: area.value, annualValue: annualValue.value });
             this.closeModal(modal); this.renderRentalPoints(); requestAnimationFrame(() => this.openDetails(active.point)); });
-        modal.querySelector<HTMLButtonElement>('.rental-reset')!.addEventListener('click', () => { this.overrides.delete(this.overrideKey(active.transaction)); this.closeModal(modal); this.renderRentalPoints(); });
+        modal.querySelector<HTMLButtonElement>('.rental-reset')!.addEventListener('click', () => { this.overrides.delete(this.overrideKey(active.target)); this.closeModal(modal); this.renderRentalPoints(); });
     }
 
     private openScenarioEditor(): void {
@@ -396,7 +408,21 @@ export class RentalController {
         modal.querySelector<HTMLElement>('button, input')?.focus(); return modal;
     }
     private closeModal(modal: HTMLElement): void { modal.remove(); }
-    private overrideKey(transaction: HDBTransaction): string { return `${transaction.block}|${transaction.street_name}|${transaction.flat_type}`; }
+    private overrideKey(target: BlockTypeTarget): string { return `${blockKey(target.block, target.streetName)}|${normalizeFlatType(target.flatType)}`; }
+}
+
+export function buildRentalScalePresentation(
+    metric: RentalMode,
+    points: readonly RentalMapPoint[],
+    activeType: string | null,
+    selection: SpatialSelection,
+): ScalePresentation {
+    const population = points.filter((point) => !activeType || normalizeFlatType(point.flatType) === normalizeFlatType(activeType));
+    const values = population.map((point) => metricValue(metric, point));
+    const selectedValues = selection.kind === 'none' ? undefined : population
+        .filter((point) => containsCoordinate(selection, point))
+        .map((point) => metricValue(metric, point));
+    return createScalePresentation(metric, values, selectedValues);
 }
 
 function escapeHtml(value: string): string { const el = document.createElement('span'); el.textContent = value; return el.innerHTML; }

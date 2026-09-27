@@ -1,5 +1,8 @@
 /** Domain types for whole-flat rental evidence and post-MOP scenarios. */
 
+import type { NumericSummary } from '../metrics';
+export type { NumericSummary } from '../metrics';
+
 export type Month = `${number}-${string}` | string;
 
 /** The raw shape published by data.gov.sg's HDB rental transactions dataset. */
@@ -10,14 +13,24 @@ export interface RentalRecord {
     street_name: string;
     flat_type: string;
     monthly_rent: number;
+    /** Index into RentalDataset.locations; null when the source address is unresolved. */
+    locationId: number | null;
+}
+
+export interface RentalLocation {
+    id: number;
+    addressKey: string;
+    latitude: number;
+    longitude: number;
 }
 
 export interface RentalDataset {
-    version: 1;
+    version: 2;
     generatedAt: string;
     minMonth: Month;
     maxMonth: Month;
     records: RentalRecord[];
+    locations: RentalLocation[];
 }
 
 /** The resale fields used by the rental estimator.  They intentionally mirror HDBTransaction. */
@@ -52,16 +65,6 @@ export interface BlockTypeTarget {
 export interface RentalAnalysisWindow {
     minMonth: Month;
     maxMonth: Month;
-}
-
-export interface NumericSummary {
-    count: number;
-    min: number;
-    max: number;
-    median: number;
-    q1: number;
-    q3: number;
-    iqr: number;
 }
 
 export interface RentalEvidence {
@@ -108,6 +111,7 @@ export interface RentalEstimate {
 export interface EstimationInput {
     target: BlockTypeTarget;
     rentalRecords: RentalRecord[];
+    rentalLocations?: readonly RentalLocation[];
     resaleComparables: ResaleComparable[];
     analysisWindow?: RentalAnalysisWindow;
     resaleFilters?: ResaleFilters;
@@ -116,6 +120,7 @@ export interface EstimationInput {
 /** Shared immutable inputs for building a bulk rental estimation context. */
 export interface EstimationContextInput {
     rentalRecords: RentalRecord[];
+    rentalLocations?: readonly RentalLocation[];
     resaleComparables: ResaleComparable[];
     analysisWindow?: RentalAnalysisWindow;
     resaleFilters?: ResaleFilters;
@@ -171,17 +176,8 @@ export interface RentalScenario {
 
 export type RentalMetric = 'monthly_rent' | 'estimated_rent_psf' | 'gross_yield' | 'monthly_surplus';
 /** Map-facing names, including the existing resale colour modes. */
-export type MapMetric = 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus';
-
 export interface MetricValue {
     value: number | null;
     unit: '$/month' | '$/psf/month' | '%' | '$/month after reserve and tax';
     available: boolean;
-}
-
-export interface PaletteDomain {
-    min: number;
-    max: number;
-    lowClipped: boolean;
-    highClipped: boolean;
 }

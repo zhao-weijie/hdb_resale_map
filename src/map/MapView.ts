@@ -6,10 +6,18 @@ import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import maplibregl from 'maplibre-gl';
 import { appState } from '../state/AppState';
 import { buildColorLookup, type ColorScale } from '../components/ColorScaleBar';
-import { getTransactionStats } from '../utils/transactionStats';
+import { circleSelection, rectangleSelection, type SpatialSelection } from '../spatial/selection';
+import {
+    calculateMetricDomain,
+    getMetricDefinition,
+    metricValue,
+    scaleScalar,
+    type MapMetric,
+    type ScaleDomain,
+} from '../metrics';
 
 
-export type ColorMode = 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus';
+export type ColorMode = MapMetric;
 export interface RentalMapPoint {
     block: string;
     streetName: string;
@@ -29,23 +37,18 @@ export class MapView {
     private map: maplibregl.Map | null = null;
     private deckOverlay: MapboxOverlay | null = null;
     private containerElement: HTMLElement;
-    private selectionCircle: any = null;
-    private selectionRect: any = null;
     private mopData: any = null; // Store MOP GeoJSON data
     private mopLoadPromise: Promise<void> | null = null;
 
     private rangeData: HDBTransaction[] | null = null;
     private rangeMode: ColorMode | null = null;
-    private rangeMin = 0;
-    private rangeMax = 0;
-    private selectedData: HDBTransaction[] | null = null;
-    private selectedItems: Set<HDBTransaction> | null = null;
+    private resaleDomain: ScaleDomain | null = null;
 
     private isMobile: boolean;
     private onPointClickCallback: ((lat: number, lng: number, transaction: HDBTransaction) => void) | null = null;
     private colorLookup: [number, number, number][] = buildColorLookup('viridis');
     private rentalPoints: RentalMapPoint[] = [];
-    private rentalDomain: { min: number; max: number; extent?: number } | null = null;
+    private rentalDomain: ScaleDomain | null = null;
     private onRentalPointClickCallback: ((point: RentalMapPoint) => void) | null = null;
 
     constructor(containerId: string, _dataLoader: DataLoader, isMobile: boolean) {
@@ -79,7 +82,7 @@ export class MapView {
         // Add attribution manually since OneMap style might miss it
         this.map.addControl(new maplibregl.AttributionControl({
             customAttribution: 'Map data © <a href="https://www.onemap.gov.sg/" target="_blank">OneMap</a>'
-        }));
+        }), 'bottom-left');
 
         // Custom click handler for closing popups
         this.map.on('click', () => {
@@ -88,7 +91,7 @@ export class MapView {
                 this.activePopup = null;
             }
         });
-        this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+        this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
         // 2. Initialize Deck.gl Overlay
         this.deckOverlay = new MapboxOverlay({
@@ -122,6 +125,7 @@ export class MapView {
         });
         appState.subscribe('colorMode', () => this.updateLayers());
         appState.subscribe('rentalActiveFlatType', () => this.updateLayers());
+        appState.subscribe('spatialSelection', () => this.updateLayers());
 
         console.log("✓ Map initialized with OneMap basemap");
     }
@@ -224,11 +228,6 @@ export class MapView {
      */
     setFilteredData(transactions: import('../data/DataLoader').HDBTransaction[]): void {
         appState.set('filteredTransactions', transactions);
-        appState.set('selectedTransactions', null);
-        this.selectedData = null;
-        this.selectedItems = null;
-        this.selectionCircle = null;
-        this.selectionRect = null;
         this.updateLayers();
     }
 
@@ -253,7 +252,7 @@ export class MapView {
         this.updateLayers();
     }
 
-    setRentalDomain(domain: { min: number; max: number; extent?: number } | null): void {
+    setRentalDomain(domain: ScaleDomain | null): void {
         this.rentalDomain = domain;
         this.updateLayers();
     }
@@ -263,6 +262,10 @@ export class MapView {
 
         const layers: any[] = [];
 
+        // Keep the translucent selection under every data layer so it cannot
+        // alter the apparent scale colour of points within the geometry.
+        layers.push(...this.createSelectionLayers(appState.get('spatialSelection')));
+
 
         // Price modes keep the original individual-transaction map. Rental modes
         // deliberately collapse to one marker per block so overlapping records do
@@ -271,29 +274,15 @@ export class MapView {
         if (colorMode !== 'price' && colorMode !== 'price_psf') {
             layers.push(...this.createRentalLayers(colorMode));
         } else {
-        const getValue = colorMode === 'price'
-            ? (d: HDBTransaction) => d.resale_price
-            : (d: HDBTransaction) => d.price_psf;
-
         if (this.rangeData !== dataToRender || this.rangeMode !== colorMode) {
             this.rangeData = dataToRender;
             this.rangeMode = colorMode;
-            const stats = getTransactionStats(dataToRender, colorMode);
-            this.rangeMin = stats?.min ?? 0;
-            this.rangeMax = stats?.max ?? 0;
+            this.resaleDomain = calculateMetricDomain(
+                colorMode,
+                dataToRender.map((transaction) => metricValue(colorMode, transaction)),
+            );
         }
-        const minValue = this.rangeMin;
-        const maxValue = this.rangeMax;
-
-        // When there's a selection, show unselected data as faded
-        const selectedTransactions = appState.get('selectedTransactions');
-        if (this.selectedData !== selectedTransactions) {
-            this.selectedData = selectedTransactions;
-            this.selectedItems = selectedTransactions
-                ? new Set(selectedTransactions)
-                : null;
-        }
-        const selectedSet = this.selectedItems;
+        const domain = this.resaleDomain;
 
         const colorScale = appState.get('colorScale');
 
@@ -304,20 +293,15 @@ export class MapView {
             getPosition: (d: HDBTransaction) => [d.longitude, d.latitude],
             getRadius: this.isMobile ? 65 : 50,
             getFillColor: (d: HDBTransaction) => {
-                const value = getValue(d);
-                const normalized = maxValue === minValue
-                    ? 0.5
-                    : (value - minValue) / (maxValue - minValue);
-                const idx = Math.floor(Math.max(0, Math.min(0.9999, normalized)) * 255);
+                const scalar = scaleScalar(metricValue(colorMode, d), domain);
+                if (scalar === null) return [151, 151, 151, 180] as [number, number, number, number];
+                const idx = Math.min(255, Math.floor(scalar * 255));
                 const [r, g, b] = this.colorLookup[idx];
-                const alpha = selectedSet && !selectedSet.has(d)
-                    ? 60  // Fade out unselected points when there's a selection
-                    : 255;
-                return [r, g, b, alpha] as [number, number, number, number];
+                return [r, g, b, 255] as [number, number, number, number];
             },
             // Tell Deck.gl to re-evaluate getFillColor whenever these change
             updateTriggers: {
-                getFillColor: [minValue, maxValue, colorMode, colorScale, selectedTransactions]
+                getFillColor: [domain?.min, domain?.max, colorMode, colorScale]
             },
             opacity: 1, // Use RGBA alpha instead
             pickable: true,
@@ -405,86 +389,70 @@ export class MapView {
             );
         }
 
-        // Add selection circle if active
-        if (this.selectionCircle) {
-            layers.push(
-                new ScatterplotLayer({
-                    id: 'selection-circle',
-                    data: [this.selectionCircle],
-                    pickable: false,
-                    stroked: true,
-                    filled: true,
-                    getFillColor: [59, 130, 246, 40], // Light blue transparent
-                    getLineColor: [59, 130, 246, 255], // Solid blue border
-                    getLineWidth: 2,
-                    lineWidthMinPixels: 2,
-                    getPosition: (d: any) => d.position,
-                    getRadius: (d: any) => d.radius,
-                    radiusUnits: 'meters'
-                })
-            );
-        }
-
-
-
-        // Add selection rectangle if active
-        if (this.selectionRect) {
-            layers.push(
-                new PolygonLayer({
-                    id: 'selection-rect',
-                    data: [this.selectionRect],
-                    pickable: false,
-                    stroked: true,
-                    filled: true,
-                    getFillColor: [59, 130, 246, 40],
-                    getLineColor: [59, 130, 246, 255],
-                    getLineWidth: 2,
-                    lineWidthMinPixels: 2,
-                    getPolygon: (d: any) => d.polygon,
-                })
-            );
-        }
-
         return layers;
+    }
+
+    private createSelectionLayers(selection: SpatialSelection): any[] {
+        if (selection.kind === 'circle') {
+            return [new ScatterplotLayer({
+                id: 'selection-circle',
+                data: [{
+                    position: [selection.center.longitude, selection.center.latitude],
+                    radius: selection.radiusMeters
+                }],
+                pickable: false,
+                stroked: true,
+                filled: true,
+                getFillColor: [59, 130, 246, 12],
+                getLineColor: [59, 130, 246, 255],
+                getLineWidth: 2,
+                lineWidthMinPixels: 2,
+                getPosition: (d: any) => d.position,
+                getRadius: (d: any) => d.radius,
+                radiusUnits: 'meters'
+            })];
+        }
+        if (selection.kind === 'rectangle') {
+            const polygon = [
+                [selection.west, selection.south],
+                [selection.east, selection.south],
+                [selection.east, selection.north],
+                [selection.west, selection.north]
+            ];
+            return [new PolygonLayer({
+                id: 'selection-rect',
+                data: [{ polygon }],
+                pickable: false,
+                stroked: true,
+                filled: true,
+                getFillColor: [59, 130, 246, 12],
+                getLineColor: [59, 130, 246, 255],
+                getLineWidth: 2,
+                lineWidthMinPixels: 2,
+                getPolygon: (d: any) => d.polygon
+            })];
+        }
+        return [];
     }
 
     private createRentalLayers(mode: Exclude<ColorMode, 'price' | 'price_psf'>): any[] {
         const selectedType = appState.get('rentalActiveFlatType');
         const points = this.rentalPoints.filter((point) => !selectedType || point.flatType === selectedType);
-        const getValue = (point: RentalMapPoint): number | null => {
-            if (mode === 'rent') return point.rent;
-            if (mode === 'rent_psf') return point.rentPsf;
-            if (mode === 'gross_yield') return point.grossYield;
-            return point.monthlySurplus;
-        };
-        const values = points.map(getValue).filter((value): value is number =>
-            typeof value === 'number' && Number.isFinite(value));
-        const sorted = [...values].sort((a, b) => a - b);
-        const percentile = (p: number) => {
-            if (!sorted.length) return 0;
-            const index = Math.max(0, Math.min(sorted.length - 1, (sorted.length - 1) * p));
-            const lower = Math.floor(index); const upper = Math.ceil(index);
-            return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
-        };
-        const computedLow = percentile(.05);
-        const computedHigh = percentile(.95);
-        const low = this.rentalDomain?.min ?? computedLow;
-        const high = this.rentalDomain?.max ?? computedHigh;
-        const extent = this.rentalDomain?.extent ?? Math.max(Math.abs(low), Math.abs(high), 1);
+        const definition = getMetricDefinition(mode);
         const color = (point: RentalMapPoint): [number, number, number, number] => {
-            const value = getValue(point);
-            if (value === null || value === undefined || !Number.isFinite(value)) return [151, 151, 151, 180];
-            if (mode === 'monthly_surplus') {
+            const value = metricValue(mode, point);
+            const scalar = scaleScalar(value, this.rentalDomain);
+            if (value === null || scalar === null) return [151, 151, 151, 180];
+            if (definition.palette === 'diverging') {
                 // Orange → neutral → blue, fixed at zero so profit/loss is legible.
-                const ratio = Math.max(-1, Math.min(1, value / extent));
+                const ratio = scalar * 2 - 1;
                 if (ratio < 0) {
                     const t = ratio + 1;
                     return [Math.round(224 + 31 * t), Math.round(116 + 126 * t), Math.round(43 + 192 * t), 245];
                 }
                 return [Math.round(255 - 197 * ratio), Math.round(242 - 112 * ratio), Math.round(235 + 15 * ratio), 245];
             }
-            const normalized = high === low ? .5 : Math.max(0, Math.min(1, (value - low) / (high - low)));
-            const [r, g, b] = this.colorLookup[Math.min(255, Math.floor(normalized * 255))];
+            const [r, g, b] = this.colorLookup[Math.min(255, Math.floor(scalar * 255))];
             return [r, g, b, 245];
         };
         const layers: any[] = [new ScatterplotLayer({
@@ -493,7 +461,7 @@ export class MapView {
             getRadius: this.isMobile ? 85 : 68,
             radiusMinPixels: this.isMobile ? 5 : 4, radiusMaxPixels: 28,
             getFillColor: color,
-            updateTriggers: { getFillColor: [mode, low, high, extent, this.colorLookup] },
+            updateTriggers: { getFillColor: [mode, this.rentalDomain?.min, this.rentalDomain?.max, this.colorLookup] },
             onHover: (info: any) => { this.containerElement.style.cursor = info.object ? 'pointer' : ''; },
             onClick: (info: any) => {
                 if (!info?.object || this.containerElement.classList.contains('selection-active')) return false;
@@ -506,55 +474,27 @@ export class MapView {
 
 
     updateSelectionCircle(centerLat: number, centerLng: number, radiusMeters: number): void {
-        this.selectionCircle = { position: [centerLng, centerLat], radius: radiusMeters };
-        // Clear rect when updating circle
-        this.selectionRect = null;
-        this.updateLayers();
+        appState.setSpatialSelection(circleSelection(centerLat, centerLng, radiusMeters));
     }
 
     updateSelectionRect(startLat: number, startLng: number, endLat: number, endLng: number): void {
-        const minLng = Math.min(startLng, endLng);
-        const maxLng = Math.max(startLng, endLng);
-        const minLat = Math.min(startLat, endLat);
-        const maxLat = Math.max(startLat, endLat);
-
-        this.selectionRect = {
-            polygon: [
-                [minLng, minLat],
-                [maxLng, minLat],
-                [maxLng, maxLat],
-                [minLng, maxLat]
-            ]
-        };
-        // Clear circle when updating rect
-        this.selectionCircle = null;
-        this.updateLayers();
+        appState.setSpatialSelection(rectangleSelection(startLat, startLng, endLat, endLng));
     }
 
     clearSelectionCircle(): void {
-        this.selectionCircle = null;
-        this.updateLayers();
+        if (appState.get('spatialSelection').kind === 'circle') appState.clearSpatialSelection();
     }
 
     clearSelectionRect(): void {
-        this.selectionRect = null;
-        this.updateLayers();
+        if (appState.get('spatialSelection').kind === 'rectangle') appState.clearSpatialSelection();
     }
 
     clearSelectionGeometry(): void {
-        if (!this.selectionCircle && !this.selectionRect) return;
-        this.selectionCircle = null;
-        this.selectionRect = null;
-        this.updateLayers();
+        appState.clearSpatialSelection();
     }
 
     setColorMode(mode: ColorMode): void {
         appState.set('colorMode', mode);
-        this.updateLayers();
-    }
-
-    setSelectedTransactions(transactions: HDBTransaction[] | null): void {
-        appState.set('selectedTransactions', transactions);
         this.updateLayers();
     }
 

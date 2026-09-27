@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
     calculateBSD, calculateMortgageDuty, calculateNonOwnerPropertyTax, calculateScenario,
-    createRentalEstimationContext, estimateRent, filterRentalRecords, getBlockResaleEvidence, getMapRentalMetric, getPaletteDomain,
-    getSharedRentalAnalysisWindow, normalizeAddressPart, normalizeFlatType, paletteScalar,
+    buildRentalMapTargets, createRentalEstimationContext, estimateRent, filterRentalRecords, getBlockResaleEvidence, getMapRentalMetric,
+    getSharedRentalAnalysisWindow, normalizeAddressPart, normalizeFlatType,
     singaporeToday,
 } from './model';
 import type { BlockTypeTarget, RentalRecord, ResaleComparable } from './types';
@@ -21,7 +21,36 @@ const resale = (overrides: Partial<ResaleComparable> = {}): ResaleComparable => 
 
 const rent = (overrides: Partial<RentalRecord> = {}): RentalRecord => ({
     month: '2026-08', town: 'Town', block: '123A', street_name: 'Example Road', flat_type: '4 ROOM', monthly_rent: 3_000,
+    locationId: null,
     ...overrides,
+});
+
+describe('rental map targets', () => {
+    it('uses independent rental locations and emits one target per block and type', () => {
+        const dataset = {
+            version: 2 as const, generatedAt: '2026-09-27T00:00:00Z', minMonth: '2026-01', maxMonth: '2026-08',
+            locations: [{ id: 0, addressKey: '999|NEW ST', latitude: 1.4, longitude: 103.9 }],
+            records: [
+                rent({ block: '999', street_name: 'NEW ST', locationId: 0 }),
+                rent({ block: '999', street_name: 'NEW ST', locationId: 0 }),
+                rent({ block: '999', street_name: 'NEW ST', flat_type: '5 ROOM', locationId: 0 }),
+                rent({ block: '888', street_name: 'LOST ST', locationId: null }),
+            ],
+        };
+        const targets = buildRentalMapTargets(dataset, { minMonth: '2026-01', maxMonth: '2026-12' });
+        expect(targets).toHaveLength(2);
+        expect(targets[0]).toMatchObject({ block: '999', flatType: '4 ROOM', latitude: 1.4, longitude: 103.9 });
+    });
+
+    it('applies the analysis window and enabled flat types', () => {
+        const dataset = {
+            version: 2 as const, generatedAt: '2026-09-27T00:00:00Z', minMonth: '2025-01', maxMonth: '2026-08',
+            locations: [{ id: 0, addressKey: '123A|EXAMPLE ROAD', latitude: 1.3, longitude: 103.8 }],
+            records: [rent({ month: '2025-01', flat_type: '5 ROOM', locationId: 0 }), rent({ locationId: 0 })],
+        };
+        expect(buildRentalMapTargets(dataset, { minMonth: '2026-01', maxMonth: '2026-12' }, ['4 ROOM'])).toHaveLength(1);
+        expect(buildRentalMapTargets(dataset, { minMonth: '2026-09', maxMonth: '2026-12' })).toHaveLength(0);
+    });
 });
 
 describe('rental evidence estimation', () => {
@@ -102,6 +131,31 @@ describe('rental evidence estimation', () => {
         expect(result.direct.summary?.count).toBe(2);
         expect(result.nearby?.summary?.count).toBe(12);
         expect(result.nearby?.blockCount).toBe(3);
+        expect(result.monthlyRent).toBe(3_200);
+    });
+
+    it('uses rental locations for nearby evidence when resale profiles are unavailable', () => {
+        const nearbyBlocks = ['124', '125', '126'];
+        const rentalRecords = nearbyBlocks.flatMap((block, locationId) => Array.from({ length: 4 }, () => rent({
+            block,
+            street_name: 'Rental Only Road',
+            monthly_rent: 3_100 + locationId * 100,
+            locationId,
+        })));
+        const rentalLocations = nearbyBlocks.map((block, id) => ({
+            id,
+            addressKey: `${block}|RENTAL ONLY RD`,
+            latitude: 1.3005 + id * 0.0001,
+            longitude: 103.8,
+        }));
+        const result = estimateRent({
+            target: { ...target, leaseCommencement: undefined },
+            rentalRecords,
+            rentalLocations,
+            resaleComparables: [],
+        });
+        expect(result.source).toBe('nearby_blocks');
+        expect(result.nearby?.summary?.count).toBe(12);
         expect(result.monthlyRent).toBe(3_200);
     });
 
@@ -235,11 +289,7 @@ describe('scenario finance model', () => {
         expect(scenario.propertyMonthlySurplus).not.toBeCloseTo(scenario.propertyMonthlySurplus + scenario.firstRentalYearPrincipal / 12);
     });
 
-    it('exposes stable palette scalars and UI map metric aliases', () => {
-        const domain = getPaletteDomain([0, 10, 20, 30, 1_000]);
-        expect(domain?.min).toBeGreaterThanOrEqual(0);
-        expect(paletteScalar(-1, domain)).toBe(0);
-        expect(paletteScalar(1_000, domain)).toBe(1);
+    it('exposes UI map metric aliases', () => {
         const estimate = estimateRent({ target, rentalRecords: Array.from({ length: 5 }, () => rent()), resaleComparables: [resale(), resale(), resale()] });
         expect(getMapRentalMetric('rent', estimate).value).toBe(3_000);
     });

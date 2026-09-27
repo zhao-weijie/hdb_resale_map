@@ -3,13 +3,11 @@
  */
 
 import type { DataLoader, HDBTransaction } from '../data/DataLoader';
+import { appState } from '../state/AppState';
+import { circleSelection, filterBySpatialSelection } from '../spatial/selection';
 
 export class RadialSelection {
     private dataLoader: DataLoader;
-    private centerLat: number | null = null;
-    private centerLng: number | null = null;
-    private radiusMeters: number = 0;
-    private isActive: boolean = false;
 
     constructor(dataLoader: DataLoader) {
         this.dataLoader = dataLoader;
@@ -19,54 +17,47 @@ export class RadialSelection {
      * Start a radial selection
      */
     setSelection(centerLat: number, centerLng: number, radiusMeters: number): void {
-        this.centerLat = centerLat;
-        this.centerLng = centerLng;
-        this.radiusMeters = radiusMeters;
-        this.isActive = true;
+        appState.setSpatialSelection(circleSelection(centerLat, centerLng, radiusMeters));
     }
 
     /**
      * Clear the selection
      */
     clearSelection(): void {
-        this.centerLat = null;
-        this.centerLng = null;
-        this.radiusMeters = 0;
-        this.isActive = false;
+        appState.clearSpatialSelection();
     }
 
     /**
      * Query transactions within the selected area
      */
     getSelectedTransactions(): HDBTransaction[] | null {
-        if (!this.isActive || this.centerLat === null || this.centerLng === null) {
-            return null;
-        }
-        return this.dataLoader.queryCircle(this.centerLat, this.centerLng, this.radiusMeters);
+        return filterBySpatialSelection(
+            this.dataLoader.getAllData(),
+            appState.get('spatialSelection'),
+            (transaction) => ({ latitude: transaction.latitude, longitude: transaction.longitude })
+        );
     }
 
     isSelectionActive(): boolean {
-        return this.isActive;
+        return appState.get('spatialSelection').kind === 'circle';
     }
 
     getSelectionInfo(): { center: [number, number]; radius: number } | null {
-        if (!this.isActive || this.centerLat === null || this.centerLng === null) {
-            return null;
-        }
+        const selection = appState.get('spatialSelection');
+        if (selection.kind !== 'circle') return null;
         return {
-            center: [this.centerLat, this.centerLng],
-            radius: this.radiusMeters,
+            center: [selection.center.latitude, selection.center.longitude],
+            radius: selection.radiusMeters,
         };
     }
     // Helper aliases for AnalyticsPanel
     hasSelection(): boolean {
-        return this.isActive;
+        return appState.get('spatialSelection').kind === 'circle';
     }
 
     getCurrentCenter(): { lat: number, lng: number } | null {
-        if (!this.isActive || this.centerLat === null || this.centerLng === null) {
-            return null;
-        }
-        return { lat: this.centerLat, lng: this.centerLng };
+        const selection = appState.get('spatialSelection');
+        if (selection.kind !== 'circle') return null;
+        return { lat: selection.center.latitude, lng: selection.center.longitude };
     }
 }

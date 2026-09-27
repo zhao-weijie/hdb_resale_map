@@ -1,4 +1,5 @@
-import type { MapMetric, RentalAnalysisWindow } from './types';
+import type { RentalAnalysisWindow } from './types';
+import type { MapMetric } from '../metrics';
 import { MAP_METRICS } from '../components/MapMetricOptions';
 
 export interface RentalControlsViewModel {

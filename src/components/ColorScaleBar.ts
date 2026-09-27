@@ -1,391 +1,400 @@
-import { interpolateViridis, interpolateTurbo } from 'd3-scale-chromatic';
 import { rgb as d3rgb } from 'd3-color';
-import type { HDBTransaction } from '../data/DataLoader';
+import { interpolateTurbo, interpolateViridis } from 'd3-scale-chromatic';
+import { refreshIcons } from '../icons';
+import {
+    createScalePresentation,
+    getMetricDefinition,
+    metricValues,
+    scaleScalar,
+    type MapMetric,
+    type NumericSummary,
+    type ScalePresentation,
+} from '../metrics';
 import { appState } from '../state/AppState';
-import { getTransactionStats, type TransactionStats } from '../utils/transactionStats';
 
 export type ColorScale = 'viridis' | 'turbo';
 
-/**
- * Build a 256-entry RGB lookup table for a given color scale.
- * Uses d3-color's rgb() parser instead of regex so it handles any CSS color
- * format that d3-scale-chromatic may return (rgb, hsl, hex, floats…).
- */
+const STATS_OPEN_KEY = 'hdb-scale-stats-open';
+const PALETTE_HINT_KEY = 'hdb-palette-hint-seen';
+const PALETTE_HINT = 'Tip: select the color scale to change its palette.';
+
+/** Build the map's 256-entry RGB lookup table. */
 export function buildColorLookup(scale: ColorScale): [number, number, number][] {
     const fn = scale === 'viridis' ? interpolateViridis : interpolateTurbo;
-    return Array.from({ length: 256 }, (_, i) => {
-        const c = d3rgb(fn(i / 255));
-        return [Math.round(c.r), Math.round(c.g), Math.round(c.b)] as [number, number, number];
+    return Array.from({ length: 256 }, (_, index) => {
+        const color = d3rgb(fn(index / 255));
+        return [Math.round(color.r), Math.round(color.g), Math.round(color.b)];
     });
 }
 
-// ─── Stat helpers ────────────────────────────────────────────────────────────
-
-function formatPrice(v: number, mode: 'price' | 'price_psf'): string {
-    if (mode === 'price_psf') return `$${Math.round(v).toLocaleString()}/psf`;
-    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-    return `$${Math.round(v / 1000)}K`;
+function readStatsOpen(): boolean {
+    try { return sessionStorage.getItem(STATS_OPEN_KEY) === 'true'; } catch (_) { return false; }
 }
 
-function dedupePoints(
-    points: Array<{ value: number; label: string }>,
-    threshold: number
-): Array<{ value: number; label: string }> {
-    const result: typeof points = [];
-    for (const p of points) {
-        if (!result.some((u) => Math.abs(u.value - p.value) < threshold)) {
-            result.push(p);
-        }
-    }
-    return result;
+function hasSeenPaletteHint(): boolean {
+    try { return localStorage.getItem(PALETTE_HINT_KEY) === 'true'; } catch (_) { return false; }
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
-/**
- * A vertical color-scale bar that lives alongside the Maplibre zoom controls
- * in the top-right corner of the map.
- *
- * - Renders a canvas gradient (viridis or turbo) that mirrors the map's color
- *   encoding (max at top, min at bottom).
- * - On hover: shows price tick-marks for min, −1σ, median, +1σ, max.
- * - On click: cycles between viridis ↔ turbo and broadcasts via appState.
- */
+/** A model-driven color scale control shared by resale and rental metrics. */
 export class ColorScaleBar {
     private outerEl: HTMLElement | null = null;
     private gradientEl: HTMLElement | null = null;
     private canvasEl: HTMLCanvasElement | null = null;
-    private overlayEl: HTMLElement | null = null;
-    private selectionOverlayEl: HTMLElement | null = null;
-    //private labelEl: HTMLElement | null = null;
-
+    private domainEl: HTMLElement | null = null;
+    private statsEl: HTMLElement | null = null;
+    private allPlotEl: HTMLElement | null = null;
+    private selectedPlotEl: HTMLElement | null = null;
+    private zeroTickEl: HTMLElement | null = null;
+    private statsButtonEl: HTMLButtonElement | null = null;
+    private hintEl: HTMLElement | null = null;
+    private hintTimer: ReturnType<typeof setTimeout> | null = null;
     private colorScale: ColorScale = 'viridis';
-    private colorMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus' = 'price_psf';
-    private stats: TransactionStats | null = null;
-    private selectionStats: TransactionStats | null = null;
+    private colorMode: MapMetric = 'price_psf';
+    private presentation: ScalePresentation = createScalePresentation('price_psf', []);
+    private statsOpen = false;
     private resizeObserver: ResizeObserver | null = null;
     private panelObserver: MutationObserver | null = null;
-    private statsSource: HDBTransaction[] | null = null;
-    private statsMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus' | null = null;
-    private selectionSource: HDBTransaction[] | null = null;
-    private selectionMode: 'price' | 'price_psf' | 'rent' | 'rent_psf' | 'gross_yield' | 'monthly_surplus' | null = null;
-    private legendSummaryEl: HTMLElement | null = null;
-    private rentalLegend: { label: string; low: string; high: string; midpoint?: string; key?: string; divergent?: boolean } | null = null;
+    private unsubscribe: Array<() => void> = [];
 
-    // IControl interface
-    onAdd(_map: any): HTMLElement {
-        // ── Outer wrapper (the Maplibre control root) ─────────────────────
+    private readonly onWindowResize = () => this.updateResponsiveLayout();
+    private readonly onMetricControlInteraction = (event: Event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const isMetricInteraction =
+            (event.type === 'change' && target.matches('#color-mode-select')) ||
+            (event.type === 'click' && !!target.closest('[data-rental-mode]'));
+        if (isMetricInteraction) this.showPaletteHintOnce();
+    };
+
+    onAdd(_map: unknown): HTMLElement {
         this.outerEl = document.createElement('div');
         this.outerEl.className = 'color-scale-bar maplibregl-ctrl';
 
-        // ── Gradient container (has the border, border-radius, sizing) ────
         this.gradientEl = document.createElement('div');
         this.gradientEl.className = 'color-scale-gradient';
         this.gradientEl.tabIndex = 0;
         this.gradientEl.setAttribute('role', 'button');
+        this.gradientEl.title = 'Change color palette';
 
-        // ── Canvas for pixel-accurate gradient ────────────────────────────
         this.canvasEl = document.createElement('canvas');
         this.canvasEl.className = 'color-scale-canvas';
         this.canvasEl.setAttribute('aria-hidden', 'true');
 
-        // ── Overlay: tick marks + labels (global stats, always visible) ────
-        this.overlayEl = document.createElement('div');
-        this.overlayEl.className = 'color-scale-overlay';
+        this.allPlotEl = this.populationPlot('all');
+        this.selectedPlotEl = this.populationPlot('selected');
 
-        // ── Selection overlay: tick marks for selection stats ────────────
-        this.selectionOverlayEl = document.createElement('div');
-        this.selectionOverlayEl.className = 'color-scale-overlay color-scale-overlay--selection';
+        this.zeroTickEl = document.createElement('span');
+        this.zeroTickEl.className = 'color-scale-zero-tick';
+        this.zeroTickEl.setAttribute('aria-hidden', 'true');
 
-        // ── Small label beneath the bar showing current scale name ────────
-        /*this.labelEl = document.createElement('div');
-        this.labelEl.className = 'color-scale-label';
-        this.labelEl.textContent = 'Viridis';*/
+        this.domainEl = document.createElement('div');
+        this.domainEl.className = 'color-scale-domain';
+        this.domainEl.setAttribute('aria-hidden', 'true');
 
-        this.gradientEl.appendChild(this.canvasEl);
-        this.gradientEl.appendChild(this.overlayEl);
-        this.gradientEl.appendChild(this.selectionOverlayEl);
-        this.legendSummaryEl = document.createElement('div');
-        this.legendSummaryEl.className = 'color-scale-summary';
-        // Put labels inside the gradient's positioned box so 0%, 50% and
-        // 100% always follow its actual (responsive) height.
-        this.gradientEl.appendChild(this.legendSummaryEl);
+        this.statsEl = document.createElement('div');
+        this.statsEl.className = 'color-scale-stats';
+        this.statsEl.setAttribute('aria-live', 'polite');
+        this.gradientEl.append(
+            this.allPlotEl,
+            this.selectedPlotEl,
+            this.canvasEl,
+            this.zeroTickEl,
+            this.domainEl,
+            this.statsEl,
+        );
         this.outerEl.appendChild(this.gradientEl);
-        //this.outerEl.appendChild(this.labelEl);
 
-        // ── Click: toggle color scale ─────────────────────────────────────
+        this.statsButtonEl = document.createElement('button');
+        this.statsButtonEl.type = 'button';
+        this.statsButtonEl.className = 'color-scale-stats-toggle';
+        this.statsButtonEl.title = 'Toggle scale statistics';
+        this.statsButtonEl.setAttribute('aria-label', 'Toggle scale statistics');
+        this.statsButtonEl.innerHTML = '<i data-lucide="chart-no-axes-column" aria-hidden="true"></i>';
+        this.outerEl.appendChild(this.statsButtonEl);
+        refreshIcons();
+
+        this.hintEl = document.createElement('div');
+        this.hintEl.className = 'color-scale-palette-hint';
+        this.hintEl.textContent = PALETTE_HINT;
+        this.hintEl.setAttribute('role', 'status');
+        this.hintEl.hidden = true;
+        this.outerEl.appendChild(this.hintEl);
+
+        this.statsOpen = readStatsOpen();
+        this.statsButtonEl.addEventListener('click', () => this.setStatsOpen(!this.statsOpen));
         const togglePalette = () => {
-            if (this.colorMode === 'monthly_surplus') return;
+            this.dismissPaletteHint();
+            if (getMetricDefinition(this.colorMode).palette === 'diverging') return;
             appState.set('colorScale', this.colorScale === 'viridis' ? 'turbo' : 'viridis');
         };
         this.gradientEl.addEventListener('click', togglePalette);
         this.gradientEl.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); togglePalette(); }
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                togglePalette();
+            }
         });
 
-        // ── Hover: show / hide tick markers ───────────────────────────────
-        this.gradientEl.addEventListener('mouseenter', () => this.showMarkers());
-        this.gradientEl.addEventListener('mouseleave', () => this.hideMarkers());
+        document.addEventListener('change', this.onMetricControlInteraction);
+        document.addEventListener('click', this.onMetricControlInteraction);
+        this.unsubscribe.push(
+            appState.subscribe('colorScale', (scale) => {
+                this.colorScale = scale;
+                this.syncPaletteAccessibility();
+                this.renderGradient();
+            }),
+            appState.subscribe('colorMode', (mode) => {
+                this.colorMode = mode;
+                this.presentation = createScalePresentation(mode, []);
+                this.syncPaletteAccessibility();
+                if (mode === 'price' || mode === 'price_psf') this.refreshResalePresentation();
+                else this.renderPresentation();
+            }),
+            appState.subscribe('filteredTransactions', () => this.refreshResalePresentation()),
+            appState.subscribe('selectedTransactions', () => this.refreshResalePresentation()),
+        );
 
-        // ── State subscriptions ───────────────────────────────────────────
-        appState.subscribe('colorScale', (scale) => {
-            this.colorScale = scale;
-            this.syncPaletteAccessibility();
-        /*    this.labelEl!.textContent =
-                scale === 'viridis' ? 'Viridis' : 'Turbo';
-        */    this.renderGradient();
-        });
-
-        appState.subscribe('colorMode', (mode) => {
-            this.colorMode = mode;
-            this.syncPaletteAccessibility();
-            this.refreshStats();
-            this.refreshSelectionStats();
-        });
-
-        appState.subscribe('filteredTransactions', () => this.refreshStats());
-        appState.subscribe('allTransactions', () => this.refreshStats());
-        appState.subscribe('selectedTransactions', () => this.refreshSelectionStats());
-
-        // ── Sync initial values ───────────────────────────────────────────
         this.colorScale = appState.get('colorScale');
         this.colorMode = appState.get('colorMode');
         this.syncPaletteAccessibility();
-        this.refreshStats();
-        this.refreshSelectionStats();
-        /*this.labelEl.textContent =
-            this.colorScale === 'viridis' ? 'Viridis' : 'Turbo';*/
+        this.refreshResalePresentation();
+        this.setStatsOpen(this.statsOpen);
 
-        // ── ResizeObserver: redraw canvas when bar height changes ─────────
         if (typeof ResizeObserver !== 'undefined') {
             this.resizeObserver = new ResizeObserver(() => this.renderGradient());
             this.resizeObserver.observe(this.gradientEl);
         }
-
-        // ── MutationObserver: respond to mobile drawer open/close ─────────
         this.watchAnalyticsPanel();
-
         return this.outerEl;
     }
 
     onRemove(): void {
         this.resizeObserver?.disconnect();
         this.panelObserver?.disconnect();
+        this.unsubscribe.splice(0).forEach((unsubscribe) => unsubscribe());
+        document.removeEventListener('change', this.onMetricControlInteraction);
+        document.removeEventListener('click', this.onMetricControlInteraction);
+        window.removeEventListener('resize', this.onWindowResize);
+        if (this.hintTimer) clearTimeout(this.hintTimer);
         this.outerEl?.remove();
         this.outerEl = null;
-        this.selectionOverlayEl = null;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────
+    /** Canonical update path for rental and any future metric populations. */
+    setPresentation(presentation: ScalePresentation): void {
+        if (presentation.metric !== this.colorMode) return;
+        this.presentation = presentation;
+        this.renderPresentation();
+    }
 
-    private refreshStats(): void {
-        if (this.colorMode !== 'price' && this.colorMode !== 'price_psf') {
-            this.stats = null;
-            this.renderGradient();
-            this.renderMarkers();
-            return;
-        }
-        const source = appState.get('filteredTransactions');
-        if (this.statsSource === source && this.statsMode === this.colorMode) return;
-        this.statsSource = source;
-        this.statsMode = this.colorMode;
-        if (source.length === 0) {
-            this.stats = null;
-            this.renderMarkers();
-            return;
-        }
-        this.stats = getTransactionStats(source, this.colorMode);
+    private refreshResalePresentation(): void {
+        if (this.colorMode !== 'price' && this.colorMode !== 'price_psf') return;
+        const allValues = metricValues(this.colorMode, appState.get('filteredTransactions'));
+        const selected = appState.get('selectedTransactions');
+        const selectedValues = selected === null ? undefined : metricValues(this.colorMode, selected);
+        this.presentation = createScalePresentation(this.colorMode, allValues, selectedValues);
+        this.renderPresentation();
+    }
+
+    private setStatsOpen(open: boolean): void {
+        this.statsOpen = open;
+        try { sessionStorage.setItem(STATS_OPEN_KEY, String(open)); } catch (_) { /* optional preference */ }
+        if (this.statsEl) this.statsEl.hidden = !open;
+        if (this.statsButtonEl) this.statsButtonEl.setAttribute('aria-pressed', String(open));
+        this.renderStats();
+        this.renderPopulationPlots();
+    }
+
+    private renderPresentation(): void {
         this.renderGradient();
-        this.renderMarkers();
+        this.renderDomain();
+        this.renderStats();
+        this.renderPopulationPlots();
+    }
+
+    private renderDomain(): void {
+        if (!this.domainEl) return;
+        this.domainEl.replaceChildren();
+        const formatter = getMetricDefinition(this.colorMode).formatter;
+        const domain = this.presentation.domain;
+        const high = domain ? formatter(domain.max) : undefined;
+        const low = domain ? formatter(domain.min) : undefined;
+        if (!high || !low) return;
+        this.domainEl.append(
+            this.domainLabel('color-scale-domain-high', high),
+            this.domainLabel('color-scale-domain-low', low),
+        );
+    }
+
+    private domainLabel(className: string, value: string): HTMLElement {
+        const label = document.createElement('span');
+        label.className = className;
+        label.textContent = value;
+        return label;
+    }
+
+    private renderStats(): void {
+        if (!this.statsEl || !this.statsOpen) return;
+        const formatter = getMetricDefinition(this.colorMode).formatter;
+        const selected = this.presentation.selected?.summary ?? null;
+        const all = this.presentation.all.summary;
+        const value = (summary: NumericSummary | null, key: 'q3' | 'median' | 'q1' | 'count'): string => {
+            if (!summary) return '—';
+            return key === 'count' ? summary.count.toLocaleString() : formatter(summary[key]);
+        };
+        const table = document.createElement('table');
+        table.className = 'color-scale-stats-table';
+        table.setAttribute('aria-label', 'Scale statistics');
+        const head = table.createTHead().insertRow();
+        head.append(document.createElement('th'));
+        for (const label of ['Selected', 'All']) {
+            const header = document.createElement('th');
+            header.scope = 'col';
+            header.textContent = label;
+            head.appendChild(header);
+        }
+        const body = table.createTBody();
+        const rows: Array<['Q3' | 'Median' | 'Q1' | 'n', 'q3' | 'median' | 'q1' | 'count']> = [
+            ['Q3', 'q3'],
+            ['Median', 'median'],
+            ['Q1', 'q1'],
+            ['n', 'count'],
+        ];
+        for (const [label, key] of rows) {
+            const row = body.insertRow();
+            const header = document.createElement('th');
+            header.scope = 'row';
+            header.textContent = label;
+            row.append(header, this.statCell(value(selected, key)), this.statCell(value(all, key)));
+        }
+        this.statsEl.replaceChildren(table);
+    }
+
+    private statCell(value: string): HTMLTableCellElement {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        return cell;
+    }
+
+    private populationPlot(population: 'all' | 'selected'): HTMLElement {
+        const plot = document.createElement('div');
+        plot.className = `color-scale-population color-scale-population--${population}`;
+        plot.setAttribute('aria-hidden', 'true');
+        plot.hidden = true;
+        const box = document.createElement('span');
+        box.className = 'color-scale-iqr-box';
+        const median = document.createElement('span');
+        median.className = 'color-scale-median-tick';
+        plot.append(box, median);
+        return plot;
+    }
+
+    private renderPopulationPlots(): void {
+        this.renderPopulationPlot(this.allPlotEl, this.presentation.all.summary);
+        this.renderPopulationPlot(this.selectedPlotEl, this.presentation.selected?.summary ?? null);
+        if (this.zeroTickEl) {
+            this.zeroTickEl.hidden = getMetricDefinition(this.colorMode).palette !== 'diverging' || !this.presentation.domain;
+        }
+    }
+
+    private renderPopulationPlot(plot: HTMLElement | null, summary: NumericSummary | null): void {
+        const domain = this.presentation.domain;
+        if (!plot || !this.statsOpen || !summary || !domain) {
+            if (plot) plot.hidden = true;
+            return;
+        }
+        const q3 = scaleScalar(summary.q3, domain);
+        const q1 = scaleScalar(summary.q1, domain);
+        const median = scaleScalar(summary.median, domain);
+        if (q3 === null || q1 === null || median === null) {
+            plot.hidden = true;
+            return;
+        }
+        plot.hidden = false;
+        const box = plot.querySelector<HTMLElement>('.color-scale-iqr-box')!;
+        const medianTick = plot.querySelector<HTMLElement>('.color-scale-median-tick')!;
+        box.style.top = `${((1 - q3) * 100).toFixed(3)}%`;
+        box.style.bottom = `${(q1 * 100).toFixed(3)}%`;
+        medianTick.style.top = `${((1 - median) * 100).toFixed(3)}%`;
+        plot.classList.toggle('is-clipped-high', summary.q3 > domain.max);
+        plot.classList.toggle('is-clipped-low', summary.q1 < domain.min);
     }
 
     private syncPaletteAccessibility(): void {
         if (!this.gradientEl) return;
-        const disabled = this.colorMode === 'monthly_surplus';
+        const disabled = getMetricDefinition(this.colorMode).palette === 'diverging';
         this.gradientEl.setAttribute('aria-disabled', String(disabled));
-        this.gradientEl.setAttribute('aria-label', disabled ? 'Monthly surplus colour scale' : `Colour palette: ${this.colorScale}. Activate to switch palette.`);
-    }
-
-    private refreshSelectionStats(): void {
-        if (this.colorMode !== 'price' && this.colorMode !== 'price_psf') {
-            this.selectionStats = null;
-            this.renderMarkers();
-            return;
-        }
-        const selected = appState.get('selectedTransactions');
-        if (this.selectionSource === selected && this.selectionMode === this.colorMode) return;
-        this.selectionSource = selected;
-        this.selectionMode = this.colorMode;
-        if (!selected || selected.length === 0) {
-            this.selectionStats = null;
-        } else {
-            this.selectionStats = getTransactionStats(selected, this.colorMode);
-        }
-        this.renderMarkers();
+        this.gradientEl.title = disabled ? 'Monthly surplus color scale' : 'Change color palette';
+        this.gradientEl.setAttribute(
+            'aria-label',
+            disabled ? 'Monthly surplus color scale' : `${this.colorScale} color palette. Activate to change palette.`,
+        );
     }
 
     private renderGradient(): void {
         if (!this.canvasEl || !this.gradientEl) return;
-        const h = this.gradientEl.clientHeight;
-        const w = this.gradientEl.clientWidth;
-
-        // Not yet laid out — retry after browser paint
-        if (h <= 0 || w <= 0) {
+        const height = this.gradientEl.clientHeight;
+        const width = this.gradientEl.clientWidth;
+        if (height <= 0 || width <= 0) {
             requestAnimationFrame(() => this.renderGradient());
             return;
         }
-
-        this.canvasEl.width = w;
-        this.canvasEl.height = h;
-        const ctx = this.canvasEl.getContext('2d');
-        if (!ctx) return;
-
-        const fn = this.colorScale === 'viridis' ? interpolateViridis : interpolateTurbo;
-
-        // Use CSS gradient stops — fn(t) returns a valid CSS color string, so
-        // we hand it directly to the browser rather than trying to parse it.
-        // Top of bar = max value (t=1), bottom = min value (t=0).
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        const steps = 32;
-        for (let i = 0; i <= steps; i++) {
-            const stopPos = i / steps;      // 0 = top, 1 = bottom
-            const t = 1 - stopPos;          // t=1 at top (max), t=0 at bottom (min)
-            if (this.colorMode === 'monthly_surplus') {
-                const c = t < .5
-                    ? `rgb(${Math.round(224 + 31 * (t * 2))}, ${Math.round(116 + 126 * (t * 2))}, ${Math.round(43 + 192 * (t * 2))})`
-                    : `rgb(${Math.round(255 - 197 * ((t - .5) * 2))}, ${Math.round(242 - 112 * ((t - .5) * 2))}, ${Math.round(235 + 15 * ((t - .5) * 2))})`;
-                grad.addColorStop(stopPos, c);
-            } else grad.addColorStop(stopPos, fn(t));
+        this.canvasEl.width = width;
+        this.canvasEl.height = height;
+        const context = this.canvasEl.getContext('2d');
+        if (!context) return;
+        const color = this.colorScale === 'viridis' ? interpolateViridis : interpolateTurbo;
+        const gradient = context.createLinearGradient(0, 0, 0, height);
+        for (let index = 0; index <= 32; index++) {
+            const stop = index / 32;
+            const scalar = 1 - stop;
+            if (getMetricDefinition(this.colorMode).palette === 'diverging') {
+                const divergent = scalar < .5
+                    ? `rgb(${Math.round(224 + 31 * (scalar * 2))}, ${Math.round(116 + 126 * (scalar * 2))}, ${Math.round(43 + 192 * (scalar * 2))})`
+                    : `rgb(${Math.round(255 - 197 * ((scalar - .5) * 2))}, ${Math.round(242 - 112 * ((scalar - .5) * 2))}, ${Math.round(235 + 15 * ((scalar - .5) * 2))})`;
+                gradient.addColorStop(stop, divergent);
+            } else {
+                gradient.addColorStop(stop, color(scalar));
+            }
         }
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, width, height);
     }
 
-    private showMarkers(): void {
-        if (this.overlayEl) this.overlayEl.style.display = 'block';
-        if (this.selectionOverlayEl && this.selectionStats) {
-            this.selectionOverlayEl.style.display = 'block';
-        }
+    private showPaletteHintOnce(): void {
+        if (!this.hintEl || hasSeenPaletteHint()) return;
+        try { localStorage.setItem(PALETTE_HINT_KEY, 'true'); } catch (_) { /* storage unavailable */ }
+        this.hintEl.hidden = false;
+        if (this.hintTimer) clearTimeout(this.hintTimer);
+        this.hintTimer = setTimeout(() => this.dismissPaletteHint(), 7000);
     }
 
-    private hideMarkers(): void {
-        if (this.overlayEl) this.overlayEl.style.display = 'none';
-        if (this.selectionOverlayEl) this.selectionOverlayEl.style.display = 'none';
+    private dismissPaletteHint(): void {
+        if (this.hintEl) this.hintEl.hidden = true;
+        if (this.hintTimer) clearTimeout(this.hintTimer);
+        this.hintTimer = null;
     }
 
-    /** Rebuild marker HTML for both overlays (but keep them hidden until hover). */
-    private renderMarkers(): void {
-        if (this.legendSummaryEl) {
-            this.legendSummaryEl.innerHTML = this.rentalLegend
-                ? `<span class="scale-legend-title">${this.rentalLegend.label}</span><span class="scale-legend-high">${this.rentalLegend.high}</span>${this.rentalLegend.midpoint ? `<span class="scale-legend-mid">${this.rentalLegend.midpoint}</span>` : ''}<span class="scale-legend-low">${this.rentalLegend.low}</span>${this.rentalLegend.key ? `<span class="scale-legend-key">${this.rentalLegend.key}</span>` : ''}`
-                : '';
-        }
-        if (!this.overlayEl || !this.stats) {
-            if (this.overlayEl) this.overlayEl.innerHTML = '';
-            if (this.selectionOverlayEl) this.selectionOverlayEl.innerHTML = '';
-            return;
-        }
-
-        const { min, max, median, std } = this.stats;
-        if (max === min) {
-            this.overlayEl.innerHTML = `<div class="scale-marker" style="top:50%">
-                <div class="scale-marker-tick"></div>
-                <div class="scale-marker-label">${formatPrice(min, this.colorMode as 'price' | 'price_psf')}</div>
-            </div>`;
-            if (this.selectionOverlayEl) this.selectionOverlayEl.innerHTML = '';
-            return;
-        }
-
-        const mode = this.colorMode as 'price' | 'price_psf';
-        const clamp = (v: number) => Math.max(min, Math.min(max, v));
-
-        // ── Global markers ──────────────────────────────────────────────
-        const globalPoints: Array<{ value: number; label: string }> = [
-            { value: max,                label: formatPrice(max, mode) },
-            { value: clamp(median + std), label: `+1σ  ${formatPrice(clamp(median + std), mode)}` },
-            { value: median,              label: `Med  ${formatPrice(median, mode)}` },
-            { value: clamp(median - std), label: `-1σ  ${formatPrice(clamp(median - std), mode)}` },
-            { value: min,                label: formatPrice(min, mode) },
-        ];
-
-        const threshold = (max - min) * 0.04;
-        const deduped = dedupePoints(globalPoints, threshold);
-
-        this.overlayEl.innerHTML = deduped
-            .map(({ value, label }) => {
-                const pct = (value - min) / (max - min);
-                const topPct = (1 - pct) * 100;
-                return `<div class="scale-marker" style="top:${topPct.toFixed(2)}%">
-                    <div class="scale-marker-tick"></div>
-                    <div class="scale-marker-label">${label}</div>
-                </div>`;
-            })
-            .join('');
-
-        // ── Selection markers (positioned on the global scale) ──────────
-        if (!this.selectionOverlayEl) return;
-
-        if (!this.selectionStats) {
-            this.selectionOverlayEl.innerHTML = '';
-            return;
-        }
-
-        const sel = this.selectionStats;
-        const selPoints: Array<{ value: number; label: string }> = [
-            { value: sel.max,                              label: `Max ${formatPrice(sel.max, mode)}` },
-            { value: clamp(sel.median + sel.std),          label: `+1σ  ${formatPrice(clamp(sel.median + sel.std), mode)}` },
-            { value: sel.median,                           label: `Med  ${formatPrice(sel.median, mode)}` },
-            { value: clamp(sel.median - sel.std),          label: `-1σ  ${formatPrice(clamp(sel.median - sel.std), mode)}` },
-            { value: sel.min,                              label: `Min ${formatPrice(sel.min, mode)}` },
-        ];
-
-        const selDeduped = dedupePoints(selPoints, threshold);
-
-        this.selectionOverlayEl.innerHTML = selDeduped
-            .map(({ value, label }) => {
-                const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
-                const topPct = (1 - pct) * 100;
-                return `<div class="scale-marker scale-marker--selection" style="top:${topPct.toFixed(2)}%">
-                    <div class="scale-marker-tick"></div>
-                    <div class="scale-marker-label">${label}</div>
-                </div>`;
-            })
-            .join('');
-    }
-
-    /** Rental domains are global, clipped and supplied by the controller. */
-    setRentalLegend(legend: { label: string; low: string; high: string; midpoint?: string; key?: string; divergent?: boolean } | null): void {
-        this.rentalLegend = legend;
-        this.renderGradient();
-        this.renderMarkers();
-    }
-
-    /**
-     * Watch the analytics panel for class changes (collapsed ↔ open on mobile)
-     * and adjust the bar's max-height to stay above the drawer.
-     */
     private watchAnalyticsPanel(): void {
         const panel = document.getElementById('analytics-panel');
-        if (!panel || !this.gradientEl) return;
+        if (!panel) return;
+        this.panelObserver = new MutationObserver(() => this.updateResponsiveLayout());
+        this.panelObserver.observe(panel, { attributes: true, attributeFilter: ['class'] });
+        window.addEventListener('resize', this.onWindowResize);
+        this.updateResponsiveLayout();
+    }
 
-        const update = () => {
-            const mobile = window.innerWidth < 768;
-            const open = mobile && !panel.classList.contains('collapsed');
-            if (this.gradientEl) {
-                // When the drawer is open on mobile, constrain height so the
-                // bar doesn't slide under the panel sheet.
-                this.gradientEl.style.maxHeight = open
-                    ? 'calc(35vh - 80px)'
-                    : '';
-            }
-        };
-
-        this.panelObserver = new MutationObserver(update);
-        this.panelObserver.observe(panel, {
-            attributes: true,
-            attributeFilter: ['class'],
-        });
-        window.addEventListener('resize', update);
-        update();
+    private updateResponsiveLayout(): void {
+        if (!this.gradientEl) return;
+        const panel = document.getElementById('analytics-panel');
+        const mobile = window.innerWidth < 768;
+        const panelHeight = mobile && panel
+            ? (panel.classList.contains('collapsed') ? 60 : panel.getBoundingClientRect().height)
+            : 0;
+        const panelToggleClearance = mobile ? 36 : 12;
+        document.documentElement.style.setProperty('--map-control-bottom', `${panelHeight + panelToggleClearance}px`);
+        this.gradientEl.style.maxHeight = mobile && panel && !panel.classList.contains('collapsed')
+            ? 'calc(35vh - 104px)'
+            : '';
     }
 }

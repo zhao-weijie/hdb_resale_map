@@ -33,6 +33,9 @@
     --shadow-panel: 0 4px 20px rgba(0, 0, 0, 0.1);
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
 
+    --map-control-bottom: 12px;
+    --map-control-size: 30px;
+
     /* Typography */
     /* Typography */
     --font-sans: 'Roboto', monospace, sans-serif;
@@ -498,6 +501,12 @@ input[type="checkbox"] {
     border-bottom: none;
 }
 
+.overview-coverage-note {
+    margin: 8px 0 0;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
 .stats-label {
     color: var(--color-text-muted);
     text-align: left;
@@ -926,10 +935,31 @@ input[type="checkbox"] {
 
 /* ── Color Scale Bar ─────────────────────────────────────────────────────── */
 
-/*
- * The outer wrapper is the Maplibre control root.
- * overflow: visible lets the hover labels extend to the left of the bar.
- */
+#map-container .maplibregl-ctrl-bottom-right {
+    right: 12px;
+    bottom: var(--map-control-bottom);
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: end;
+    gap: 8px;
+    transition: bottom .24s ease-out;
+}
+
+#map-container .maplibregl-ctrl-bottom-right > .maplibregl-ctrl {
+    float: none;
+    margin: 0;
+}
+
+#map-container .maplibregl-ctrl-bottom-left {
+    left: 12px;
+    bottom: var(--map-control-bottom);
+    transition: bottom .24s ease-out;
+}
+
+#map-container .maplibregl-ctrl-bottom-left > .maplibregl-ctrl {
+    margin: 0;
+}
+
 .color-scale-bar.maplibregl-ctrl {
     background: none !important;
     border: none !important;
@@ -938,159 +968,258 @@ input[type="checkbox"] {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 20px;
     position: relative;
 }
-.color-scale-summary {
-    width: 190px;
-    position: absolute;
-    right: 28px;
-    top: 0;
-    height: 100%;
-    text-align: right;
-    font: 12px/1.2 var(--font-mono);
-    color: var(--color-text-main);
-    pointer-events: none;
-    display: grid !important;
-}
-.color-scale-summary span { position: absolute; right: 0; white-space: nowrap; padding: 3px 5px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg-card); box-shadow: var(--shadow-card); }
-.color-scale-summary .scale-legend-title { top: -29px; font: 600 12px/1.2 var(--font-sans); }
-.color-scale-summary .scale-legend-high { top: -3px; }
-.color-scale-summary .scale-legend-mid { top: 50%; transform: translateY(-50%); }
-.color-scale-summary .scale-legend-low { bottom: -3px; }
-.color-scale-summary .scale-legend-key { top: calc(100% + 9px); max-width: 190px; font: 10px/1.25 var(--font-sans); white-space: normal; }
 
-/*
- * The visible colored rectangle.
- * Default height = 200px, chosen so the full bar fits at 900 px viewport
- * height on both mobile (drawer open: 35 vh ≈ 315 px available) and desktop.
- */
 .color-scale-gradient {
     position: relative;
-    margin-right: 6px;
-    width: 18px;           /* matches Maplibre nav-button width */
-    height: 200px;         /* default – same as --colorscale-height */
-    max-height: calc(100vh - 130px);   /* desktop safety */
-    min-height: 40px;
+    width: 18px;
+    height: 200px;
+    max-height: calc(100vh - 130px);
+    min-height: 96px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-card);
     background: var(--color-bg-card);
     cursor: pointer;
-    overflow: visible;     /* labels extend left beyond the bar */
-    transition: opacity 0.15s;
+    overflow: visible;
+    transition: opacity .15s;
 }
 
 .color-scale-gradient:hover {
     opacity: 0.92;
 }
+
 .color-scale-gradient:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 .color-scale-gradient[aria-disabled="true"] { cursor: default; }
+
+.color-scale-domain {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    font: 10px/1.2 var(--font-mono);
+    color: var(--color-text-main);
+}
+
+.color-scale-domain span {
+    position: absolute;
+    right: calc(100% + 7px);
+    padding: 2px 4px;
+    white-space: nowrap;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--color-bg-card) 84%, transparent);
+    box-shadow: 0 2px 8px rgba(69, 58, 45, .08);
+    backdrop-filter: blur(8px);
+}
+
+.color-scale-domain-high { top: 0; transform: translateY(-50%); }
+.color-scale-domain-low { top: 100%; transform: translateY(-50%); }
+
+.color-scale-stats {
+    position: absolute;
+    z-index: 5;
+    top: 50%;
+    right: calc(100% + 86px);
+    width: min(190px, calc(100vw - 150px));
+    max-height: calc(100% - 26px);
+    padding: 3px 5px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+    background: color-mix(in srgb, var(--color-bg-card) 82%, transparent);
+    box-shadow: 0 3px 12px rgba(69, 58, 45, .1);
+    backdrop-filter: blur(8px);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.color-scale-stats[hidden],
+.color-scale-palette-hint[hidden],
+.color-scale-population[hidden],
+.color-scale-zero-tick[hidden] {
+    display: none;
+}
+
+.color-scale-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font: 9px/1.15 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.color-scale-stats-table th,
+.color-scale-stats-table td {
+    padding: 2px 4px;
+    border: 0;
+    white-space: nowrap;
+}
+
+.color-scale-stats-table thead th {
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    text-align: right;
+}
+
+.color-scale-stats-table tbody th {
+    color: var(--color-text-muted);
+    font-weight: 500;
+    text-align: left;
+}
+
+.color-scale-stats-table td {
+    text-align: right;
+}
+
+.color-scale-population {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.color-scale-population--all {
+    --plot-protrusion: 8px;
+    z-index: 0;
+    color: var(--color-border);
+}
+
+.color-scale-population--selected {
+    --plot-protrusion: 12px;
+    z-index: 1;
+    color: var(--color-primary);
+}
+
+.color-scale-iqr-box {
+    position: absolute;
+    right: 0;
+    width: calc(100% + var(--plot-protrusion));
+    min-height: 2px;
+    border: 1px solid currentColor;
+    border-radius: 2px 0 0 2px;
+    box-sizing: border-box;
+}
+
+.color-scale-median-tick {
+    position: absolute;
+    right: 0;
+    width: calc(100% + var(--plot-protrusion));
+    border-top: 1px solid currentColor;
+}
+
+.color-scale-population.is-clipped-high::before,
+.color-scale-population.is-clipped-low::after {
+    content: '';
+    position: absolute;
+    right: 100%;
+    width: var(--plot-protrusion);
+    height: 4px;
+    box-sizing: border-box;
+    border-left: 1px solid currentColor;
+}
+
+.color-scale-population.is-clipped-high::before {
+    top: 0;
+    border-top: 1px solid currentColor;
+}
+
+.color-scale-population.is-clipped-low::after {
+    bottom: 0;
+    border-bottom: 1px solid currentColor;
+}
+
+.color-scale-stats-toggle {
+    width: var(--map-control-size);
+    height: var(--map-control-size);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+}
+
+.color-scale-stats-toggle:hover,
+.color-scale-stats-toggle[aria-pressed="true"] {
+    color: var(--color-primary-hover);
+    border-color: var(--color-primary);
+    background: var(--color-primary-bg);
+}
+
+.color-scale-stats-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.color-scale-stats-toggle svg {
+    width: 17px;
+    height: 17px;
+}
+
+.color-scale-palette-hint {
+    position: absolute;
+    z-index: 8;
+    right: calc(100% + 12px);
+    bottom: 38px;
+    width: 190px;
+    padding: 7px 9px;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-main);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-panel);
+    font: 11px/1.35 var(--font-sans);
+}
 
 /* The pixel-painted gradient canvas – fills the box, clipped by border-radius */
 .color-scale-canvas {
     position: absolute;
     inset: 0;
+    z-index: 2;
     width: 100%;
     height: 100%;
     display: block;
     border-radius: calc(var(--radius-sm) - 1px);
 }
 
-/*
- * Small label under the bar ("Viridis" / "Turbo").
- * Rotated 90° so it reads vertically beside the bar, or kept horizontal.
- */
-.color-scale-label {
-    font-size: 9px;
-    font-family: var(--font-mono);
-    color: var(--color-text-muted);
-    text-align: center;
-    letter-spacing: 0.04em;
-    user-select: none;
-    pointer-events: none;
-    white-space: nowrap;
-}
-
-/* ── Stat markers overlay ────────────────────────────────────────────────── */
-
-.color-scale-overlay {
+.color-scale-zero-tick {
     position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: visible;
-    display: none;   /* shown via JS when stats are available */
-}
-
-/* Each marker sits at the correct % position on the bar */
-.scale-marker {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 0;
-    overflow: visible;
-}
-
-/* Horizontal white tick across the full bar width */
-.scale-marker-tick {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    top: 0;
-    background: rgba(255, 255, 255, 0.85);
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
-}
-
-/* Price label to the left of the bar (global stats) */
-.scale-marker-label {
-    position: absolute;
-    right: calc(100% + 6px);
+    z-index: 3;
     top: 50%;
-    transform: translateY(-50%);
-    white-space: nowrap;
-    font-size: 10px;
-    font-family: var(--font-mono);
-    line-height: 1.4;
-    background: var(--color-bg-card);
-    color: var(--color-text-main);
-    padding: 2px 5px;
-    border-radius: 3px;
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-card);
+    left: 0;
+    right: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-text-main) 72%, white);
+    box-shadow: 0 1px 1px rgba(255, 255, 255, .45);
+    pointer-events: none;
 }
 
-/* ── Selection markers (2nd set, left side further out, orange accent) ──── */
-
-.color-scale-overlay--selection {
-    z-index: 1;
-}
-
-.scale-marker--selection .scale-marker-tick {
-    background: var(--color-primary);
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-    height: 2px;
-}
-
-/* Offset selection labels further left, past the global labels */
-.scale-marker--selection .scale-marker-label {
-    right: calc(100% + 110px);
-    background: var(--color-primary);
-    color: var(--color-primary-bg);
-    border-color: var(--color-primary-hover);
-}
-
-/* ── Mobile responsive ───────────────────────────────────────────────────── */
-/*
- * On mobile the analytics panel opens as a bottom sheet (65 vh).
- * This leaves ~35 vh of visible map area.  Constrain the bar's height so
- * it stays fully above the sheet even on small phones.
- * JS (ColorScaleBar.watchAnalyticsPanel) adjusts maxHeight dynamically
- * when the drawer opens/closes; this CSS provides the conservative baseline.
- */
 @media (max-width: 768px) {
+    :root {
+        --map-control-size: 44px;
+    }
+
+    .maplibregl-ctrl-group button {
+        width: var(--map-control-size);
+        height: var(--map-control-size);
+    }
+
     .color-scale-gradient {
-        max-height: calc(35vh - 80px);
+        max-height: calc(35vh - 104px);
+    }
+
+    .color-scale-stats {
+        right: calc(100% + 78px);
+        width: min(178px, calc(100vw - 145px));
+    }
+
+    .color-scale-palette-hint {
+        right: calc(100% + 10px);
+        width: min(180px, calc(100vw - 80px));
     }
 }
 /* Keep map navigation available while required transaction files are loading. */
@@ -1119,12 +1248,19 @@ input[type="checkbox"] {
 
 /* Persistent rental map controls.  They live outside the analytics drawer so
    comparison remains discoverable even with the drawer collapsed. */
-.rental-map-controls { position: fixed; z-index: 2100; right: 62px; top: 14px; font-family: var(--font-sans); }
+.rental-map-controls {
+    position: fixed;
+    z-index: 2100;
+    right: calc(28px + (var(--map-control-size) * 2));
+    bottom: var(--map-control-bottom);
+    font-family: var(--font-sans);
+    transition: bottom .24s ease-out;
+}
 .rental-metric-trigger, .rental-controls-menu button, .rental-controls-menu select, .rental-modal button, .rental-modal input {
     font: inherit; color: var(--color-text-main);
 }
 .rental-metric-trigger { border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-card); box-shadow: var(--shadow-card); padding: 9px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
-.rental-controls-menu { position: absolute; top: 42px; right: 0; width: 248px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-card); box-shadow: var(--shadow-panel); }
+.rental-controls-menu { position: absolute; right: 0; bottom: calc(100% + 8px); width: 248px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-card); box-shadow: var(--shadow-panel); }
 .rental-mode-options { display: grid; gap: 3px; }
 .rental-mode-options button { width: 100%; border: 0; border-radius: 5px; background: transparent; padding: 7px; text-align: left; display: flex; justify-content: space-between; cursor: pointer; }
 .rental-mode-options button:hover, .rental-mode-options button.active { background: var(--color-primary-bg); color: var(--color-primary-hover); }
@@ -1232,9 +1368,9 @@ input[type="checkbox"] {
 .rental-overrides .rental-reset { border-color: var(--color-border); background: transparent; color: var(--color-text-main); }
 .rental-overrides button:disabled { cursor: not-allowed; opacity: .45; }
 @media (max-width: 768px) {
-    .rental-map-controls { top: 12px; left: 12px; right: auto; }
+    .rental-map-controls { right: calc(28px + (var(--map-control-size) * 2)); }
     .rental-controls-menu { position: fixed; inset: auto 0 0 0; width: auto; border-radius: 14px 14px 0 0; max-height: 72vh; overflow: auto; padding: 18px; }
-    .rental-metric-trigger { min-height: 42px; }
+    .rental-metric-trigger { min-height: var(--map-control-size); }
     .rental-metric-trigger { max-width: calc(100vw - 76px); }
     .rental-metric-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rental-active-type { flex: 0 0 auto; }

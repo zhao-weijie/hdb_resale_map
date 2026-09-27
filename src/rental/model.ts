@@ -1,10 +1,12 @@
 import { haversineDistance } from '../utils/geo';
+import { summarizeNumbers } from '../metrics';
 import type {
-    BlockTypeTarget, EstimationContextInput, EstimationInput, MetricValue, Month, NumericSummary, PaletteDomain,
-    MapMetric, RentalAnalysisWindow, RentalEstimate,
-    RentalEvidence, RentalMetric, RentalRecord, RentalScenario, ResaleComparable,
+    BlockTypeTarget, EstimationContextInput, EstimationInput, MetricValue, Month, NumericSummary,
+    RentalAnalysisWindow, RentalEstimate,
+    RentalDataset, RentalEvidence, RentalMetric, RentalRecord, RentalScenario, ResaleComparable,
     ResaleEstimate, ResaleFilters, ScenarioAssumptions, ScenarioInput,
 } from './types';
+import type { MapMetric } from '../metrics';
 
 export type { RentalEstimate, RentalScenario } from './types';
 
@@ -76,19 +78,7 @@ export function getSharedRentalAnalysisWindow(
 }
 
 export function summarize(values: number[]): NumericSummary | null {
-    const sorted = values.filter(isFiniteNumber).sort((a, b) => a - b);
-    if (sorted.length === 0) return null;
-    const q1 = quantile(sorted, 0.25);
-    const q3 = quantile(sorted, 0.75);
-    return {
-        count: sorted.length,
-        min: sorted[0],
-        max: sorted[sorted.length - 1],
-        median: quantile(sorted, 0.5),
-        q1,
-        q3,
-        iqr: q3 - q1,
-    };
+    return summarizeNumbers(values);
 }
 
 /** Removes invalid rents and town/type 3-IQR outliers within the supplied analysis window. */
@@ -154,6 +144,7 @@ export function createRentalEstimationContext(input: EstimationContextInput): Re
     const rawRentalByBlockType = indexBy(rawInWindow, (record) => recordBlockTypeKey(record));
     const resaleByBlockType = indexBy(input.resaleComparables.filter((record) => inWindow(record.month, analysisWindow)), (record) => resaleBlockTypeKey(record));
     const profiles = blockProfiles(input.resaleComparables);
+    addRentalLocationProfiles(profiles, input.rentalRecords, input.rentalLocations ?? []);
     const nearbyBlockTypes = new Map<string, Map<string, RentalRecord[]>>();
     const nearbyGrid = new Map<string, string[]>();
     for (const records of rentalByBlockType.values()) {
@@ -197,6 +188,38 @@ export function estimateRentForTarget(context: RentalEstimationContext, target: 
         return selectedEstimate('nearby_blocks', direct, nearby, resale, window);
     }
     return unavailableEstimate(direct, resale, window, nearby);
+}
+
+/**
+ * Builds the map population from rental locations, not resale transactions.
+ * A source address/flat-type pair is emitted once even when the source contains
+ * repeated observations. Unresolved source rows cannot be map targets.
+ */
+export function buildRentalMapTargets(
+    dataset: RentalDataset,
+    analysisWindow: RentalAnalysisWindow | null,
+    flatTypes?: readonly string[],
+): BlockTypeTarget[] {
+    const allowedTypes = flatTypes ? new Set(flatTypes.map(normalizeFlatType)) : null;
+    const targets = new Map<string, BlockTypeTarget>();
+    for (const record of dataset.records) {
+        const flatType = normalizeFlatType(record.flat_type);
+        if (!inWindow(record.month, analysisWindow) || (allowedTypes && !allowedTypes.has(flatType)) || record.locationId === null) continue;
+        const location = dataset.locations[record.locationId];
+        if (!location || !isFiniteNumber(location.latitude) || !isFiniteNumber(location.longitude)) continue;
+        const key = `${blockKey(record.block, record.street_name)}|${flatType}`;
+        if (!targets.has(key)) {
+            targets.set(key, {
+                block: record.block,
+                streetName: record.street_name,
+                flatType: record.flat_type,
+                town: record.town,
+                latitude: location.latitude,
+                longitude: location.longitude,
+            });
+        }
+    }
+    return [...targets.values()];
 }
 
 export function getBlockResaleEvidence(
@@ -329,19 +352,6 @@ export function getMapRentalMetric(
     return getRentalMetric(rentalMetric, estimate, scenario);
 }
 
-export function getPaletteDomain(values: Array<number | null | undefined>): PaletteDomain | null {
-    const sorted = values.filter((value): value is number => isFiniteNumber(value)).sort((a, b) => a - b);
-    if (!sorted.length) return null;
-    const min = quantile(sorted, 0.05);
-    const max = quantile(sorted, 0.95);
-    return { min, max: max > min ? max : min + 1, lowClipped: sorted[0] < min, highClipped: sorted[sorted.length - 1] > max };
-}
-
-export function paletteScalar(value: number | null | undefined, domain: PaletteDomain | null): number | null {
-    if (!isFiniteNumber(value) || !domain) return null;
-    return Math.max(0, Math.min(1, (value - domain.min) / (domain.max - domain.min)));
-}
-
 function selectedEstimate(source: 'same_block' | 'nearby_blocks', direct: RentalEvidence, nearby: RentalEvidence | null,
     resale: ResaleEstimate, window: RentalAnalysisWindow | null): RentalEstimate {
     const selected = source === 'same_block' ? direct : nearby;
@@ -377,7 +387,7 @@ function nearbyRentalRecordsFromContext(context: RentalEstimationContext, target
     const targetLat = target.latitude ?? targetProfile?.latitude;
     const targetLng = target.longitude ?? targetProfile?.longitude;
     const targetLease = target.leaseCommencement ?? targetProfile?.leaseCommencement;
-    if (!isFiniteNumber(targetLat) || !isFiniteNumber(targetLng) || !isFiniteNumber(targetLease)) return [];
+    if (!isFiniteNumber(targetLat) || !isFiniteNumber(targetLng)) return [];
     const candidates = new Set<string>();
     const { latCell, lngCell } = gridCoordinates(targetLat, targetLng);
     for (let lat = latCell - 1; lat <= latCell + 1; lat++) {
@@ -390,8 +400,8 @@ function nearbyRentalRecordsFromContext(context: RentalEstimationContext, target
     for (const candidateBlock of candidates) {
         if (candidateBlock === targetBlock) continue;
         const profile = context.blockProfiles.get(candidateBlock);
-        if (!profile || !isFiniteNumber(profile.latitude) || !isFiniteNumber(profile.longitude) || !isFiniteNumber(profile.leaseCommencement) ||
-            Math.abs(profile.leaseCommencement - targetLease) > 10 ||
+        if (!profile || !isFiniteNumber(profile.latitude) || !isFiniteNumber(profile.longitude) ||
+            (isFiniteNumber(targetLease) && isFiniteNumber(profile.leaseCommencement) && Math.abs(profile.leaseCommencement - targetLease) > 10) ||
             haversineDistance(targetLat, targetLng, profile.latitude, profile.longitude) > 500) continue;
         const first = context.nearbyBlockTypes.get(flatType)?.get(candidateBlock)?.[0];
         if (!first) continue;
@@ -416,6 +426,25 @@ function blockProfiles(resales: ResaleComparable[]): Map<string, BlockProfile> {
         });
     }
     return profiles;
+}
+
+function addRentalLocationProfiles(
+    profiles: Map<string, BlockProfile>,
+    records: readonly RentalRecord[],
+    locations: readonly import('./types').RentalLocation[],
+): void {
+    const byId = new Map(locations.map((location) => [location.id, location]));
+    for (const record of records) {
+        if (record.locationId === null) continue;
+        const location = byId.get(record.locationId);
+        if (!location || !isFiniteNumber(location.latitude) || !isFiniteNumber(location.longitude)) continue;
+        const key = blockKey(record.block, record.street_name);
+        profiles.set(key, {
+            ...profiles.get(key),
+            latitude: location.latitude,
+            longitude: location.longitude,
+        });
+    }
 }
 
 function indexBy<T>(items: T[], keyFor: (item: T) => string): Map<string, T[]> {
@@ -503,7 +532,6 @@ function inWindow(month: string, window: RentalAnalysisWindow | null): boolean {
 function maxMonth(months: Month[]): Month { return months.reduce((max, month) => month > max ? month : max); }
 function isFiniteNumber(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value); }
 function nonNegative(value: unknown): number { return isFiniteNumber(value) && value > 0 ? value : 0; }
-function quantile(sorted: number[], p: number): number { const index = (sorted.length - 1) * p; const lower = Math.floor(index); const upper = Math.ceil(index); return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower); }
 function clampFinite(value: unknown, min: number, max: number, fallback: number): number { return isFiniteNumber(value) ? Math.max(min, Math.min(max, value)) : fallback; }
 function validDate(value: string): boolean {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
