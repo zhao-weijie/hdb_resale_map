@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     calculateBSD, calculateMortgageDuty, calculateNonOwnerPropertyTax, calculateScenario,
-    estimateRent, filterRentalRecords, getMapRentalMetric, getPaletteDomain,
+    createRentalEstimationContext, estimateRent, filterRentalRecords, getBlockResaleEvidence, getMapRentalMetric, getPaletteDomain,
     getSharedRentalAnalysisWindow, normalizeAddressPart, normalizeFlatType, paletteScalar,
     singaporeToday,
 } from './model';
@@ -65,6 +65,26 @@ describe('rental evidence estimation', () => {
         const filtered = filterRentalRecords(records, { minMonth: '2026-01', maxMonth: '2026-12' });
         expect(filtered).toHaveLength(20);
         expect(filtered.every((record) => record.monthly_rent === 3_000)).toBe(true);
+    });
+
+    it('exposes exact raw record membership while keeping outliers out of estimates', () => {
+        const included = Array.from({ length: 20 }, () => rent({ monthly_rent: 3_000 }));
+        const outlier = rent({ monthly_rent: 30_000 });
+        const result = estimateRent({ target, rentalRecords: [...included, outlier], resaleComparables: [resale(), resale(), resale()] });
+        expect(result.direct.records).toContain(outlier);
+        expect(result.direct.includedRecords).not.toContain(outlier);
+        expect(result.direct.includedRecords[0]).toBe(included[0]);
+        expect(result.direct.excludedOutliers).toBe(1);
+        expect(result.monthlyRent).toBe(3_000);
+    });
+
+    it('gets clicked-block resale evidence for every selected type from the rental window', () => {
+        const fourRoom = resale({ flat_type: '4 ROOM', month: '2026-04' });
+        const fiveRoom = resale({ flat_type: '5 ROOM', month: '2026-05' });
+        const beforeWindow = resale({ flat_type: '5 ROOM', month: '2025-12' });
+        const context = createRentalEstimationContext({ rentalRecords: [rent()], resaleComparables: [fourRoom, fiveRoom, beforeWindow],
+            analysisWindow: { minMonth: '2026-01', maxMonth: '2026-08' }, resaleFilters: { floorMin: 1, leaseMin: 0, leaseMax: 99 } });
+        expect(getBlockResaleEvidence(context, target, ['4 ROOM', '5 ROOM'])).toEqual([fourRoom, fiveRoom]);
     });
 
     it('retains thin direct evidence but falls back only to nearby samples from three blocks', () => {

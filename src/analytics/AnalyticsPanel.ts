@@ -13,6 +13,8 @@ import { LocationCard } from '../components/LocationCard';
 import { FiltersCard } from '../components/FiltersCard';
 import { MopFiltersCard } from '../components/MopFiltersCard';
 import { OverviewTab } from '../components/OverviewTab';
+import { metricOptionsMarkup } from '../components/MapMetricOptions';
+import { TransactionTable } from '../components/TransactionTable';
 
 export class AnalyticsPanel {
     private container: HTMLElement;
@@ -34,7 +36,6 @@ export class AnalyticsPanel {
     private startDragLng: number | null = null;
 
     // Popup pagination state
-    private readonly PAGE_SIZE = 5;
     private popupTransactions: HDBTransaction[] = [];
     private popupMeta: { lat: number; lng: number; title: string; subtitle: string; geocodeKey: string } | null = null;
 
@@ -102,12 +103,7 @@ export class AnalyticsPanel {
              <div class="input-wrapper">
                  <label style="margin-bottom: 4px; display:block;">Color Map By</label>
                  <select id="color-mode-select">
-                    <option value="price_psf">Price per SqFt</option>
-                    <option value="price">Resale Price</option>
-                    <option value="rent">Monthly Rent</option>
-                    <option value="rent_psf">Estimated Rent per SqFt</option>
-                    <option value="gross_yield">Gross Yield</option>
-                    <option value="monthly_surplus">Monthly Surplus</option>
+                    ${metricOptionsMarkup()}
                  </select>
              </div>
         </div>
@@ -116,6 +112,8 @@ export class AnalyticsPanel {
         <div class="card" style="flex: 1; display: flex; flex-direction: column;">
             ${this.overviewTab.render()}
         </div>
+
+        <div id="rental-analysis-slot"></div>
 
         <!-- Panel Toggle (Absolute) -->
         <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Panel">
@@ -350,7 +348,7 @@ export class AnalyticsPanel {
 
             this.popupTransactions = relevant;
             this.popupMeta = { lat, lng, title, subtitle, geocodeKey };
-            this.renderTransactionPopup(0);
+            this.renderTransactionPopup();
 
             if (!this.geocodeCache) {
                 void this.ensureGeocodeCache().then(() => {
@@ -358,20 +356,12 @@ export class AnalyticsPanel {
                     const loadedPostal = this.geocodeCache?.[geocodeKey]?.postal;
                     if (!loadedPostal) return;
                     this.popupMeta.title = `Blk ${clicked.block} ${clicked.street_name} • ${loadedPostal}`;
-                    this.renderTransactionPopup(0);
+                    this.renderTransactionPopup();
                 });
             }
         });
 
-        // 3. Popup pagination — single delegated listener on document
-        document.addEventListener('click', (e: MouseEvent) => {
-            const btn = (e.target as HTMLElement).closest('[data-popup-page]') as HTMLElement | null;
-            if (!btn) return;
-            const page = parseInt(btn.dataset.popupPage!, 10);
-            this.renderTransactionPopup(page);
-        });
-
-        // 4. Drag Selection
+        // 3. Drag Selection
         this.mapView.setOnDragSelection({
             onStart: (lat, lng) => {
                 this.startDragLat = lat;
@@ -421,52 +411,13 @@ export class AnalyticsPanel {
         });
     }
 
-    private renderTransactionPopup(page: number): void {
+    private renderTransactionPopup(): void {
         if (!this.popupMeta) return;
-        const html = this.buildTransactionPopupHTML(page);
+        const table = new TransactionTable(this.popupTransactions, { pageSize: 5 });
+        const { title, subtitle } = this.popupMeta;
+        const html = `<div class="popover-header"><div class="popover-title">${title}</div>${subtitle ? `<div class="popover-subtitle">${subtitle}</div>` : ''}</div><div class="popover-body">${table.markup()}</div>`;
         this.mapView.showPopup(this.popupMeta.lat, this.popupMeta.lng, html);
-    }
-
-    private buildTransactionPopupHTML(page: number): string {
-        const { title, subtitle } = this.popupMeta!;
-        const total = this.popupTransactions.length;
-        const totalPages = Math.ceil(total / this.PAGE_SIZE);
-        const slice = this.popupTransactions.slice(page * this.PAGE_SIZE, (page + 1) * this.PAGE_SIZE);
-
-        const rows = slice.map(t => {
-            const psf = t.resale_price / (t.floor_area_sqm * 10.7639);
-            return `<tr>
-                <td>${new Date(t.transaction_date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })}</td>
-                <td>${t.flat_type}</td>
-                <td>${t.storey_range}</td>
-                <td>$${(t.resale_price / 1000).toFixed(0)}k</td>
-                <td>$${Math.round(psf)}</td>
-            </tr>`;
-        }).join('');
-
-        const nav = totalPages > 1 ? `
-            <div class="popup-nav">
-                ${page > 0
-                    ? `<button class="popup-nav-btn" data-popup-page="${page - 1}">← Prev</button>`
-                    : `<span></span>`}
-                <span class="popup-nav-info">${page + 1} / ${totalPages}</span>
-                ${page < totalPages - 1
-                    ? `<button class="popup-nav-btn" data-popup-page="${page + 1}">Next →</button>`
-                    : `<span></span>`}
-            </div>` : '';
-
-        return `
-            <div class="popover-header">
-                <div class="popover-title">${title}</div>
-                ${subtitle ? `<div class="popover-subtitle">${subtitle}</div>` : ''}
-            </div>
-            <div class="popover-body">
-                <table class="popover-table">
-                    <thead><tr><th>Date</th><th>Type</th><th>Floor</th><th>Price</th><th>PSF</th></tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-                ${nav}
-            </div>`;
+        requestAnimationFrame(() => table.mount(document.body));
     }
 
     private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {

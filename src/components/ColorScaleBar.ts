@@ -81,6 +81,8 @@ export class ColorScaleBar {
         // ── Gradient container (has the border, border-radius, sizing) ────
         this.gradientEl = document.createElement('div');
         this.gradientEl.className = 'color-scale-gradient';
+        this.gradientEl.tabIndex = 0;
+        this.gradientEl.setAttribute('role', 'button');
 
         // ── Canvas for pixel-accurate gradient ────────────────────────────
         this.canvasEl = document.createElement('canvas');
@@ -112,8 +114,14 @@ export class ColorScaleBar {
         //this.outerEl.appendChild(this.labelEl);
 
         // ── Click: toggle color scale ─────────────────────────────────────
-        // Palette is selected in the visible map appearance setting.  The
-        // legend should explain values, never behave like an undiscoverable control.
+        const togglePalette = () => {
+            if (this.colorMode === 'monthly_surplus') return;
+            appState.set('colorScale', this.colorScale === 'viridis' ? 'turbo' : 'viridis');
+        };
+        this.gradientEl.addEventListener('click', togglePalette);
+        this.gradientEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); togglePalette(); }
+        });
 
         // ── Hover: show / hide tick markers ───────────────────────────────
         this.gradientEl.addEventListener('mouseenter', () => this.showMarkers());
@@ -122,6 +130,7 @@ export class ColorScaleBar {
         // ── State subscriptions ───────────────────────────────────────────
         appState.subscribe('colorScale', (scale) => {
             this.colorScale = scale;
+            this.syncPaletteAccessibility();
         /*    this.labelEl!.textContent =
                 scale === 'viridis' ? 'Viridis' : 'Turbo';
         */    this.renderGradient();
@@ -129,6 +138,7 @@ export class ColorScaleBar {
 
         appState.subscribe('colorMode', (mode) => {
             this.colorMode = mode;
+            this.syncPaletteAccessibility();
             this.refreshStats();
             this.refreshSelectionStats();
         });
@@ -140,6 +150,7 @@ export class ColorScaleBar {
         // ── Sync initial values ───────────────────────────────────────────
         this.colorScale = appState.get('colorScale');
         this.colorMode = appState.get('colorMode');
+        this.syncPaletteAccessibility();
         this.refreshStats();
         this.refreshSelectionStats();
         /*this.labelEl.textContent =
@@ -188,6 +199,13 @@ export class ColorScaleBar {
         this.renderMarkers();
     }
 
+    private syncPaletteAccessibility(): void {
+        if (!this.gradientEl) return;
+        const disabled = this.colorMode === 'monthly_surplus';
+        this.gradientEl.setAttribute('aria-disabled', String(disabled));
+        this.gradientEl.setAttribute('aria-label', disabled ? 'Monthly surplus colour scale' : `Colour palette: ${this.colorScale}. Activate to switch palette.`);
+    }
+
     private refreshSelectionStats(): void {
         if (this.colorMode !== 'price' && this.colorMode !== 'price_psf') {
             this.selectionStats = null;
@@ -232,7 +250,7 @@ export class ColorScaleBar {
         for (let i = 0; i <= steps; i++) {
             const stopPos = i / steps;      // 0 = top, 1 = bottom
             const t = 1 - stopPos;          // t=1 at top (max), t=0 at bottom (min)
-            if (this.rentalLegend?.divergent) {
+            if (this.colorMode === 'monthly_surplus') {
                 const c = t < .5
                     ? `rgb(${Math.round(224 + 31 * (t * 2))}, ${Math.round(116 + 126 * (t * 2))}, ${Math.round(43 + 192 * (t * 2))})`
                     : `rgb(${Math.round(255 - 197 * ((t - .5) * 2))}, ${Math.round(242 - 112 * ((t - .5) * 2))}, ${Math.round(235 + 15 * ((t - .5) * 2))})`;

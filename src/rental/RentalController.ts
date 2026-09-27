@@ -5,24 +5,19 @@ import type { MapView, RentalMapPoint } from '../map/MapView';
 import { appState } from '../state/AppState';
 import { applyFilters } from '../utils/filters';
 import {
-    calculateScenario, createRentalEstimationContext, estimateRentForTarget, getMapRentalMetric, getPaletteDomain, singaporeToday,
+    calculateScenario, createRentalEstimationContext, estimateRentForTarget, getBlockResaleEvidence, getMapRentalMetric, getPaletteDomain, singaporeToday,
     type RentalEstimate, type RentalScenario, type RentalEstimationContext,
 } from './model';
 import type { MapMetric, RentalAnalysisWindow, RentalDataset, ScenarioAssumptions } from './types';
+import { MAP_METRICS } from '../components/MapMetricOptions';
+import { RentalControls } from './RentalControls';
+import { TransactionTable } from '../components/TransactionTable';
 
 type RentalMode = Exclude<MapMetric, 'price' | 'price_psf'>;
-const RENTAL_MODES: Array<{ value: MapMetric; label: string; unit: string }> = [
-    { value: 'price_psf', label: 'Price per sqft', unit: '$/psf' },
-    { value: 'price', label: 'Resale price', unit: '$' },
-    { value: 'rent', label: 'Monthly rent', unit: '$/month' },
-    { value: 'rent_psf', label: 'Estimated rent / sqft', unit: '$/psf/month' },
-    { value: 'gross_yield', label: 'Gross yield', unit: '%' },
-    { value: 'monthly_surplus', label: 'Monthly surplus', unit: '$/month' },
-];
 
 interface EstimateRow { point: RentalMapPoint; estimate: RentalEstimate; scenario: RentalScenario | null; transaction: HDBTransaction; }
 
-/** Owns rental-only UI and keeps it lazy: a failed rental fetch never blocks resale. */
+/** Coordinates lazy rental loading and calculations with separate rental views. */
 export class RentalController {
     private readonly dataLoader: DataLoader;
     private readonly mapView: MapView;
@@ -33,17 +28,25 @@ export class RentalController {
     private loadPromise: Promise<void> | null = null;
     private requestVersion = 0;
     private windowRequestVersion = 0;
+    private windowLoading = false;
     private status = '';
     private estimationContext: RentalEstimationContext | null = null;
     private estimationContextKey = '';
     private analysisWindow: RentalAnalysisWindow | null = null;
     private overrides = new Map<string, { price?: number; marketValue?: number; rent?: number; area?: number; annualValue?: number }>();
+    private readonly controls: RentalControls;
 
     constructor(dataLoader: DataLoader, mapView: MapView, colorScale: ColorScaleBar) {
         this.dataLoader = dataLoader;
         this.mapView = mapView;
         this.colorScale = colorScale;
-        this.renderControls();
+        this.controls = new RentalControls({
+            onMetric: (mode) => { appState.set('colorMode', mode); try { localStorage.setItem('hdb_colorMode', mode); } catch (_) {} },
+            onFlatType: (type) => appState.set('rentalActiveFlatType', type),
+            onApplyWindow: (start) => this.updateWindow(start),
+            onAssumptions: () => this.openScenarioEditor(),
+            onRetry: () => void this.loadAndRender(),
+        });
         this.mapView.setOnRentalPointClick((point) => this.openDetails(point));
         try {
             const saved = JSON.parse(localStorage.getItem('hdb_rentalScenario') ?? '{}') as Record<string, unknown>;
@@ -60,6 +63,7 @@ export class RentalController {
         });
         appState.subscribe('globalFilters', () => {
             this.ensureActiveType();
+            this.syncControls();
             if (this.isRentalMode(appState.get('colorMode'))) void this.loadAndRender();
         });
         appState.subscribe('rentalScenario', () => {
@@ -80,88 +84,21 @@ export class RentalController {
 
     private isRentalMode(mode: MapMetric): mode is RentalMode { return mode !== 'price' && mode !== 'price_psf'; }
 
-    private renderControls(): void {
-        const shell = document.createElement('section');
-        shell.id = 'rental-map-controls';
-        shell.className = 'rental-map-controls';
-        shell.innerHTML = `<button type="button" class="rental-metric-trigger" aria-haspopup="dialog" aria-expanded="false">
-            <span class="rental-metric-label">Colour by: Price per sqft</span><span class="rental-active-type" hidden></span><span aria-hidden="true">▾</span>
-          </button>
-          <div class="rental-controls-menu" hidden>
-            <div class="rental-mode-options"></div>
-            <div class="rental-type-row" hidden><label>Flat type <select class="rental-type-select"></select></label></div>
-            <div class="rental-window-row" hidden>
-              <label for="rental-window-start">From Month</label>
-              <div class="input-wrapper">
-                <i data-lucide="calendar" aria-hidden="true"></i>
-                <input type="month" id="rental-window-start" class="rental-window-start" aria-describedby="rental-window-hint">
-              </div>
-              <button type="button" class="btn-primary rental-window-apply">Apply</button>
-              <small id="rental-window-hint">Through the latest month shared by rental and resale data.</small>
-            </div>
-            <label class="rental-palette-row">Appearance <select class="rental-palette"><option value="viridis">Viridis</option><option value="turbo">Turbo</option></select></label>
-            <button type="button" class="rental-assumptions-open">Edit assumptions</button>
-            <p class="rental-status" aria-live="polite"></p>
-            <button type="button" class="rental-retry" hidden>Retry rental data</button>
-          </div>`;
-        document.body.appendChild(shell);
-        // @ts-ignore - lucide is installed globally by icons.ts at app startup.
-        if (window.lucide) window.lucide.createIcons();
-        const closeMenu = () => {
-            shell.querySelector<HTMLElement>('.rental-controls-menu')!.hidden = true;
-            shell.querySelector('.rental-metric-trigger')!.setAttribute('aria-expanded', 'false');
-        };
-        shell.querySelector<HTMLButtonElement>('.rental-metric-trigger')!.addEventListener('click', () => {
-            const menu = shell.querySelector<HTMLElement>('.rental-controls-menu')!;
-            menu.hidden = !menu.hidden;
-            shell.querySelector<HTMLButtonElement>('.rental-metric-trigger')!.setAttribute('aria-expanded', String(!menu.hidden));
-        });
-        shell.querySelector('.rental-mode-options')!.innerHTML = RENTAL_MODES.map((mode) =>
-            `<button type="button" data-rental-mode="${mode.value}"><span>${mode.label}</span><small>${mode.unit}</small></button>`).join('');
-        shell.querySelectorAll<HTMLButtonElement>('[data-rental-mode]').forEach((button) => button.addEventListener('click', () => {
-            const mode = button.dataset.rentalMode as MapMetric;
-            appState.set('colorMode', mode);
-            try { localStorage.setItem('hdb_colorMode', mode); } catch (_) { /* local storage optional */ }
-            if (!this.isRentalMode(mode)) closeMenu();
-        }));
-        shell.querySelector<HTMLSelectElement>('.rental-type-select')!.addEventListener('change', (event) => {
-            appState.set('rentalActiveFlatType', (event.target as HTMLSelectElement).value);
-        });
-        shell.querySelector<HTMLSelectElement>('.rental-palette')!.addEventListener('change', (event) =>
-            appState.set('colorScale', (event.target as HTMLSelectElement).value as 'viridis' | 'turbo'));
-        const startInput = shell.querySelector<HTMLInputElement>('.rental-window-start')!;
-        const applyWindow = shell.querySelector<HTMLButtonElement>('.rental-window-apply')!;
-        const updateWindow = () => {
-            const resaleLatest = this.dataLoader.getAllData().reduce((latest, row) => row.month > latest ? row.month : latest, '');
-            const requestedWindow = this.dataset
-                ? rentalWindowFromStart(startInput.value, this.dataset.minMonth, this.dataset.maxMonth, resaleLatest)
-                : null;
-            if (!requestedWindow) {
-                const latest = this.dataset && resaleLatest && resaleLatest < this.dataset.maxMonth ? resaleLatest : this.dataset?.maxMonth ?? '';
-                this.status = `Choose a start month between ${this.dataset?.minMonth ?? 'the first available month'} and ${latest || 'the latest available month'}.`;
-                shell.querySelector('.rental-status')!.textContent = this.status; return;
-            }
-            const version = ++this.windowRequestVersion;
-            applyWindow.disabled = true;
-            this.status = `Loading evidence from ${requestedWindow.minMonth}…`;
-            shell.querySelector('.rental-status')!.textContent = this.status;
-            void this.dataLoader.ensureDateRange(requestedWindow.minMonth, requestedWindow.maxMonth).then(() => {
-                if (version !== this.windowRequestVersion) return;
-                this.analysisWindow = requestedWindow; this.estimationContext = null;
-                this.status = '';
-                this.syncControls();
-                if (this.isRentalMode(appState.get('colorMode') as MapMetric)) this.renderRentalPoints();
-            }).catch(() => { if (version === this.windowRequestVersion) { this.status = 'Could not load resale comparables from that month.'; this.syncControls(); } })
-                .finally(() => { if (version === this.windowRequestVersion) applyWindow.disabled = false; });
-        };
-        applyWindow.addEventListener('click', updateWindow);
-        shell.querySelector<HTMLButtonElement>('.rental-assumptions-open')!.addEventListener('click', () => this.openScenarioEditor());
-        shell.querySelector<HTMLButtonElement>('.rental-retry')!.addEventListener('click', () => void this.loadAndRender());
-        document.addEventListener('click', (event) => {
-            if (!shell.contains(event.target as Node)) closeMenu();
-        });
-        shell.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { closeMenu(); shell.querySelector<HTMLButtonElement>('.rental-metric-trigger')!.focus(); }
+    private updateWindow(start: string): void {
+        const resaleLatest = this.dataLoader.getAllData().reduce((latest, row) => row.month > latest ? row.month : latest, '');
+        const requestedWindow = this.dataset ? rentalWindowFromStart(start, this.dataset.minMonth, this.dataset.maxMonth, resaleLatest) : null;
+        if (!requestedWindow) { this.status = 'Invalid month'; this.syncControls(); return; }
+        const version = ++this.windowRequestVersion;
+        this.windowLoading = true; this.status = 'Loading…'; this.syncControls();
+        void this.dataLoader.ensureDateRange(requestedWindow.minMonth, requestedWindow.maxMonth).then(() => {
+            if (version !== this.windowRequestVersion) return;
+            this.analysisWindow = requestedWindow;
+            this.estimationContext = null;
+            this.windowLoading = false; this.status = '';
+            this.syncControls();
+            if (this.isRentalMode(appState.get('colorMode') as MapMetric)) this.renderRentalPoints();
+        }).catch(() => {
+            if (version === this.windowRequestVersion) { this.windowLoading = false; this.status = 'Load failed'; this.syncControls(); }
         });
     }
 
@@ -173,41 +110,11 @@ export class RentalController {
     }
 
     private syncControls(): void {
-        const shell = document.getElementById('rental-map-controls');
-        if (!shell) return;
-        const mode = appState.get('colorMode') as MapMetric;
-        const descriptor = RENTAL_MODES.find((item) => item.value === mode) ?? RENTAL_MODES[0];
-        shell.querySelector('.rental-metric-label')!.textContent = `Colour by: ${descriptor.label}`;
-        const visibleType = shell.querySelector<HTMLElement>('.rental-active-type')!;
-        visibleType.textContent = appState.get('rentalActiveFlatType') ?? '';
-        visibleType.hidden = !this.isRentalMode(mode);
-        shell.querySelectorAll<HTMLButtonElement>('[data-rental-mode]').forEach((button) =>
-            button.classList.toggle('active', button.dataset.rentalMode === mode));
-        const typeRow = shell.querySelector<HTMLElement>('.rental-type-row')!;
-        typeRow.hidden = !this.isRentalMode(mode);
-        const windowRow = shell.querySelector<HTMLElement>('.rental-window-row')!;
-        windowRow.hidden = !this.isRentalMode(mode);
-        const typeSelect = shell.querySelector<HTMLSelectElement>('.rental-type-select')!;
-        const types = appState.get('globalFilters').flatTypes;
-        typeSelect.innerHTML = types.map((type) => `<option>${escapeHtml(type)}</option>`).join('');
-        typeSelect.value = appState.get('rentalActiveFlatType') ?? '';
-        shell.querySelector<HTMLSelectElement>('.rental-palette')!.value = appState.get('colorScale');
         const resaleLatest = this.dataLoader.getAllData().reduce((latest, row) => row.month > latest ? row.month : latest, '');
         const latest = this.dataset && resaleLatest > this.dataset.maxMonth ? this.dataset.maxMonth : resaleLatest;
-        const startInput = shell.querySelector<HTMLInputElement>('.rental-window-start')!;
-        startInput.disabled = !this.dataset;
-        shell.querySelector<HTMLButtonElement>('.rental-window-apply')!.disabled = !this.dataset;
-        if (this.dataset) startInput.min = this.dataset.minMonth;
-        startInput.max = latest;
-        if (this.analysisWindow) {
-            startInput.value = this.analysisWindow.minMonth;
-        }
-        shell.querySelector<HTMLElement>('#rental-window-hint')!.textContent = this.analysisWindow
-            ? `Through ${formatMonth(this.analysisWindow.maxMonth)}, the latest month shared by rental and resale data.`
-            : 'Through the latest month shared by rental and resale data.';
-        const status = shell.querySelector('.rental-status')!;
-        status.textContent = this.status;
-        shell.querySelector<HTMLButtonElement>('.rental-retry')!.hidden = !this.status.startsWith('Rental data unavailable');
+        this.controls.update({ mode: appState.get('colorMode') as MapMetric, activeType: appState.get('rentalActiveFlatType'), flatTypes: appState.get('globalFilters').flatTypes,
+            datasetMin: this.dataset?.minMonth, latestMonth: latest, window: this.analysisWindow, status: this.status, loading: !!this.loadPromise || this.windowLoading,
+            retry: this.status.startsWith('Rental data unavailable') });
     }
 
     private async loadAndRender(): Promise<void> {
@@ -293,7 +200,7 @@ export class RentalController {
 
     private updateLegend(): void {
         const mode = appState.get('colorMode') as RentalMode;
-        const descriptor = RENTAL_MODES.find((item) => item.value === mode)!;
+        const descriptor = MAP_METRICS.find((item) => item.value === mode)!;
         const values = this.rows
             .filter((row) => row.point.flatType === appState.get('rentalActiveFlatType'))
             .map((row) => row.point.metricValue as number | null)
@@ -318,9 +225,10 @@ export class RentalController {
         if (!active) return;
         const modal = this.modal('rental-detail-modal', `Blk ${escapeHtml(point.block)} ${escapeHtml(point.streetName)}`);
 
-        const summaries = matching.map((row) => row.estimate.selected?.summary).filter((summary) => summary !== null && summary !== undefined);
-        let scaleMin = summaries.length ? Math.min(...summaries.map((summary) => summary.min)) : 0;
-        let scaleMax = summaries.length ? Math.max(...summaries.map((summary) => summary.max)) : 1;
+        const displayEvidence = (row: EstimateRow) => row.estimate.selected ?? row.estimate.direct;
+        const observations = matching.flatMap((row) => displayEvidence(row).records).filter((record) => Number.isFinite(record.monthly_rent) && record.monthly_rent > 0);
+        let scaleMin = observations.length ? Math.min(...observations.map((record) => record.monthly_rent)) : 0;
+        let scaleMax = observations.length ? Math.max(...observations.map((record) => record.monthly_rent)) : 1;
         if (scaleMin === scaleMax) {
             const padding = Math.max(100, scaleMin * .05);
             scaleMin -= padding; scaleMax += padding;
@@ -329,15 +237,24 @@ export class RentalController {
         const distributionRows = matching.map((row) => {
             const selected = row.point.flatType === point.flatType;
             const override = this.overrides.get(this.overrideKey(row.transaction));
-            const evidence = row.estimate.selected?.summary;
+            const evidenceModel = displayEvidence(row);
+            const evidence = evidenceModel.summary;
             const source = row.estimate.source === 'same_block' ? 'same block' : row.estimate.source === 'nearby_blocks' ? 'nearby' : 'insufficient';
-            const plot = evidence ? `<div class="rental-boxplot" role="img" aria-label="${escapeAttribute(`${row.point.flatType}: ${evidence.count} rents, ${money(evidence.min)} to ${money(evidence.max)}, median ${money(evidence.median)}`)}"
-                style="--plot-min:${position(evidence.min)}%;--plot-q1:${position(evidence.q1)}%;--plot-median:${position(evidence.median)}%;--plot-q3:${position(evidence.q3)}%;--plot-max:${position(evidence.max)}%">
-                <span class="rental-boxplot-whisker"></span><span class="rental-boxplot-cap rental-boxplot-cap--min"></span><span class="rental-boxplot-cap rental-boxplot-cap--max"></span><span class="rental-boxplot-box"></span><span class="rental-boxplot-median"></span>
+            const included = new Set(evidenceModel.includedRecords);
+            const lanes = new Map<number, number>();
+            let maxLane = 0;
+            const points = evidenceModel.records.map((record) => {
+                const lane = lanes.get(record.monthly_rent) ?? 0; lanes.set(record.monthly_rent, lane + 1); maxLane = Math.max(maxLane, lane);
+                const tooltip = `${record.month} · ${money(record.monthly_rent)} · ${record.block} ${record.street_name}`;
+                return `<button type="button" class="rental-observation${included.has(record) ? '' : ' excluded'}" style="--point:${position(record.monthly_rent)}%;--lane:${lane}" data-rental-tooltip="${escapeAttribute(tooltip)}" aria-label="${escapeAttribute(tooltip)}"></button>`;
+            }).join('');
+            const plot = evidenceModel.records.length ? `<div class="rental-boxplot" role="group" aria-label="${escapeAttribute(`${row.point.flatType}: ${evidenceModel.records.length} rents`)}"
+                style="--lanes:${maxLane};${evidence ? `--plot-min:${position(evidence.min)}%;--plot-q1:${position(evidence.q1)}%;--plot-median:${position(evidence.median)}%;--plot-q3:${position(evidence.q3)}%;--plot-max:${position(evidence.max)}%` : ''}">
+                ${evidence ? `<span class="rental-boxplot-whisker"></span><span class="rental-boxplot-cap rental-boxplot-cap--min"></span><span class="rental-boxplot-cap rental-boxplot-cap--max"></span><span class="rental-boxplot-box"></span><span class="rental-boxplot-median"></span><span class="rental-quartile rental-quartile--q1" style="--quartile:${position(evidence.q1)}%">${money(evidence.q1)}</span><span class="rental-quartile rental-quartile--q3" style="--quartile:${position(evidence.q3)}%">${money(evidence.q3)}</span>` : ''}${points}
               </div>` : '<span class="rental-distribution-empty">Insufficient evidence</span>';
             return `<div class="rental-distribution-row${selected ? ' active' : ''}" role="listitem">
               <div class="rental-distribution-type"><strong>${escapeHtml(row.point.flatType)}</strong>${selected ? '<span>Selected</span>' : ''}${override ? '<small>Adjusted</small>' : ''}</div>
-              <div class="rental-distribution-plot">${plot}<small>${evidence ? `${evidence.count} rents · ${source}` : source}</small></div>
+              <div class="rental-distribution-plot">${plot}<small>${evidenceModel.records.length} rents · ${source}</small></div>
               <div class="rental-distribution-value"><strong>${row.estimate.monthlyRent === null ? '—' : money(row.estimate.monthlyRent)}</strong><small>estimate</small></div>
             </div>`;
         }).join('');
@@ -365,8 +282,9 @@ export class RentalController {
           <section class="rental-distribution" aria-labelledby="rental-distribution-title">
             <div class="rental-section-heading"><h3 id="rental-distribution-title">Rental range by flat type</h3><span>Box shows the middle 50%</span></div>
             <div class="rental-distribution-list" role="list">${distributionRows}</div>
-            ${summaries.length ? `<div class="rental-distribution-axis"><span>${money(scaleMin)}</span><span>${money(scaleMax)}</span></div>` : ''}
+            ${observations.length ? `<div class="rental-distribution-axis"><span>${money(scaleMin)}</span><span>${money(scaleMax)}</span></div>` : ''}
           </section>
+          <section class="rental-resale-comparables" aria-labelledby="rental-resale-title"><div class="rental-section-heading"><h3 id="rental-resale-title">Resale comparables</h3></div><div class="rental-resale-table"></div></section>
           <div class="rental-disclosures">
             <details class="rental-disclosure">
               <summary><i data-lucide="chevron-down" aria-hidden="true"></i><span>Scenario details</span><small>Financing, tax and upfront capital</small></summary>
@@ -378,17 +296,6 @@ export class RentalController {
                 <div><dt>Upfront capital</dt><dd>${money(s.upfrontCapital)}</dd></div><div><dt>Cash-flow return</dt><dd>${percent(s.cashFlowReturnOnInitialCapital)}</dd></div>
                 <div><dt>Equity / BSD / mortgage duty</dt><dd>${money(s.equityContribution)} / ${money(s.bsd)} / ${money(s.mortgageDuty)}</dd></div><div><dt>First-year principal</dt><dd>${money(s.firstRentalYearPrincipal)}</dd></div>
               </dl>` : `<p>${missingScenarioText(active.estimate, activeOverride?.price !== undefined)}</p>`}
-            </details>
-            <details class="rental-disclosure">
-              <summary><i data-lucide="chevron-down" aria-hidden="true"></i><span>Evidence &amp; methodology</span><small>Sources, filters and model boundaries</small></summary>
-              <dl class="rental-evidence-list">
-                <div><dt>Evidence window</dt><dd>${active.estimate.analysisWindow?.minMonth ?? '—'}–${active.estimate.analysisWindow?.maxMonth ?? '—'}</dd></div>
-                <div><dt>Same block</dt><dd>${summaryText(active.estimate.direct.summary)} (raw ${active.estimate.direct.rawCount}; excluded ${active.estimate.direct.excludedInvalid} invalid and ${active.estimate.direct.excludedOutliers} outliers)</dd></div>
-                ${active.estimate.source === 'nearby_blocks' ? `<div><dt>Nearby fallback</dt><dd>${summaryText(active.estimate.nearby?.summary)} across ${active.estimate.nearby?.blockCount ?? 0} blocks</dd></div>` : ''}
-                <div><dt>Resale comparables</dt><dd>${summaryText(active.estimate.resale.summary)}; area ${areaSummaryText(active.estimate.resale.areaSummary)}</dd></div>
-                <div><dt>Nearest MRT exit</dt><dd>${active.estimate.resale.nearestMrtExitMeters === null ? 'Unavailable' : `${Math.round(active.estimate.resale.nearestMrtExitMeters)} m straight-line`}</dd></div>
-              </dl>
-              <p class="rental-method-note">Rental records are whole-flat figures. Floor and lease filters apply only to resale comparables. Cash flow includes the operating reserve, mortgage payment and estimated non-owner property tax. It excludes income tax, CPF funding, ABSD, renovation, legal costs and the five-year holding period. Principal repayment is equity accumulation, not an expense.</p>
             </details>
             <details class="rental-disclosure">
               <summary><i data-lucide="chevron-down" aria-hidden="true"></i><span>Adjust inputs</span><small>Price, rent, area and Annual Value</small></summary>
@@ -404,6 +311,13 @@ export class RentalController {
           </div>`;
         // @ts-ignore - lucide is installed globally by icons.ts at app startup.
         if (window.lucide) window.lucide.createIcons();
+        const resaleRecords = this.estimationContext ? [...getBlockResaleEvidence(this.estimationContext,
+            { block: point.block, streetName: point.streetName }, appState.get('globalFilters').flatTypes)] as HDBTransaction[] : [];
+        resaleRecords.sort((a, b) => b.month.localeCompare(a.month));
+        const tableHost = modal.querySelector<HTMLElement>('.rental-resale-table')!;
+        const table = new TransactionTable(resaleRecords, { pageSize: 5, activeFlatType: active.point.flatType });
+        tableHost.innerHTML = table.markup(); table.mount(tableHost);
+        this.bindObservationTooltips(modal);
         modal.querySelector<HTMLFormElement>('.rental-overrides')!.addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget as HTMLFormElement;
             const read = (name: string, allowZero: boolean) => {
                 const raw = (form.elements.namedItem(name) as HTMLInputElement).value.trim();
@@ -440,13 +354,34 @@ export class RentalController {
             this.closeModal(modal); });
     }
 
+    private bindObservationTooltips(modal: HTMLElement): void {
+        const tooltip = document.createElement('div'); tooltip.className = 'rental-observation-tooltip'; tooltip.hidden = true; modal.appendChild(tooltip);
+        let pinned: HTMLElement | null = null;
+        const hide = () => { tooltip.hidden = true; };
+        const dismiss = () => { pinned = null; hide(); };
+        const show = (button: HTMLElement) => {
+            tooltip.textContent = button.dataset.rentalTooltip ?? '';
+            const rect = button.getBoundingClientRect(); tooltip.hidden = false;
+            tooltip.style.left = `${Math.max(8, Math.min(window.innerWidth - tooltip.offsetWidth - 8, rect.left + rect.width / 2 - tooltip.offsetWidth / 2))}px`;
+            tooltip.style.top = `${Math.max(8, rect.top - tooltip.offsetHeight - 7)}px`;
+        };
+        modal.querySelectorAll<HTMLElement>('[data-rental-tooltip]').forEach((button) => {
+            button.addEventListener('mouseenter', () => show(button));
+            button.addEventListener('focus', () => show(button)); button.addEventListener('blur', () => { if (pinned !== button) hide(); });
+            button.addEventListener('mouseleave', () => { if (pinned !== button) hide(); });
+            button.addEventListener('click', (event) => { event.stopPropagation(); pinned = button; show(button); });
+        });
+        modal.addEventListener('click', dismiss);
+        modal.addEventListener('rental-tooltip-dismiss', dismiss);
+    }
+
     private modal(id: string, title: string): HTMLElement {
         document.getElementById(id)?.remove(); const modal = document.createElement('div'); modal.id = id; modal.className = 'rental-modal';
         modal.innerHTML = `<div class="rental-modal-card" role="dialog" aria-modal="true" aria-labelledby="${id}-title"><header><h2 id="${id}-title">${title}</h2><button type="button" aria-label="Close"><i data-lucide="x"></i></button></header><div class="rental-modal-body"></div></div>`;
         modal.querySelector('header button')!.addEventListener('click', () => this.closeModal(modal));
         modal.addEventListener('click', (event) => { if (event.target === modal) this.closeModal(modal); });
         modal.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { this.closeModal(modal); return; }
+            if (event.key === 'Escape') { const tooltip = modal.querySelector<HTMLElement>('.rental-observation-tooltip:not([hidden])'); if (tooltip) { modal.dispatchEvent(new Event('rental-tooltip-dismiss')); event.stopImmediatePropagation(); return; } this.closeModal(modal); return; }
             if (event.key !== 'Tab') return;
             const focusable = [...modal.querySelectorAll<HTMLElement>('button, input, select, summary, [href]')].filter((element) => !element.hasAttribute('disabled'));
             if (!focusable.length) return;
@@ -483,12 +418,6 @@ export function scenarioFormMarkup(existing: Record<string, number | string>): s
           ${numberField('initialRate', 'Rate before MOP (%)', Number(existing.initialRate ?? .03) * 100)} ${numberField('rentalRate', 'Rate at rental start (%)', Number(existing.rentalRate ?? .03) * 100)}
           ${numberField('annualRentGrowth', 'Annual rent growth (%)', Number(existing.annualRentGrowth ?? 0) * 100)} ${numberField('operatingReserve', 'Operating reserve (%)', Number(existing.operatingReserve ?? .10) * 100)}
           <button>Apply scenario</button></form>`;
-}
-function summaryText(summary: { count: number; min: number; max: number; median: number; q1: number; q3: number } | null | undefined): string {
-    return summary ? `n=${summary.count}, median ${money(summary.median)}, range ${money(summary.min)}–${money(summary.max)}, IQR ${money(summary.q1)}–${money(summary.q3)}` : 'none';
-}
-function areaSummaryText(summary: { count: number; min: number; max: number; median: number; q1: number; q3: number } | null | undefined): string {
-    return summary ? `n=${summary.count}, median ${summary.median.toFixed(1)} sqm, range ${summary.min.toFixed(1)}–${summary.max.toFixed(1)} sqm, IQR ${summary.q1.toFixed(1)}–${summary.q3.toFixed(1)} sqm` : 'none';
 }
 function escapeAttribute(value: string): string { return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 export function rentalWindowFromStart(startMonth: string, datasetMin: string, datasetMax: string, resaleLatest: string): RentalAnalysisWindow | null {

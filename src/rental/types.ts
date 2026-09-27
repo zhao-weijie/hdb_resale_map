@@ -72,6 +72,9 @@ export interface RentalEvidence {
     excludedOutliers: number;
     blockCount: number;
     window: RentalAnalysisWindow | null;
+    /** Exact source records exposed for plots; record objects retain source identity. */
+    records: readonly RentalRecord[];
+    includedRecords: readonly RentalRecord[];
 }
 
 export type RentalEstimateSource = 'same_block' | 'nearby_blocks' | 'unavailable';
@@ -87,6 +90,7 @@ export interface ResaleEstimate {
     areaSummary: NumericSummary | null;
     qualifiedForMap: boolean;
     nearestMrtExitMeters: number | null;
+    records: readonly ResaleComparable[];
 }
 
 export interface RentalEstimate {

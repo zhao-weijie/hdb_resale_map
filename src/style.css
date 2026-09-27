@@ -984,6 +984,8 @@ input[type="checkbox"] {
 .color-scale-gradient:hover {
     opacity: 0.92;
 }
+.color-scale-gradient:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.color-scale-gradient[aria-disabled="true"] { cursor: default; }
 
 /* The pixel-painted gradient canvas – fills the box, clipped by border-radius */
 .color-scale-canvas {
@@ -1136,6 +1138,11 @@ input[type="checkbox"] {
 .rental-window-row input { min-width: 0; }
 .rental-window-apply { width: 100%; margin-top: 6px; }
 .rental-controls-menu select { width: 100%; padding: 7px; border: 1px solid var(--color-border); border-radius: 5px; background: #fff; }
+.rental-analysis-card .card-body { display: grid; gap: 8px; }
+.rental-window-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.rental-window-fields input { min-width: 0; }
+.rental-analysis-actions { display: flex; gap: 8px; }
+.rental-analysis-actions button { flex: 1; }
 .rental-assumptions-open { width: 100%; margin-top: 12px; padding: 8px; border: 1px solid var(--color-primary); border-radius: 5px; color: var(--color-primary-hover); background: var(--color-primary-bg); cursor: pointer; }
 .rental-retry { width: 100%; margin-top: 6px; padding: 7px; border: 1px solid var(--color-danger); border-radius: 5px; background: #fff5f5; color: var(--color-danger); cursor: pointer; }
 .rental-status { font-size: 11px; color: var(--color-text-muted); margin: 8px 0 0; }
@@ -1177,7 +1184,7 @@ input[type="checkbox"] {
 .rental-distribution-value { text-align: right; }
 .rental-distribution-value strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .rental-distribution-plot { min-width: 0; }
-.rental-boxplot { position: relative; height: 22px; }
+.rental-boxplot { position: relative; height: calc(34px + var(--lanes, 0) * 6px); margin-top: 12px; }
 .rental-boxplot::before { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 1px; background: color-mix(in srgb, var(--color-border) 58%, transparent); }
 .rental-boxplot-whisker { position: absolute; left: var(--plot-min); top: 10px; width: calc(var(--plot-max) - var(--plot-min)); height: 1px; background: #827667; }
 .rental-boxplot-cap { position: absolute; top: 6px; width: 1px; height: 9px; background: #827667; }
@@ -1185,6 +1192,15 @@ input[type="checkbox"] {
 .rental-boxplot-cap--max { left: var(--plot-max); }
 .rental-boxplot-box { position: absolute; left: var(--plot-q1); top: 5px; width: max(2px, calc(var(--plot-q3) - var(--plot-q1))); height: 11px; border: 1px solid #827667; border-radius: 2px; background: #dfd5c8; }
 .rental-boxplot-median { position: absolute; left: var(--plot-median); top: 3px; width: 2px; height: 15px; background: #554e45; transform: translateX(-1px); }
+.rental-observation { position: absolute; z-index: 2; left: var(--point); top: calc(21px + var(--lane) * 6px); width: 7px !important; height: 7px !important; min-width: 0; padding: 0 !important; border: 1px solid #554e45 !important; border-radius: 50% !important; background: #554e45 !important; transform: translateX(-50%); cursor: help; }
+.rental-observation.excluded { background: var(--color-bg-card) !important; }
+.rental-observation:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; z-index: 3; }
+.rental-quartile { position: absolute; left: var(--quartile); top: -12px; color: var(--rental-text-muted); font: 9px/1 var(--font-mono); white-space: nowrap; transform: translateX(-50%); }
+.rental-quartile--q1 { transform: translateX(-100%); }
+.rental-quartile--q3 { transform: none; }
+.rental-observation-tooltip { position: fixed; z-index: 5100; padding: 5px 7px; border-radius: 5px; background: #302b25; color: white; font: 11px/1.2 var(--font-sans); box-shadow: var(--shadow-card); pointer-events: none; white-space: nowrap; }
+.transaction-table { overflow-x: auto; }
+.popover-table tr.active-flat-type td { background: var(--color-primary-bg); font-weight: 600; }
 .rental-distribution-row.active .rental-boxplot-whisker, .rental-distribution-row.active .rental-boxplot-cap { background: var(--color-primary); }
 .rental-distribution-row.active .rental-boxplot-box { border-color: var(--color-primary); background: #bfdbfe; }
 .rental-distribution-row.active .rental-boxplot-median { background: var(--color-primary-hover); }

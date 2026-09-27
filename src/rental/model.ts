@@ -138,7 +138,7 @@ function resaleEstimateForMatching(matching: ResaleComparable[], target: BlockTy
     const summary = summarize(matching.map((record) => record.resale_price));
     const areaSummary = summarize(matching.map((record) => record.floor_area_sqm));
     const mrt = target.nearestMrtExitMeters ?? summarize(matching.map((record) => record.mrt_distance_m ?? NaN))?.median ?? null;
-    return { summary, areaSummary, qualifiedForMap: (summary?.count ?? 0) >= 3, nearestMrtExitMeters: mrt };
+    return { summary, areaSummary, qualifiedForMap: (summary?.count ?? 0) >= 3, nearestMrtExitMeters: mrt, records: matching };
 }
 
 export function estimateRent(input: EstimationInput): RentalEstimate {
@@ -197,6 +197,16 @@ export function estimateRentForTarget(context: RentalEstimationContext, target: 
         return selectedEstimate('nearby_blocks', direct, nearby, resale, window);
     }
     return unavailableEstimate(direct, resale, window, nearby);
+}
+
+export function getBlockResaleEvidence(
+    context: RentalEstimationContext, target: Pick<BlockTypeTarget, 'block' | 'streetName'>, flatTypes: readonly string[],
+): readonly ResaleComparable[] {
+    const wantedTypes = new Set(flatTypes.map(normalizeFlatType));
+    const wantedBlock = blockKey(target.block, target.streetName);
+    return context.resaleComparables.filter((record) => blockKey(record.block, record.street_name) === wantedBlock &&
+        wantedTypes.has(normalizeFlatType(record.flat_type)) && inWindow(record.month, context.analysisWindow) &&
+        validResale(record, context.resaleFilters));
 }
 
 export function calculateScenario(input: ScenarioInput): RentalScenario {
@@ -358,7 +368,7 @@ function evidenceFor(records: RentalRecord[], raw: RentalRecord[], window: Renta
         excludedInvalid: raw.length - validRaw.length,
         excludedOutliers: Math.max(0, validRaw.length - records.length),
         blockCount: new Set(records.map((record) => blockKey(record.block, record.street_name))).size,
-        window,
+        window, records: validRaw, includedRecords: records,
     };
 }
 

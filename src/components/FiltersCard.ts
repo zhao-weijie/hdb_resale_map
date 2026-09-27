@@ -30,7 +30,7 @@ export class FiltersCard {
                 <div class="filter-grid">
                     <!-- Date -->
                     <div class="filter-item full-width">
-                        <label>From Month</label>
+                        <label>Resale from</label>
                         <div class="input-wrapper">
                             <i data-lucide="calendar"></i>
                             <input type="month" id="filter-date" value="2024-01">
