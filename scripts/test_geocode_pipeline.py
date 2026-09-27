@@ -63,6 +63,36 @@ class GeocodePipelineTests(unittest.TestCase):
         request.assert_called_once_with('123', 'TEST ROAD', None)
         self.assertEqual(result['123|TEST ROAD']['status'], 'resolved')
 
+    def test_cached_postal_mismatch_from_previous_run_is_retried(self):
+        cache = {
+            '157|TEST ROAD': {
+                'block': '157', 'street_name': 'TEST ROAD', 'status': 'ambiguous',
+                'latitude': None, 'longitude': None, 'reason': 'cached_postal_mismatch',
+            },
+        }
+        resolved = {
+            'block': '157', 'street_name': 'TEST ROAD', 'status': 'resolved',
+            'latitude': 1.3, 'longitude': 103.8, 'postal': '521157',
+        }
+        with patch.object(geocode_pipeline, 'load_geocode_cache', return_value=cache), \
+                patch.object(geocode_pipeline, 'get_onemap_token', return_value=None), \
+                patch.object(geocode_pipeline, 'save_geocode_cache'), \
+                patch.object(geocode_pipeline.time, 'sleep'), \
+                patch.object(geocode_pipeline, 'geocode_address', return_value=resolved) as request:
+            result = geocode_pipeline.geocode_addresses([('157', 'TEST ROAD')])
+        request.assert_called_once_with('157', 'TEST ROAD', None)
+        self.assertEqual(result['157|TEST ROAD']['status'], 'resolved')
+
+    def test_postal_code_validation_handles_hdb_block_suffix_forms(self):
+        self.assertTrue(geocode_pipeline.validate_postal_code('6', '560006'))
+        self.assertTrue(geocode_pipeline.validate_postal_code('39', '120039'))
+        self.assertTrue(geocode_pipeline.validate_postal_code('157', '521157'))
+        self.assertTrue(geocode_pipeline.validate_postal_code('12A', '321012'))
+        self.assertTrue(geocode_pipeline.validate_postal_code('1A', '085101'))
+        self.assertTrue(geocode_pipeline.validate_postal_code('1', '591501'))
+        self.assertTrue(geocode_pipeline.validate_postal_code('1001', '731001'))
+        self.assertFalse(geocode_pipeline.validate_postal_code('157', '521158'))
+
     def test_legacy_registry_is_migrated_to_canonical_status_entries(self):
         legacy = {' 123 |Test  Road': {
             'block': ' 123 ', 'street_name': 'Test  Road', 'latitude': 1.3,

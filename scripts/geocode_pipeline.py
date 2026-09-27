@@ -234,8 +234,9 @@ def make_address_key(block: str, street_name: str) -> str:
 def validate_postal_code(block: str, postal: str) -> bool:
     """
     Validates if the postal code matches the block number based on the heuristic:
-    - Standard (1-3 digits): 0 + Block Number (e.g., Block 6 -> ...006?, 39 -> 039, 464 -> 0464)
-    - With Letter (e.g., 12A): X + Block Number (X is a digit)
+    - Standard (1-2 digits): postal ends in 0 + block (e.g., 6 -> ...06, 39 -> ...039)
+    - Standard (3-4 digits): postal ends in the block number (e.g., 157 -> ...157)
+    - With Letter (e.g., 12A): postal suffix ends in the numeric block portion
     - 4-Digit Block: Ends with Block Number
     """
     if not postal: 
@@ -252,32 +253,16 @@ def validate_postal_code(block: str, postal: str) -> bool:
     block_digits = "".join(filter(str.isdigit, block))
     
     if block.isdigit():
-        if len(block) == 4:
-            # 4-Digit Block: Block Number
+        if len(block) <= 2:
+            return postal.endswith("0" + block)
+        if len(block) <= 4:
             return postal.endswith(block)
-        else:
-            # Standard (1-3 digits): 0 + Block Number
-            # Example: Block 6 -> Ends with 06 (actually usually 006 but let's be safe with heuristic)
-            # Example: Block 39 -> Ends with 039
-            # Example: Block 464 -> Ends with 0464
-            target_ending = "0" + block
-            return postal.endswith(target_ending)
+        return False
     else:
-        # With Letter (e.g., 12A)
-        # Rule: X + Block Number (where X is a digit)
         if not block_digits:
             return False
-            
         suffix_len = 1 + len(block_digits)
-        if len(postal) < suffix_len:
-            return False
-            
-        params = postal[-suffix_len:]
-        # Check if the last part is BlockDigits
-        if params.endswith(block_digits):
-            return True
-            
-        return False
+        return len(postal) >= suffix_len and postal[-suffix_len:].endswith(block_digits)
 
 
 def geocode_address(block: str, street_name: str, token: Optional[str] = None) -> Dict:
@@ -407,6 +392,7 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
         addr for addr in addresses
         if make_address_key(addr[0], addr[1]) not in cache
         or cache[make_address_key(addr[0], addr[1])].get("status") == "transient_failure"
+        or cache[make_address_key(addr[0], addr[1])].get("reason") == "cached_postal_mismatch"
     ]
     
     if not to_geocode:
