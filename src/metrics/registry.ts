@@ -7,8 +7,8 @@ import type {
 
 const robustDomain = (constantPadding: number): MetricDomainPolicy => ({
     kind: 'percentile',
-    lower: 0.05,
-    upper: 0.95,
+    lower: 0.02,
+    upper: 0.98,
     constantPadding,
 });
 
