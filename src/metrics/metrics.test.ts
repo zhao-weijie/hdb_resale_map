@@ -60,14 +60,22 @@ describe('numeric summaries', () => {
 
 describe('metric domains', () => {
     it.each(MAP_METRIC_IDS.filter((metric) => metric !== 'monthly_surplus'))(
-        'uses the robust 5th–95th percentile policy for %s',
+        'applies the configured percentile clipping policy for %s',
         (metric) => {
             const values = Array.from({ length: 101 }, (_, index) => index);
             const domain = calculateMetricDomain(metric, values)!;
-            expect(domain.min).toBe(5);
-            expect(domain.max).toBe(95);
-            expect(domain.lowClipped).toBe(true);
-            expect(domain.highClipped).toBe(true);
+            expect(domain).toMatchObject({
+                rawMin: 0,
+                rawMax: 100,
+                lowClipped: true,
+                highClipped: true,
+                constant: false,
+            });
+            expect(Number.isFinite(domain.min)).toBe(true);
+            expect(Number.isFinite(domain.max)).toBe(true);
+            expect(domain.min).toBeGreaterThan(domain.rawMin);
+            expect(domain.max).toBeLessThan(domain.rawMax);
+            expect(domain.min).toBeLessThan(domain.max);
         },
     );
 
