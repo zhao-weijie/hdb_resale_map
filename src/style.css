@@ -938,10 +938,10 @@ input[type="checkbox"] {
 #map-container .maplibregl-ctrl-bottom-right {
     right: 12px;
     bottom: var(--map-control-bottom);
-    display: grid;
-    grid-template-columns: auto auto;
-    align-items: end;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
     transition: bottom .24s ease-out;
 }
 
@@ -968,8 +968,9 @@ input[type="checkbox"] {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 8px;
     position: relative;
+    order: 0;
 }
 
 .color-scale-gradient {
@@ -1021,10 +1022,11 @@ input[type="checkbox"] {
     position: absolute;
     z-index: 5;
     top: 50%;
-    right: calc(100% + 86px);
-    width: min(190px, calc(100vw - 150px));
+    right: 31px;
+    width: max-content;
+    max-width: calc(100vw - 118px);
     max-height: calc(100% - 26px);
-    padding: 3px 5px;
+    padding: 5px 6px;
     border-radius: var(--radius-sm);
     color: var(--color-text-main);
     background: color-mix(in srgb, var(--color-bg-card) 82%, transparent);
@@ -1045,13 +1047,13 @@ input[type="checkbox"] {
     width: 100%;
     border-collapse: collapse;
     table-layout: auto;
-    font: 9px/1.15 var(--font-mono);
+    font: 11px/1.25 var(--font-mono);
     font-variant-numeric: tabular-nums;
 }
 
 .color-scale-stats-table th,
 .color-scale-stats-table td {
-    padding: 2px 4px;
+    padding: 2px 3px;
     border: 0;
     white-space: nowrap;
 }
@@ -1144,6 +1146,18 @@ input[type="checkbox"] {
     cursor: pointer;
 }
 
+#map-container .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
+    width: var(--map-control-size);
+    border-radius: var(--radius-sm) !important;
+    overflow: hidden;
+    order: 1;
+}
+
+#map-container .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group button {
+    width: var(--map-control-size) !important;
+    height: var(--map-control-size) !important;
+}
+
 .color-scale-stats-toggle:hover,
 .color-scale-stats-toggle[aria-pressed="true"] {
     color: var(--color-primary-hover);
@@ -1200,12 +1214,7 @@ input[type="checkbox"] {
 
 @media (max-width: 768px) {
     :root {
-        --map-control-size: 44px;
-    }
-
-    .maplibregl-ctrl-group button {
-        width: var(--map-control-size);
-        height: var(--map-control-size);
+        --map-control-size: 36px;
     }
 
     .color-scale-gradient {
@@ -1213,8 +1222,8 @@ input[type="checkbox"] {
     }
 
     .color-scale-stats {
-        right: calc(100% + 78px);
-        width: min(178px, calc(100vw - 145px));
+        right: 34px;
+        max-width: calc(100vw - 112px);
     }
 
     .color-scale-palette-hint {
@@ -1251,7 +1260,7 @@ input[type="checkbox"] {
 .rental-map-controls {
     position: fixed;
     z-index: 2100;
-    right: calc(28px + (var(--map-control-size) * 2));
+    right: calc(20px + var(--map-control-size));
     bottom: var(--map-control-bottom);
     font-family: var(--font-sans);
     transition: bottom .24s ease-out;
@@ -1259,7 +1268,7 @@ input[type="checkbox"] {
 .rental-metric-trigger, .rental-controls-menu button, .rental-controls-menu select, .rental-modal button, .rental-modal input {
     font: inherit; color: var(--color-text-main);
 }
-.rental-metric-trigger { border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-card); box-shadow: var(--shadow-card); padding: 9px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.rental-metric-trigger { height: var(--map-control-size); box-sizing: border-box; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-card); box-shadow: var(--shadow-card); padding: 0 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
 .rental-controls-menu { position: absolute; right: 0; bottom: calc(100% + 8px); width: 248px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-card); box-shadow: var(--shadow-panel); }
 .rental-mode-options { display: grid; gap: 3px; }
 .rental-mode-options button { width: 100%; border: 0; border-radius: 5px; background: transparent; padding: 7px; text-align: left; display: flex; justify-content: space-between; cursor: pointer; }
@@ -1368,9 +1377,8 @@ input[type="checkbox"] {
 .rental-overrides .rental-reset { border-color: var(--color-border); background: transparent; color: var(--color-text-main); }
 .rental-overrides button:disabled { cursor: not-allowed; opacity: .45; }
 @media (max-width: 768px) {
-    .rental-map-controls { right: calc(28px + (var(--map-control-size) * 2)); }
+    .rental-map-controls { right: calc(20px + var(--map-control-size)); }
     .rental-controls-menu { position: fixed; inset: auto 0 0 0; width: auto; border-radius: 14px 14px 0 0; max-height: 72vh; overflow: auto; padding: 18px; }
-    .rental-metric-trigger { min-height: var(--map-control-size); }
     .rental-metric-trigger { max-width: calc(100vw - 76px); }
     .rental-metric-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rental-active-type { flex: 0 0 auto; }

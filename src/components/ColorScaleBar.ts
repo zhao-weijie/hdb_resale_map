@@ -235,12 +235,11 @@ export class ColorScaleBar {
 
     private renderStats(): void {
         if (!this.statsEl || !this.statsOpen) return;
-        const formatter = getMetricDefinition(this.colorMode).formatter;
         const selected = this.presentation.selected?.summary ?? null;
         const all = this.presentation.all.summary;
         const value = (summary: NumericSummary | null, key: 'q3' | 'median' | 'q1' | 'count'): string => {
             if (!summary) return '—';
-            return key === 'count' ? summary.count.toLocaleString() : formatter(summary[key]);
+            return key === 'count' ? summary.count.toLocaleString() : this.formatStatValue(summary[key]);
         };
         const table = document.createElement('table');
         table.className = 'color-scale-stats-table';
@@ -268,6 +267,20 @@ export class ColorScaleBar {
             row.append(header, this.statCell(value(selected, key)), this.statCell(value(all, key)));
         }
         this.statsEl.replaceChildren(table);
+    }
+
+    private formatStatValue(value: number): string {
+        if (this.colorMode === 'price') {
+            const magnitude = Math.abs(value);
+            const divisor = magnitude >= 1_000_000 ? 1_000_000 : 1_000;
+            const suffix = magnitude >= 1_000_000 ? 'm' : 'k';
+            const compact = (value / divisor).toFixed(1).replace(/\.0$/, '');
+            return `$${compact}${suffix}`;
+        }
+        const formatted = getMetricDefinition(this.colorMode).formatter(value);
+        return this.colorMode === 'price_psf' || this.colorMode === 'rent_psf'
+            ? formatted.replace('/psf', '')
+            : formatted;
     }
 
     private statCell(value: string): HTMLTableCellElement {
@@ -388,13 +401,27 @@ export class ColorScaleBar {
         if (!this.gradientEl) return;
         const panel = document.getElementById('analytics-panel');
         const mobile = window.innerWidth < 768;
+        const panelExpanded = Boolean(mobile && panel && !panel.classList.contains('collapsed'));
         const panelHeight = mobile && panel
-            ? (panel.classList.contains('collapsed') ? 60 : panel.getBoundingClientRect().height)
+            ? (panelExpanded ? panel.getBoundingClientRect().height : 60)
             : 0;
         const panelToggleClearance = mobile ? 36 : 12;
         document.documentElement.style.setProperty('--map-control-bottom', `${panelHeight + panelToggleClearance}px`);
-        this.gradientEl.style.maxHeight = mobile && panel && !panel.classList.contains('collapsed')
-            ? 'calc(35vh - 104px)'
-            : '';
+        this.outerEl?.classList.toggle('panel-expanded', panelExpanded);
+        if (panelExpanded) {
+            const controlSize = Number.parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue('--map-control-size'),
+            ) || 36;
+            const fixedRailHeight = (controlSize * 3) + 12;
+            const availableScaleHeight = Math.max(
+                48,
+                window.innerHeight - panelHeight - panelToggleClearance - fixedRailHeight - 12,
+            );
+            this.gradientEl.style.minHeight = `${availableScaleHeight}px`;
+            this.gradientEl.style.maxHeight = `${availableScaleHeight}px`;
+        } else {
+            this.gradientEl.style.minHeight = '';
+            this.gradientEl.style.maxHeight = '';
+        }
     }
 }

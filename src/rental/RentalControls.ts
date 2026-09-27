@@ -43,7 +43,7 @@ export class RentalControls {
     update(vm: RentalControlsViewModel): void {
         const descriptor = MAP_METRICS.find((item) => item.value === vm.mode) ?? MAP_METRICS[0];
         const rental = vm.mode !== 'price' && vm.mode !== 'price_psf';
-        this.shell.querySelector('.rental-metric-label')!.textContent = `Colour by: ${descriptor.label}`;
+        this.shell.querySelector('.rental-metric-label')!.textContent = descriptor.label;
         const badge = this.shell.querySelector<HTMLElement>('.rental-active-type')!;
         badge.textContent = vm.activeType ?? '';
         badge.hidden = !rental;
