@@ -36,7 +36,7 @@ export class AnalyticsPanel {
     private overviewTab: OverviewTab;
 
     // Local state
-    private currentTransactions: HDBTransaction[] | null = null;
+    private viewportTransactions: HDBTransaction[] | null = null;
     private startDragLat: number | null = null;
     private startDragLng: number | null = null;
 
@@ -52,7 +52,7 @@ export class AnalyticsPanel {
         this.container = container;
         this.dataLoader = dataLoader;
         this.mapView = mapView;
-        this.radialSelection = new RadialSelection(dataLoader);
+        this.radialSelection = new RadialSelection();
 
         // Initialize components
         this.locationCard = new LocationCard(mapView, this.radialSelection);
@@ -126,8 +126,7 @@ export class AnalyticsPanel {
         }
 
         this.attachEventListeners();
-        const initialData = this.currentTransactions ?? this.getGlobalFilteredData();
-        this.renderOverview(initialData);
+        this.renderOverview();
     }
 
     private attachEventListeners(): void {
@@ -150,7 +149,11 @@ export class AnalyticsPanel {
             this.renderOverview();
         });
         appState.subscribe('rentalActiveFlatType', () => this.renderOverview());
-        appState.subscribe('spatialSelection', () => this.renderOverview());
+        appState.subscribe('selectedTransactions', () => {
+            // Selection and filter transitions invalidate the mobile viewport cache.
+            this.viewportTransactions = null;
+            this.renderOverview();
+        });
         subscribeRentalOverviewSource(() => this.renderOverview());
 
         // Panel Toggle
@@ -160,35 +163,14 @@ export class AnalyticsPanel {
         });
 
         // Bind component events
-        this.locationCard.bindEvents(() => this.updateSelectionState());
-        this.filtersCard.bindEvents((filtered) => this.onFiltersApplied(filtered));
+        this.locationCard.bindEvents();
+        this.filtersCard.bindEvents();
         this.mopFiltersCard.bindEvents();
 
         // Bind remaining panel events
         this.bindMapEvents();
         this.bindResizeEvents();
         this.bindTooltipEvents();
-    }
-
-    private onFiltersApplied(filtered: HDBTransaction[]): void {
-        // Clear current user selection as it might be invalid now
-        this.currentTransactions = null;
-        this.radialSelection.clearSelection();
-
-        // Update stats with filtered overview
-        this.renderOverview(filtered);
-    }
-
-    private updateSelectionState(): void {
-        const selected = appState.get('selectedTransactions');
-        this.currentTransactions = selected;
-
-        let dataToRender = selected;
-        if (!dataToRender) {
-            dataToRender = this.getGlobalFilteredData();
-        }
-
-        this.renderOverview(dataToRender);
     }
 
     private applyFiltersToTransactions(transactions: HDBTransaction[]): HDBTransaction[] {
@@ -214,7 +196,7 @@ export class AnalyticsPanel {
         }
         const dataToRender = data
             ?? appState.get('selectedTransactions')
-            ?? this.currentTransactions
+            ?? this.viewportTransactions
             ?? this.getGlobalFilteredData();
         this.overviewTab.renderStats(dataToRender);
         void this.overviewTab.renderChart(dataToRender);
@@ -406,7 +388,6 @@ export class AnalyticsPanel {
                     const postalInput = document.getElementById('postal-input') as HTMLInputElement;
                     if (postalInput) postalInput.value = '';
 
-                    this.updateSelectionState();
                     this.locationCard.setSelectionMode(false);
                 }
             }
@@ -443,7 +424,7 @@ export class AnalyticsPanel {
 
         const inView = this.dataLoader.queryRectangle(bounds.south, bounds.west, bounds.north, bounds.east);
         const filtered = this.applyFiltersToTransactions(inView);
-        this.currentTransactions = filtered;
+        this.viewportTransactions = filtered;
 
         this.renderOverview(filtered);
     }

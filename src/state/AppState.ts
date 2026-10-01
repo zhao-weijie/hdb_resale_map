@@ -84,22 +84,26 @@ export class StateStore {
     }
 
     /**
-     * Set a new value for a state key and notify listeners
+     * Prepare related selection state before notifying any listeners.
+     * Geometry and selected rows are coherent even inside filter listeners.
      */
     set<K extends StateKey>(key: K, value: AppState[K]): void {
         this.state[key] = value;
-        this.notify(key);
         if (key === 'globalFilters') {
-            this.setSpatialSelection(NO_SPATIAL_SELECTION);
+            this.state.spatialSelection = NO_SPATIAL_SELECTION;
+            this.refreshSelectedTransactions();
         } else if (key === 'spatialSelection' || key === 'filteredTransactions') {
             this.refreshSelectedTransactions();
+        }
+        this.notify(key);
+        if (key === 'globalFilters') this.notify('spatialSelection');
+        if (key === 'globalFilters' || key === 'spatialSelection' || key === 'filteredTransactions') {
+            this.notify('selectedTransactions');
         }
     }
 
     setSpatialSelection(selection: SpatialSelection): void {
-        this.state.spatialSelection = selection;
-        this.notify('spatialSelection');
-        this.refreshSelectedTransactions();
+        this.set('spatialSelection', selection);
     }
 
     clearSpatialSelection(): void {
@@ -112,7 +116,6 @@ export class StateStore {
             this.state.spatialSelection,
             (transaction) => ({ latitude: transaction.latitude, longitude: transaction.longitude })
         );
-        this.notify('selectedTransactions');
     }
 
     /**

@@ -2,7 +2,6 @@
  * LocationCard - Handles location search, selection mode, and area selection
  */
 
-import type { HDBTransaction } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { RadialSelection } from '../tools/RadialSelection';
 import { PostalSearch } from '../tools/PostalSearch';
@@ -61,14 +60,14 @@ export class LocationCard {
         `;
     }
 
-    bindEvents(onSelectionUpdate: (transactions: HDBTransaction[] | null) => void): void {
-        this.bindSearchEvents(onSelectionUpdate);
+    bindEvents(): void {
+        this.bindSearchEvents();
         this.bindSelectionControls();
-        this.bindClearButton(onSelectionUpdate);
+        this.bindClearButton();
         this.bindSelectAreaButton();
     }
 
-    private bindSearchEvents(onSelectionUpdate: (transactions: HDBTransaction[] | null) => void): void {
+    private bindSearchEvents(): void {
         const input = document.getElementById('postal-input') as HTMLInputElement;
         const btn = document.getElementById('search-btn');
 
@@ -101,10 +100,6 @@ export class LocationCard {
                     const radius = parseInt(radiusInput.value) || 500;
 
                     this.radialSelection.setSelection(lat, lng, radius);
-
-                    // Update stats
-                    const selected = this.radialSelection.getSelectedTransactions();
-                    onSelectionUpdate(selected);
                 }
 
                 // Persist last search to localStorage
@@ -193,7 +188,7 @@ export class LocationCard {
         });
     }
 
-    private bindClearButton(onSelectionUpdate: (transactions: HDBTransaction[] | null) => void): void {
+    private bindClearButton(): void {
         const clearBtn = document.getElementById('clear-selection-btn');
         clearBtn?.addEventListener('click', () => {
             this.radialSelection.clearSelection();
@@ -201,9 +196,6 @@ export class LocationCard {
             // Clear Postal Input BUT KEEP Radius
             const postalInput = document.getElementById('postal-input') as HTMLInputElement;
             if (postalInput) postalInput.value = '';
-
-            // Update stats to show global data
-            onSelectionUpdate(null);
         });
     }
 

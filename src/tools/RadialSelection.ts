@@ -2,17 +2,10 @@
  * RadialSelection - Tool for drawing circular area selections
  */
 
-import type { DataLoader, HDBTransaction } from '../data/DataLoader';
 import { appState } from '../state/AppState';
-import { circleSelection, filterBySpatialSelection } from '../spatial/selection';
+import { circleSelection } from '../spatial/selection';
 
 export class RadialSelection {
-    private dataLoader: DataLoader;
-
-    constructor(dataLoader: DataLoader) {
-        this.dataLoader = dataLoader;
-    }
-
     /**
      * Start a radial selection
      */
@@ -25,17 +18,6 @@ export class RadialSelection {
      */
     clearSelection(): void {
         appState.clearSpatialSelection();
-    }
-
-    /**
-     * Query transactions within the selected area
-     */
-    getSelectedTransactions(): HDBTransaction[] | null {
-        return filterBySpatialSelection(
-            this.dataLoader.getAllData(),
-            appState.get('spatialSelection'),
-            (transaction) => ({ latitude: transaction.latitude, longitude: transaction.longitude })
-        );
     }
 
     isSelectionActive(): boolean {

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StateStore } from './AppState';
 import type { HDBTransaction } from '../data/DataLoader';
+import { circleSelection, rectangleSelection } from '../spatial/selection';
+import { MAP_METRIC_IDS } from '../metrics';
 
 describe('StateStore', () => {
     let store: StateStore;
@@ -98,29 +100,104 @@ describe('StateStore', () => {
         expect(state).toHaveProperty('spatialSelection');
     });
 
-    it('derives selected transactions from the authoritative geometry', () => {
+    it.each(['circle', 'rectangle'] as const)('publishes coherent %s creation, resize, empty selection and clear', (shape) => {
         const inside = { latitude: 1.3, longitude: 103.8 } as HDBTransaction;
-        const outside = { latitude: 1.5, longitude: 104 } as HDBTransaction;
-        store.set('filteredTransactions', [inside, outside]);
-        store.setSpatialSelection({ kind: 'rectangle', south: 1.29, west: 103.79, north: 1.31, east: 103.81 });
-        expect(store.get('selectedTransactions')).toEqual([inside]);
+        const nearby = { latitude: 1.305, longitude: 103.8 } as HDBTransaction;
+        store.set('filteredTransactions', [inside, nearby]);
+        const small = shape === 'circle' ? circleSelection(1.3, 103.8, 100)
+            : rectangleSelection(1.299, 103.799, 1.301, 103.801);
+        const large = shape === 'circle' ? circleSelection(1.3, 103.8, 1000)
+            : rectangleSelection(1.29, 103.79, 1.31, 103.81);
+        const empty = shape === 'circle' ? circleSelection(1.4, 103.9, 100)
+            : rectangleSelection(1.39, 103.89, 1.41, 103.91);
+        const observations: ReturnType<StateStore['getAll']>[] = [];
+        store.subscribe('spatialSelection', (geometry) => {
+            expect(store.get('spatialSelection')).toBe(geometry);
+            observations.push(store.getAll());
+        });
+        store.subscribe('selectedTransactions', (rows) => {
+            expect(store.get('selectedTransactions')).toBe(rows);
+            observations.push(store.getAll());
+        });
+        // Both public setters must provide the same listener-visible contract.
+        store.setSpatialSelection(small);
+        store.set('spatialSelection', large);
+        store.setSpatialSelection(empty);
+        store.clearSpatialSelection();
+        expect(observations.map(({ spatialSelection, selectedTransactions }) => ({ spatialSelection, selectedTransactions })))
+            .toEqual([
+                ...Array(2).fill({ spatialSelection: small, selectedTransactions: [inside] }),
+                ...Array(2).fill({ spatialSelection: large, selectedTransactions: [inside, nearby] }),
+                ...Array(2).fill({ spatialSelection: empty, selectedTransactions: [] }),
+                ...Array(2).fill({ spatialSelection: { kind: 'none' }, selectedTransactions: null }),
+            ]);
     });
 
-    it('preserves geometry for metric and rental flat-type changes', () => {
-        const selection = { kind: 'circle', center: { latitude: 1.3, longitude: 103.8 }, radiusMeters: 500 } as const;
+    it.each(['circle', 'rectangle'] as const)('preserves %s geometry and rows during repeated comparison-mode changes', (shape) => {
+        const selection = shape === 'circle' ? circleSelection(1.3, 103.8, 500)
+            : rectangleSelection(1.29, 103.79, 1.31, 103.81);
+        const inside = { latitude: 1.3, longitude: 103.8 } as HDBTransaction;
+        store.set('filteredTransactions', [inside]);
         store.setSpatialSelection(selection);
-        store.set('colorMode', 'rent');
-        store.set('rentalActiveFlatType', '4 ROOM');
-        expect(store.get('spatialSelection')).toEqual(selection);
+        const selected = store.get('selectedTransactions');
+        const assertPreserved = () => {
+            expect(store.get('spatialSelection')).toBe(selection);
+            expect(store.get('selectedTransactions')).toBe(selected);
+        };
+        store.subscribe('colorMode', assertPreserved);
+        store.subscribe('rentalActiveFlatType', assertPreserved);
+        store.subscribe('selectionMode', assertPreserved);
+        store.subscribe('colorScale', assertPreserved);
+        for (const mode of [...MAP_METRIC_IDS, ...MAP_METRIC_IDS].reverse()) {
+            store.set('colorMode', mode);
+            store.set('rentalActiveFlatType', '4 ROOM');
+            store.set('rentalActiveFlatType', '5 ROOM');
+            store.set('selectionMode', 'rect');
+            store.set('selectionMode', 'radial');
+            store.set('colorScale', 'turbo');
+            store.set('colorScale', 'viridis');
+        }
+        assertPreserved();
     });
 
-    it('clears geometry and derived rows when global filters change', () => {
+    it('clears geometry and rows before filter listeners and nested flat-type listeners run', () => {
         const inside = { latitude: 1.3, longitude: 103.8 } as HDBTransaction;
         store.set('filteredTransactions', [inside]);
         store.setSpatialSelection({ kind: 'circle', center: { latitude: 1.3, longitude: 103.8 }, radiusMeters: 500 });
         expect(store.get('selectedTransactions')).toEqual([inside]);
+        const observations: ReturnType<StateStore['getAll']>[] = [];
+        store.subscribe('globalFilters', () => {
+            observations.push(store.getAll());
+            // Matches the rental controller selecting a type inside a filter listener.
+            store.set('rentalActiveFlatType', '5 ROOM');
+        });
+        for (const key of ['rentalActiveFlatType', 'spatialSelection', 'selectedTransactions'] as const) {
+            store.subscribe(key, () => observations.push(store.getAll()));
+        }
         store.set('globalFilters', { ...store.get('globalFilters'), floorMin: 5 });
-        expect(store.get('spatialSelection')).toEqual({ kind: 'none' });
-        expect(store.get('selectedTransactions')).toBeNull();
+        expect(observations).toHaveLength(4);
+        for (const observed of observations) {
+            expect(observed.globalFilters.floorMin).toBe(5);
+            expect(observed.spatialSelection).toEqual({ kind: 'none' });
+            expect(observed.selectedTransactions).toBeNull();
+        }
+    });
+
+    it('rederives rows before publishing a replacement filtered population', () => {
+        const previous = { latitude: 1.3, longitude: 103.8 } as HDBTransaction;
+        const replacement = { latitude: 1.3001, longitude: 103.8 } as HDBTransaction;
+        store.set('filteredTransactions', [previous]);
+        const selection = circleSelection(1.3, 103.8, 500);
+        store.setSpatialSelection(selection);
+        const observations: ReturnType<StateStore['getAll']>[] = [];
+        store.subscribe('filteredTransactions', () => observations.push(store.getAll()));
+        store.subscribe('selectedTransactions', () => observations.push(store.getAll()));
+        store.set('filteredTransactions', [replacement]);
+        expect(observations).toHaveLength(2);
+        for (const observed of observations) {
+            expect(observed.filteredTransactions).toEqual([replacement]);
+            expect(observed.selectedTransactions).toEqual([replacement]);
+            expect(observed.spatialSelection).toBe(selection);
+        }
     });
 });

@@ -2,7 +2,7 @@
  * FiltersCard - Handles global filters for date range, flat types, and lease
  */
 
-import type { DataLoader, HDBTransaction } from '../data/DataLoader';
+import type { DataLoader } from '../data/DataLoader';
 import type { MapView } from '../map/MapView';
 import { appState } from '../state/AppState';
 import { applyFilters, type GlobalFilters } from '../utils/filters';
@@ -75,7 +75,7 @@ export class FiltersCard {
         `;
     }
 
-    bindEvents(onFiltersApplied: (filtered: HDBTransaction[]) => void): void {
+    bindEvents(): void {
 
         // Toggle Filter Section
         const toggle = document.getElementById('filters-toggle');
@@ -90,7 +90,7 @@ export class FiltersCard {
         // Apply Filters
         const applyBtn = document.getElementById('apply-filters-btn');
         applyBtn?.addEventListener('click', () => {
-            void this.applyGlobalFilters(onFiltersApplied);
+            void this.applyGlobalFilters();
         });
 
         // Startup already loaded and applied these filters before rendering the panel.
@@ -118,7 +118,7 @@ export class FiltersCard {
         } catch (_) { /* localStorage unavailable or invalid */ }
     }
 
-    private async applyGlobalFilters(onFiltersApplied: (filtered: HDBTransaction[]) => void): Promise<void> {
+    private async applyGlobalFilters(): Promise<void> {
         // 1. Gather Filter Values
         const dateInput = document.getElementById('filter-date') as HTMLInputElement;
         const flatTypeInputs = document.querySelectorAll('#filter-flat-type input:checked');
@@ -148,7 +148,6 @@ export class FiltersCard {
             appState.set('allTransactions', allData);
             appState.set('globalFilters', filters);
             this.mapView.setFilteredData(filtered);
-            onFiltersApplied(filtered);
             try { localStorage.setItem('hdb_globalFilters', JSON.stringify(filters)); } catch { /* unavailable */ }
             if (status) status.textContent = filtered.length === 0 ? 'No transactions match these filters.' : '';
         } catch (error) {
