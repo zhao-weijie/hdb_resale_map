@@ -1,7 +1,72 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { buildRentalScalePresentation, rentalWindowFromStart, sanitizeScenario, scenarioFormMarkup } from './RentalController';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RentalController, buildRentalScalePresentation, rentalWindowFromStart, sanitizeScenario, scenarioFormMarkup } from './RentalController';
 import { circleSelection } from '../spatial/selection';
+import { appState } from '../state/AppState';
+import type { HDBTransaction } from '../data/DataLoader';
+import type { RentalMapPoint } from '../map/MapView';
+import { createRentalEstimationContext, estimateRentForTarget } from './model';
+
+describe('resale history in rental details', () => {
+    const originalFilters = appState.get('globalFilters');
+    afterEach(() => {
+        appState.set('globalFilters', originalFilters);
+        vi.unstubAllGlobals();
+    });
+
+    it('widens and narrows the displayed history independently of the rental window', () => {
+        const target = { block: '123', streetName: 'TEST ROAD', flatType: '4 ROOM' };
+        const transaction = (month: string, overrides: Partial<HDBTransaction> = {}): HDBTransaction => ({
+            month, transaction_date: new Date(`${month}-15`), block: target.block, street_name: target.streetName,
+            flat_type: '4 ROOM', town: 'TOWN', storey_range: '07 TO 09', floor_area_sqm: 90,
+            flat_model: 'Improved', lease_commence_date: 1990, remaining_lease_years: 70,
+            resale_price: 500000, price_psm: 5555, price_psf: 516, latitude: 1.3, longitude: 103.8,
+            mrt_distance_m: 500, ...overrides,
+        });
+        const records = [transaction('2023-02'), transaction('2025-06'), transaction('2026-09'),
+            transaction('2024-03', { flat_type: '5 ROOM' }),
+            transaction('2024-04', { storey_range: '01 TO 03' }),
+            transaction('2024-05', { remaining_lease_years: 30 })];
+        const context = createRentalEstimationContext({ rentalRecords: [], resaleComparables: records,
+            analysisWindow: { minMonth: '2025-01', maxMonth: '2026-08' } });
+        const estimate = estimateRentForTarget(context, target);
+        const point: RentalMapPoint = { ...target, latitude: 1.3, longitude: 103.8,
+            rent: null, rentPsf: null, grossYield: null, monthlySurplus: null };
+        const tableHost = { innerHTML: '', querySelector: () => null };
+        const body = { innerHTML: '', addEventListener: () => {} };
+        const modal = { querySelector: (selector: string) => selector === '.rental-resale-table' ? tableHost : body };
+        vi.stubGlobal('window', {});
+        vi.stubGlobal('document', { createElement: () => ({ textContent: '', get innerHTML() { return this.textContent; } }) });
+        const getTransactionsForBlock = vi.fn(() => records);
+        // Exercise the actual detail renderer with only its DOM shell stubbed.
+        const controller = Object.assign(Object.create(RentalController.prototype), {
+            dataLoader: { getTransactionsForBlock }, rows: [{ point, target, estimate, scenario: null }],
+            estimationContext: context, overrides: new Map(), modal: () => modal, bindObservationTooltips: () => {},
+        }) as { openDetails(point: RentalMapPoint): void };
+        const filters = { date: '2025-01', flatTypes: ['4 ROOM'], leaseMin: 60, leaseMax: 99, floorMin: 7 };
+        appState.set('globalFilters', filters);
+        controller.openDetails(point);
+        expect(tableHost.innerHTML).not.toContain('Feb 23');
+        expect(tableHost.innerHTML).toContain('Sept 26');
+
+        appState.set('globalFilters', { ...filters, date: '2023-01' });
+        controller.openDetails(point);
+        expect(getTransactionsForBlock).toHaveBeenCalledWith('123', 'TEST ROAD');
+        expect(tableHost.innerHTML).toContain('Feb 23');
+        expect(tableHost.innerHTML).toContain('Jun 25');
+        expect(tableHost.innerHTML).toContain('Sept 26');
+        expect(tableHost.innerHTML).not.toContain('Mar 24');
+        expect(tableHost.innerHTML).not.toContain('Apr 24');
+        expect(tableHost.innerHTML).not.toContain('May 24');
+        expect(tableHost.innerHTML.indexOf('Sept 26')).toBeLessThan(tableHost.innerHTML.indexOf('Feb 23'));
+        expect(context.analysisWindow).toEqual({ minMonth: '2025-01', maxMonth: '2026-08' });
+        expect(estimate.resale.records).toHaveLength(1);
+
+        appState.set('globalFilters', filters);
+        controller.openDetails(point);
+        expect(tableHost.innerHTML).not.toContain('Feb 23');
+    });
+});
 
 describe('rental evidence month UI', () => {
     it('uses one start month through the latest month shared by both datasets', () => {

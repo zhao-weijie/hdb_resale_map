@@ -1,11 +1,11 @@
-import type { DataLoader, HDBTransaction } from '../data/DataLoader';
+import type { DataLoader } from '../data/DataLoader';
 import { RentalDataLoader } from '../data/RentalDataLoader';
 import type { ColorScaleBar } from '../components/ColorScaleBar';
 import type { MapView, RentalMapPoint } from '../map/MapView';
 import { appState } from '../state/AppState';
 import { applyFilters } from '../utils/filters';
 import {
-    blockKey, buildRentalMapTargets, calculateScenario, createRentalEstimationContext, estimateRentForTarget, getBlockResaleEvidence, getMapRentalMetric,
+    blockKey, buildRentalMapTargets, calculateScenario, createRentalEstimationContext, estimateRentForTarget, getMapRentalMetric,
     normalizeFlatType, singaporeToday,
     type RentalEstimate, type RentalScenario, type RentalEstimationContext,
 } from './model';
@@ -323,8 +323,11 @@ export class RentalController {
           </div>`;
         // @ts-ignore - lucide is installed globally by icons.ts at app startup.
         if (window.lucide) window.lucide.createIcons();
-        const resaleRecords = this.estimationContext ? [...getBlockResaleEvidence(this.estimationContext,
-            { block: point.block, streetName: point.streetName }, appState.get('globalFilters').flatTypes)] as HDBTransaction[] : [];
+        // Transaction history follows the resale filters, independently of the rental estimate window.
+        const resaleRecords = applyFilters(
+            this.dataLoader.getTransactionsForBlock(point.block, point.streetName),
+            appState.get('globalFilters'),
+        );
         resaleRecords.sort((a, b) => b.month.localeCompare(a.month));
         const tableHost = modal.querySelector<HTMLElement>('.rental-resale-table')!;
         const table = new TransactionTable(resaleRecords, { pageSize: 5, activeFlatType: active.point.flatType });
