@@ -87,8 +87,15 @@ export class AnalyticsPanel {
     render(): void {
         this.container.innerHTML = `
       <div class="resize-handle" title="Drag to resize"></div>
+
+      <!-- Keep the toggle outside the scrolling panel content. -->
+      <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Analytics Panel" aria-expanded="true" aria-controls="analytics-panel-content">
+          <span class="mobile-panel-title">Analytics</span>
+          <span class="panel-toggle-chevron" aria-hidden="true"><i data-lucide="chevron-left"></i></span>
+          <span class="mobile-panel-count" id="mobile-record-count"></span>
+      </button>
       
-      <div class="panel-content">
+      <div id="analytics-panel-content" class="panel-content">
         <!-- Header -->
         <div class="analytics-header">
             <h2><i data-lucide="bar-chart-2"></i> Analytics <span style="font-size: 14px; font-weight: normal; color: var(--color-text-muted); margin-left: auto;" id="record-count"></span></h2>
@@ -109,13 +116,8 @@ export class AnalyticsPanel {
         <div class="card" style="flex: 1; display: flex; flex-direction: column;">
             ${this.overviewTab.render()}
         </div>
-
-        <!-- Panel Toggle (Absolute) -->
-        <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Panel">
-            <i data-lucide="chevron-left"></i>
-        </button>
-
       </div>
+
     `;
 
         // Initialize Lucide Icons
@@ -159,7 +161,8 @@ export class AnalyticsPanel {
         // Panel Toggle
         const toggleBtn = document.getElementById('panel-toggle');
         toggleBtn?.addEventListener('click', () => {
-            this.container.classList.toggle('collapsed');
+            const collapsed = this.container.classList.toggle('collapsed');
+            toggleBtn.setAttribute('aria-expanded', String(!collapsed));
         });
 
         // Bind component events
@@ -204,8 +207,10 @@ export class AnalyticsPanel {
     }
 
     private updateRecordCount(count: number): void {
-        const countSpan = document.getElementById('record-count');
-        if (countSpan) countSpan.textContent = `(${count.toLocaleString()} records)`;
+        for (const id of ['record-count', 'mobile-record-count']) {
+            const countSpan = document.getElementById(id);
+            if (countSpan) countSpan.textContent = `(${count.toLocaleString()} records)`;
+        }
     }
 
     private bindTooltipEvents(): void {

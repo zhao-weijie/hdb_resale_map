@@ -400,7 +400,7 @@ export class ColorScaleBar {
     private updateResponsiveLayout(): void {
         if (!this.gradientEl) return;
         const panel = document.getElementById('analytics-panel');
-        const mobile = window.innerWidth < 768;
+        const mobile = window.innerWidth <= 768;
         const panelExpanded = Boolean(mobile && panel && !panel.classList.contains('collapsed'));
         const rootStyles = getComputedStyle(document.documentElement);
         const drawerPeekHeight = Number.parseFloat(
