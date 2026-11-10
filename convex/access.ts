@@ -3,9 +3,13 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { customMutation, customQuery } from "convex-helpers/server/customFunctions";
+import { defineRateLimits } from "convex-helpers/server/rateLimit";
 import { mutation, query } from "./_generated/server";
 
 type ReadCtx = Pick<QueryCtx, "auth" | "db">;
+const { rateLimit } = defineRateLimits({
+  trackerWrite: { kind: "token bucket", rate: 120, period: 60_000 },
+});
 
 export async function requireIdentity(ctx: Pick<QueryCtx, "auth">) {
   const identity = await ctx.auth.getUserIdentity();
@@ -71,5 +75,14 @@ export const signedInQuery = customQuery(query, {
 
 export const signedInMutation = customMutation(mutation, {
   args: {},
-  input: async ctx => ({ ctx: { identity: await requireIdentity(ctx) }, args: {} }),
+  input: async ctx => {
+    const { identity, tokenIdentifier } = await stableIdentity(ctx);
+    const limit = await rateLimit(ctx, { name: "trackerWrite", key: tokenIdentifier });
+    if (!limit.ok) {
+      throw new ConvexError({
+        code: "rate_limited", message: "Too many tracker changes. Wait a moment and try again.", retryAt: limit.retryAt,
+      });
+    }
+    return { ctx: { identity }, args: {} };
+  },
 });

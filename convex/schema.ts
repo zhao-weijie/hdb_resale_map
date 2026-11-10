@@ -1,6 +1,7 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { rateLimitTables } from "convex-helpers/server/rateLimit";
 import { backupTables } from "./backupSchema";
 import {
   activeState, buyerFacts, candidateSummary, changedField, collectionState, comparisonContext,
@@ -15,6 +16,7 @@ const mutable = { revision: v.number(), updatedAt: v.number() };
 
 export default defineSchema({
   ...authTables,
+  ...rateLimitTables,
   ...backupTables,
   trackerUsers: defineTable({
     tokenIdentifier: v.string(), displayName: v.optional(v.string()), createdAt: v.number(), updatedAt: v.number(),

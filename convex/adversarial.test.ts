@@ -1,6 +1,6 @@
 import type { ConvexClient } from 'convex/browser';
 import { convexTest } from 'convex-test';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { applyBackup, backupFileHash, exportBackup, inspectBackup } from '../src/listings/backupFiles';
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
@@ -20,6 +20,26 @@ function fixture() {
         other: app.withIdentity({ issuer, subject: 'other|session' }),
     };
 }
+
+test('tracker write limits are shared across sessions but isolated between owners', async () => {
+    const { app, buyer, other } = fixture();
+    const time = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+    try {
+        const operation = { operationId: id() };
+        const collectionId = await buyer.mutation(api.tracker.createCollection, operation);
+        for (let count = 1; count < 120; count++) {
+            await buyer.mutation(api.tracker.createCollection, operation);
+        }
+        const otherSession = app.withIdentity({ issuer, subject: 'buyer|second-session' });
+        await expect(otherSession.mutation(api.tracker.createCollection, operation)).rejects.toThrow('Too many tracker changes');
+        await expect(other.mutation(api.tracker.createCollection, operation)).resolves.not.toBe(collectionId);
+
+        time.mockReturnValue(Date.now() + 1_000);
+        await expect(otherSession.mutation(api.tracker.createCollection, operation)).resolves.toBe(collectionId);
+    } finally {
+        time.mockRestore();
+    }
+});
 
 function row(rowNumber: number, source: ImportSource): ImportRow {
     return { rowNumber, rowKey: id(), logicalRowKey: id(), source };
