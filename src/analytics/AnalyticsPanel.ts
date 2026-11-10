@@ -424,9 +424,25 @@ export class AnalyticsPanel {
         if (!this.popupMeta) return;
         const table = new TransactionTable(this.popupTransactions, { pageSize: 5 });
         const { title, subtitle } = this.popupMeta;
-        const html = `<div class="popover-header"><div class="popover-title">${title}</div>${subtitle ? `<div class="popover-subtitle">${subtitle}</div>` : ''}</div><div class="popover-body">${table.markup()}</div>`;
-        this.mapView.showPopup(this.popupMeta.lat, this.popupMeta.lng, html);
-        requestAnimationFrame(() => table.mount(document.body));
+        const popup = document.createElement('div');
+        const header = document.createElement('div');
+        header.className = 'popover-header';
+        const heading = document.createElement('div');
+        heading.className = 'popover-title';
+        heading.textContent = title;
+        header.append(heading);
+        if (subtitle) {
+            const summary = document.createElement('div');
+            summary.className = 'popover-subtitle';
+            summary.textContent = subtitle;
+            header.append(summary);
+        }
+        const body = document.createElement('div');
+        body.className = 'popover-body';
+        body.innerHTML = table.markup();
+        popup.append(header, body);
+        this.mapView.showPopup(this.popupMeta.lat, this.popupMeta.lng, popup);
+        table.mount(body);
     }
 
     private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {

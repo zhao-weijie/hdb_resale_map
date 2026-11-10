@@ -7,6 +7,7 @@ import maplibregl from 'maplibre-gl';
 import { appState } from '../state/AppState';
 import { buildColorLookup, type ColorScale } from '../components/ColorScaleBar';
 import { circleSelection, rectangleSelection, type SpatialSelection } from '../spatial/selection';
+import { createMopPopup } from './mopPopup';
 import {
     calculateMetricDomain,
     getMetricDefinition,
@@ -91,10 +92,19 @@ export class MapView {
             ]
         });
 
-        // Add attribution manually since OneMap style might miss it
-        this.map.addControl(new maplibregl.AttributionControl({
-            customAttribution: 'Map data © <a href="https://www.onemap.gov.sg/" target="_blank">OneMap</a>'
-        }), 'bottom-left');
+        // Keep the OneMap credit independent of attribution HTML in the remote style.
+        const attribution = document.createElement('div');
+        attribution.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+        const credit = document.createElement('a');
+        credit.href = 'https://www.onemap.gov.sg/';
+        credit.target = '_blank';
+        credit.rel = 'noopener noreferrer';
+        credit.textContent = 'OneMap';
+        attribution.append('Map data © ', credit);
+        this.map.addControl({
+            onAdd: () => attribution,
+            onRemove: () => attribution.remove(),
+        }, 'bottom-left');
 
         // Custom click handler for closing popups
         this.map.on('click', () => {
@@ -463,27 +473,8 @@ export class MapView {
                     lineWidthMinPixels: 1,
                     onClick: (info: any) => {
                         if (info && info.object) {
-                            const props = info.object.properties;
-                            const html = `
-                                <div style="padding: 10px; min-width: 220px;">
-                                    <h3 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">${props.PROJECT_NAME}</h3>
-                                    <div style="margin-bottom: 8px; font-size: 12px; color: #666;">
-                                        ${props.BTO_NAME_SCRAPED ? `<span style="color: #059669;">✓ Verified: ${props.BTO_NAME_SCRAPED}</span>` : '<span style="color: #d97706;">⚠ Unverified Source</span>'}
-                                    </div>
-                                    
-                                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin-bottom: 12px;">
-                                        <strong>Type:</strong> <div>${props.PROJECT_TYPE || 'Unknown'}</div>
-                                        <strong>Units:</strong> <div>${props.TOTAL_UNITS || 'N/A'}</div>
-                                        <strong>MOP Expiry:</strong> <div>${props.MOP_EXPIRY_Q}</div>
-                                        <div style="grid-column: 2; font-size: 11px; color: #888;">${props.MOP_EXPIRY_DATE}</div>
-                                    </div>
-
-                                    <div style="border-top: 1px solid #eee; padding-top: 8px;">
-                                        ${props.BROCHURE_LINK ? `<a href="${props.BROCHURE_LINK}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500;">View Brochure →</a>` : '<span style="color: #999; font-style: italic;">No Brochure</span>'}
-                                    </div>
-                                </div>
-                            `;
-                            this.showPopup(info.coordinate[1], info.coordinate[0], html);
+                            const content = createMopPopup(info.object.properties ?? {});
+                            this.showPopup(info.coordinate[1], info.coordinate[0], content);
                             return true;
                         }
                     }
@@ -644,7 +635,7 @@ export class MapView {
 
     private activePopup: maplibregl.Popup | null = null;
 
-    showPopup(lat: number, lng: number, htmlContent: string): void {
+    showPopup(lat: number, lng: number, content: HTMLElement): void {
         console.log('MapView.showPopup called:', lat, lng);
         if (!this.map) {
             console.warn('MapView.showPopup: Map not initialized');
@@ -663,7 +654,7 @@ export class MapView {
             className: 'hdb-popup'
         })
             .setLngLat([lng, lat])
-            .setHTML(htmlContent)
+            .setDOMContent(content)
             .addTo(this.map);
 
         this.lastPopupTime = Date.now();
