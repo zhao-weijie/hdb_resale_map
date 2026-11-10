@@ -1,13 +1,122 @@
 import type { ConvexClient } from 'convex/browser';
+import { getDocumentSize } from 'convex/values';
 import { convexTest } from 'convex-test';
 import { expect, test, vi } from 'vitest';
 import { applyBackup, backupFileHash, discardBackup, exportBackup, exportCsv, inspectBackup } from '../src/listings/backupFiles';
 import { readTrackerFile } from '../src/listings/imports';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
+import { restoreIdleMs } from './backupSchema';
 import schema from './schema';
+import { defaultTrackerView, limits } from './trackerModel';
 
 const modules = import.meta.glob(['./**/*.ts', '!./**/*.test.ts']);
 const id = () => crypto.randomUUID();
+
+function restoreFixture() {
+    const app = convexTest(schema, modules);
+    const owner = app.withIdentity({ subject: 'buyer|session', issuer: 'https://tracker.test' });
+    const other = app.withIdentity({ subject: 'other|session', issuer: 'https://tracker.test' });
+    const now = Date.now();
+    const request = {
+        restoreKey: id(), fileHash: 'a'.repeat(64), expectedCount: 2,
+        header: { name: 'Backup', trackerView: defaultTrackerView, collectionPublicId: id(), contentRevision: 0, createdAt: now, exportedAt: now },
+    };
+    return { app, owner, other, request };
+}
+
+test('restore staging rejects oversized declarations and non-JSON values and counts new bytes exactly once', async () => {
+    const { app, owner, request } = restoreFixture();
+    await expect(owner.mutation(api.backups.beginRestore, { ...request, expectedCount: 50_001 })).rejects.toThrow(/50,000-record/);
+    const { collectionId } = await owner.mutation(api.backups.beginRestore, request);
+    const first = { table: 'candidates' as const, payload: { publicId: id(), customValues: [] } };
+    const second = { table: 'candidates' as const, payload: { publicId: id(), customValues: [] } };
+    await expect(owner.mutation(api.backups.uploadPage, {
+        collectionId, offset: 0, rows: [{ ...first, payload: { ...first.payload, bytes: new ArrayBuffer(32) } }],
+    })).rejects.toThrow(/only JSON values/);
+    await expect(owner.mutation(api.backups.uploadPage, {
+        collectionId, offset: 0, rows: [{ ...first, payload: { ...first.payload, oversized: 'x'.repeat(1024 * 1024) } }],
+    })).rejects.toThrow(/One backup record exceeds/);
+
+    const upload = { collectionId, offset: 0, rows: [first] };
+    expect((await owner.mutation(api.backups.uploadPage, upload)).receivedCount).toBe(1);
+    const nearLimit = 64 * 1024 * 1024 - 1;
+    await app.run(async ctx => {
+        const session = await ctx.db.query('backupRestores').withIndex('by_collectionId', q => q.eq('collectionId', collectionId)).unique();
+        const row = await ctx.db.query('backupRestoreItems').withIndex('by_collectionId_and_ordinal', q => q.eq('collectionId', collectionId)).first();
+        expect(session?.receivedBytes).toBe(getDocumentSize(row!));
+        await ctx.db.patch(session!._id, { receivedBytes: nearLimit });
+    });
+    expect((await owner.mutation(api.backups.uploadPage, upload)).receivedCount).toBe(1);
+    await expect(owner.mutation(api.backups.uploadPage, { ...upload, rows: [first, second] })).rejects.toThrow(/64 MiB restore limit/);
+    await app.run(async ctx => {
+        const session = await ctx.db.query('backupRestores').withIndex('by_collectionId', q => q.eq('collectionId', collectionId)).unique();
+        expect(session).toMatchObject({ receivedCount: 1, receivedBytes: nearLimit });
+        expect(await ctx.db.query('backupRestoreItems').withIndex('by_collectionId_and_ordinal', q => q.eq('collectionId', collectionId).eq('ordinal', 1)).first()).toBeNull();
+        await ctx.db.patch(session!._id, { receivedBytes: undefined });
+    });
+    expect((await owner.mutation(api.backups.uploadPage, { ...upload, rows: [first, second] })).receivedCount).toBe(2);
+    await app.run(async ctx => {
+        const session = await ctx.db.query('backupRestores').withIndex('by_collectionId', q => q.eq('collectionId', collectionId)).unique();
+        const staged = await ctx.db.query('backupRestoreItems').withIndex('by_collectionId_and_ordinal', q => q.eq('collectionId', collectionId)).take(2);
+        expect(session?.receivedBytes).toBe(staged.reduce((sum, row) => sum + getDocumentSize(row), 0));
+    });
+});
+
+test('abandoned restores expire without allowing upload replay or early replacement during cleanup', async () => {
+    vi.useFakeTimers();
+    try {
+        const { app, owner, other, request } = restoreFixture();
+        const expired = await owner.mutation(api.backups.beginRestore, { ...request, expectedCount: 20 });
+        const rows = Array.from({ length: 16 }, () => ({ table: 'candidates' as const, payload: { publicId: id(), customValues: [] } }));
+        const upload = { collectionId: expired.collectionId, offset: 0, rows };
+        await owner.mutation(api.backups.uploadPage, upload);
+        vi.setSystemTime(Date.now() + restoreIdleMs - 1);
+        await owner.mutation(api.backups.uploadPage, upload);
+        const recent = await other.mutation(api.backups.beginRestore, request);
+        vi.setSystemTime(Date.now() + 1);
+        await expect(owner.mutation(api.backups.uploadPage, upload)).rejects.toThrow(/restore expired/);
+        await app.mutation(internal.lifecycle.expireRestores, {});
+        expect(await owner.query(api.backups.pendingRestore, {})).toBeNull();
+        await expect(owner.mutation(api.backups.beginRestore, { ...request, restoreKey: id() })).rejects.toThrow(/cleanup to finish/);
+        await app.finishAllScheduledFunctions(() => vi.runAllTimers());
+        await app.run(async ctx => {
+            expect(await ctx.db.get(expired.collectionId)).toBeNull();
+            expect(await ctx.db.query('backupRestoreItems').withIndex('by_collectionId_and_ordinal', q => q.eq('collectionId', expired.collectionId)).first()).toBeNull();
+        });
+        expect(await other.query(api.backups.pendingRestore, {})).toMatchObject({ collectionId: recent.collectionId });
+        expect(await owner.mutation(api.backups.beginRestore, request)).toMatchObject({ state: 'uploading' });
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+test('restoring and deleting collections hold account slots until activation or cleanup', async () => {
+    vi.useFakeTimers();
+    try {
+        const { app, owner, request } = restoreFixture();
+        const activeId = await owner.mutation(api.tracker.createCollection, {});
+        await app.run(async ctx => {
+            const { _id, _creationTime, ...collection } = (await ctx.db.get(activeId))!;
+            for (let index = 0; index < limits.collections - 2; index++) {
+                await ctx.db.insert('collections', { ...collection, publicId: id() });
+            }
+        });
+        const { collectionId } = await owner.mutation(api.backups.beginRestore, { ...request, expectedCount: 0 });
+        await expect(owner.mutation(api.tracker.createCollection, {})).rejects.toThrow(/collection limit/);
+        await owner.mutation(api.lifecycle.deleteCollection, { collectionId: activeId, confirmation: 'delete', expectedRevision: 1 });
+        await expect(owner.mutation(api.tracker.createCollection, {})).rejects.toThrow(/collection limit/);
+        await app.finishAllScheduledFunctions(() => vi.runAllTimers());
+        await owner.mutation(api.tracker.createCollection, {});
+        let result;
+        for (let step = 0; step < 30 && result?.state !== 'complete'; step++) {
+            result = await owner.mutation(api.backups.advanceRestore, { collectionId });
+        }
+        expect(result?.state).toBe('complete');
+        expect(await owner.query(api.tracker.listCollections, {})).toHaveLength(limits.collections);
+    } finally {
+        vi.useRealTimers();
+    }
+});
 
 test('portable backup restores private data and more than 1,000 history records into a new owned collection', async () => {
     const app = convexTest(schema, modules);

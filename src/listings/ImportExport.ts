@@ -768,6 +768,7 @@ export function mountImportExport(host: HTMLElement, client: ConvexClient, initi
         csv.disabled = busy || !csvColumns.size;
         host.append(columns, group(csv), element('h3', 'Private JSON backup'));
         host.append(element('p', 'Includes your progress, shortlist, notes, contacts, custom fields, source observations and change history. Restore it into a separate private collection.', 'tracker-muted'));
+        host.append(element('p', 'Restores accept up to 50,000 records and 64 MiB of staged data. Larger exports can still be downloaded.', 'tracker-muted'));
         const json = action('Download private backup', () => { void download('json'); });
         json.disabled = busy;
         host.append(group(json));

@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { backupTableNames } from "./backupSchema";
 import schema from "./schema";
 import type { ImportSource } from "./trackerTypes";
@@ -64,6 +64,14 @@ test("candidate deletion hides private data immediately and purges multiple batc
     await expect(other.mutation(api.lifecycle.deleteCandidate, deletion)).rejects.toThrow();
     await expect(buyer.mutation(api.lifecycle.deleteCandidate, { ...deletion, expectedRevision: detail.candidate.revision })).rejects.toThrow();
     await buyer.mutation(api.lifecycle.deleteCandidate, deletion);
+    const jobId = await app.run(async ctx => (await ctx.db.get(target.candidateId))?.purgeJobId);
+    expect(jobId).toBeDefined();
+    await buyer.mutation(api.lifecycle.deleteCandidate, deletion);
+    await app.mutation(internal.lifecycle.purgeCandidate, target);
+    expect(await app.run(async ctx => (await ctx.db.get(target.candidateId))?.purgeJobId)).toBe(jobId);
+    await app.run(async ctx => ctx.scheduler.cancel(jobId!));
+    await buyer.mutation(api.lifecycle.deleteCandidate, deletion);
+    expect(await app.run(async ctx => (await ctx.db.get(target.candidateId))?.purgeJobId)).not.toBe(jobId);
     await expect(buyer.query(api.tracker.candidateDetail, target)).rejects.toThrow();
     const history = await buyer.query(api.tracker.collectionHistory, { collectionId: target.collectionId, paginationOpts });
     expect(history.page.some(event => event.candidateId === target.candidateId)).toBe(false);
@@ -102,13 +110,18 @@ test("collection deletion clears collection records and incomplete backup stagin
   });
   const header = await buyer.query(api.backups.exportHeader, { collectionId: home.collectionId });
   const restore = await buyer.mutation(api.backups.beginRestore, { restoreKey: crypto.randomUUID(), fileHash: "b".repeat(64), expectedCount: 1, header });
-  await buyer.mutation(api.backups.uploadPage, { collectionId: restore.collectionId, offset: 0, rows: [{ table: "candidates", payload: { publicId: crypto.randomUUID() } }] });
+  await buyer.mutation(api.backups.uploadPage, { collectionId: restore.collectionId, offset: 0, rows: [{ table: "candidates", payload: { publicId: crypto.randomUUID(), customValues: [] } }] });
 
   vi.useFakeTimers();
   try {
     const deletion = { collectionId: home.collectionId, confirmation: "delete" as const, expectedRevision: 1 };
     await expect(other.mutation(api.lifecycle.deleteCollection, deletion)).rejects.toThrow();
     await buyer.mutation(api.lifecycle.deleteCollection, deletion);
+    const jobId = await app.run(async ctx => (await ctx.db.get(home.collectionId))?.purgeJobId);
+    expect(jobId).toBeDefined();
+    await buyer.mutation(api.lifecycle.deleteCollection, deletion);
+    await app.mutation(internal.lifecycle.purgeCollection, { collectionId: home.collectionId });
+    expect(await app.run(async ctx => (await ctx.db.get(home.collectionId))?.purgeJobId)).toBe(jobId);
     await buyer.mutation(api.lifecycle.deleteCollection, { ...deletion, collectionId: restore.collectionId });
     expect(await buyer.query(api.tracker.listCollections, {})).toEqual([]);
     expect(await buyer.query(api.backups.pendingRestore, {})).toBeNull();

@@ -11,13 +11,20 @@ export const limits = { collections: 50, candidates: 1000, sources: 10, contacts
 export const emptySummary: Candidate["summary"] = { facts: {}, sourceCount: 0, availability: { reported: false, value: "unknown" }, availabilityConflict: false };
 export const defaultTrackerView: Infer<typeof trackerView> = { columnOrder: [], hiddenColumns: [], sort: { key: "createdAt", direction: "desc" } };
 
-export async function ownedCollections(ctx: ReadCtx, ownerId: Id<"trackerUsers">, state: "active" | "archived" | "restoring" | "deleting") {
+export async function ownedCollections(ctx: ReadCtx, ownerId: Id<"trackerUsers">, state: Doc<"collections">["state"]) {
   return ctx.db.query("collections").withIndex("by_ownerId_and_state", q => q.eq("ownerId", ownerId).eq("state", state)).take(limits.collections);
 }
 
+export async function checkCollectionCapacity(ctx: ReadCtx, ownerId: Id<"trackerUsers">, additional: 0 | 1 = 1) {
+  const states = ["active", "archived", "restoring", "deleting"] as const;
+  const owned = await Promise.all(states.map(state => ownedCollections(ctx, ownerId, state)));
+  if (owned.reduce((count, collections) => count + collections.length, 0) + additional > limits.collections) {
+    invalid("collection", "This account has reached its collection limit. Deleting collections still count until cleanup finishes.");
+  }
+}
+
 export async function insertCollection(ctx: MutationCtx, ownerId: Id<"trackerUsers">, name = "My home search") {
-  const visible = await Promise.all([ownedCollections(ctx, ownerId, "active"), ownedCollections(ctx, ownerId, "archived")]);
-  if (visible[0].length + visible[1].length >= limits.collections) invalid("collection", "This account has reached its collection limit.");
+  await checkCollectionCapacity(ctx, ownerId);
   const now = Date.now();
   const collectionId = await ctx.db.insert("collections", {
     publicId: newPublicId(), ownerId, name, state: "active", revision: 1, contentRevision: 0, candidateCount: 0,

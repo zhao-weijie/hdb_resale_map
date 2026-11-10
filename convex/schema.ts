@@ -24,12 +24,14 @@ export default defineSchema({
   collections: defineTable({
     ...publicId, ...mutable, ownerId: v.id("trackerUsers"), name: v.string(), state: collectionState,
     contentRevision: v.number(), candidateCount: v.number(), trackerView, schemaVersion: v.literal(1), createdAt: v.number(),
+    purgeJobId: v.optional(v.id("_scheduled_functions")),
   }).index("by_ownerId_and_state", ["ownerId", "state"]),
   candidates: defineTable({
     ...child, ...mutable, title: v.optional(v.string()), recordState, progress, shortlisted: v.boolean(),
     nextViewingAt: v.optional(v.number()), viewingTimezone: v.optional(v.string()), lastContactAt: v.optional(v.number()),
     preferredSourceListingId: v.optional(v.id("sourceListings")), buyerFacts, location, customValues: v.array(customValue),
     summary: candidateSummary, lastMeaningfulChangeAt: v.number(), createdAt: v.number(),
+    purgeJobId: v.optional(v.id("_scheduled_functions")),
   }).index("by_collectionId_and_recordState", ["collectionId", "recordState"])
     .index("by_collectionId_and_publicId", ["collectionId", "publicId"])
     .index("by_collectionId_and_postalCode", ["collectionId", "location.postalCode"])

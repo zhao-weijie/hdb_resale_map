@@ -12,6 +12,7 @@ import type * as access from "../access.js";
 import type * as auth from "../auth.js";
 import type * as backupSchema from "../backupSchema.js";
 import type * as backups from "../backups.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as imports from "../imports.js";
 import type * as lifecycle from "../lifecycle.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   backupSchema: typeof backupSchema;
   backups: typeof backups;
+  crons: typeof crons;
   http: typeof http;
   imports: typeof imports;
   lifecycle: typeof lifecycle;

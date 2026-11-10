@@ -67,6 +67,12 @@ Set `SITE_URL` to the corresponding site URL, including `/hdb_resale_map/`. Conf
 
 Run `npx convex deploy` from an authenticated terminal to release the backend. The GitHub Pages workflow uses the configured public URL at build time. The public transaction map also runs without a Convex configuration.
 
+New sign-in codes share a deployment-wide budget of 60 requests per UTC day by default. Set the optional server-side `AUTH_OTP_DAILY_SEND_LIMIT` to an integer from 1 to 1,000 to match the deployment's mail budget. The count includes admitted requests that fail to deliver. A hashed client IP bucket can request up to 15 new codes per UTC day. Calls without an IP share one bucket with the same limit. Shorter send and verification limits also apply, and repeat requests preserve a code while it is valid.
+
+IP-based limits depend on trustworthy request metadata. For a self-hosted deployment, restrict backend access to a trusted proxy that replaces forwarded IP headers. The shared deployment budget applies across source buckets. [Convex request metadata](https://docs.convex.dev/api/modules/server#requestmetadata)
+
+Signed-in tracker mutations share a per-account budget of 120 per minute with capacity for a burst of 120. A backup restore can stage up to 50,000 records and 64 MiB. The hourly cleanup expires unfinished restores after 48 hours of inactivity. Some older in-progress uploads require a restart if the server cannot reconstruct their size within a bounded read.
+
 ## Project Structure
 
 ```

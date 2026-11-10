@@ -1,15 +1,19 @@
-import { ConvexError, v } from "convex/values";
+import { ConvexError, getConvexSize, getDocumentSize, v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { backupTable, backupTableNames, restoreHeader, type BackupTable } from "./backupSchema";
+import { backupTable, backupTableNames, restoreHeader, restoreIdleMs, unfinishedRestoreStates, type BackupTable } from "./backupSchema";
 import { ensureTrackerUser, getTrackerUser, requireCollection } from "./access";
-import { limits, ownedCollections, rebuildCandidateSummary } from "./trackerModel";
+import { checkCollectionCapacity, limits, rebuildCandidateSummary } from "./trackerModel";
 import { UUID, calendarDate, canonical, canonicalizeUrl, normalizedFacts, normalizedLocation, parseLink, validateComparison, validateReferences } from "./trackerValidation";
 
 const pageSize = 10;
 const pageBytes = 2 * 1024 * 1024;
 const uploadBytes = 4 * 1024 * 1024;
 const chunkRows = 25;
+const maxRestoreRows = 50_000;
+const maxRestoreBytes = 64 * 1024 * 1024;
+const maxRecordBytes = 1024 * 1024;
+const maxLegacyRowsToMeasure = 4_000;
 const ownerRole = "collection_owner";
 const emptySummary = {
   facts: {}, sourceCount: 0, availability: { reported: false, value: "unknown" }, availabilityConflict: false,
@@ -48,6 +52,16 @@ function boundedText(value: unknown, length: number): void {
 }
 function limit(value: unknown, max: number): void {
   if (!Array.isArray(value) || value.length > max) fail("The backup contains a list that exceeds the tracker limit.");
+}
+
+function checkPortableValue(value: unknown, depth = 0): void {
+  if (depth > 24) fail("The backup contains a deeply nested record.");
+  if (value instanceof ArrayBuffer || typeof value === "bigint" || (typeof value === "number" && !Number.isFinite(value))) {
+    fail("Backup records must contain only JSON values.");
+  }
+  if (Array.isArray(value) || objectValue(value)) {
+    for (const child of Object.values(value)) checkPortableValue(child, depth + 1);
+  }
 }
 
 async function remapReferences(value: unknown, mapId: MapId, key = "", depth = 0): Promise<unknown> {
@@ -102,6 +116,7 @@ async function portableRecord(doc: BackupDoc, mapId: MapId): Promise<Payload> {
   const { _id, _creationTime, collectionId, ...rest } = doc;
   const payload: Payload = rest;
   if ("summary" in payload) delete payload.summary;
+  if ("purgeJobId" in payload) delete payload.purgeJobId;
   return await remapReferences(payload, mapId) as Payload;
 }
 
@@ -151,6 +166,30 @@ function status(restore: Doc<"backupRestores">) {
   const { collectionId, state, expectedCount, receivedCount, processedCount } = restore;
   return { collectionId, state, expectedCount, receivedCount, processedCount };
 }
+
+function checkRestoreProgress(restore: Doc<"backupRestores">) {
+  if (restore.state === "complete") return;
+  if (restore.state === "discarding") fail("This restore is being discarded.");
+  if (restore.updatedAt <= Date.now() - restoreIdleMs) fail("This restore expired after 48 hours of inactivity. Discard it and start again.");
+}
+
+function checkRestoreRowCount(expectedCount: number) {
+  if (expectedCount > maxRestoreRows) fail("The backup exceeds the 50,000-record restore limit.");
+}
+
+async function restoreReceivedBytes(ctx: MutationCtx, restore: Doc<"backupRestores">): Promise<number> {
+  if (restore.receivedBytes !== undefined) return restore.receivedBytes;
+  if (!restore.receivedCount) return 0;
+  // A pre-limit upload can resume if its accounting can be rebuilt in one bounded read.
+  if (restore.receivedCount > maxLegacyRowsToMeasure) fail("Discard this older restore and start again to apply the new restore size limit.");
+  const result = await ctx.db.query("backupRestoreItems").withIndex("by_collectionId_and_ordinal", q =>
+    q.eq("collectionId", restore.collectionId)).paginate({
+    cursor: null, numItems: maxLegacyRowsToMeasure + 1, maximumBytesRead: uploadBytes,
+  });
+  if (!result.isDone || result.page.length !== restore.receivedCount) fail("Discard this older restore and start again to apply the new restore size limit.");
+  return result.page.reduce((total, row) => total + getDocumentSize(row), 0);
+}
+
 async function getRestore(ctx: MutationCtx, collectionId: Id<"collections">) {
   const collection = await requireCollection(ctx, collectionId, ["restoring", "active", "archived"]);
   const restore = await ctx.db.query("backupRestores").withIndex("by_collectionId", q => q.eq("collectionId", collectionId)).unique();
@@ -191,19 +230,20 @@ export const beginRestore = mutation({
     if (!/^[a-f0-9]{64}$/.test(fileHash)) fail("The backup checksum is invalid.");
     limit(header.trackerView.columnOrder, 150);
     limit(header.trackerView.hiddenColumns, 150);
+    if (getConvexSize(header) > 32 * 1024) fail("The backup header exceeds the restore size limit.");
     const existing = await ctx.db.query("backupRestores")
       .withIndex("by_ownerId_and_restoreKey", q => q.eq("ownerId", owner._id).eq("restoreKey", restoreKey)).unique();
     if (existing) {
       if (existing.fileHash !== fileHash || existing.expectedCount !== expectedCount) fail("Choose the original file to resume this restore.");
       const { restore } = await getRestore(ctx, existing.collectionId);
-      if (restore.state === "discarding") fail("This restore is being discarded.");
+      checkRestoreProgress(restore);
       return status(restore);
     }
-    const pending = await ctx.db.query("collections").withIndex("by_ownerId_and_state",
-      q => q.eq("ownerId", owner._id).eq("state", "restoring")).first();
-    if (pending) fail("Resume or discard the interrupted backup restore before starting another.");
-    const owned = [...await ownedCollections(ctx, owner._id, "active"), ...await ownedCollections(ctx, owner._id, "archived")];
-    if (owned.length >= limits.collections) fail("Your account has reached its collection limit.");
+    checkRestoreRowCount(expectedCount);
+    await checkCollectionCapacity(ctx, owner._id);
+    const unfinished = await Promise.all(unfinishedRestoreStates.map(state => ctx.db.query("backupRestores")
+      .withIndex("by_ownerId_and_state", q => q.eq("ownerId", owner._id).eq("state", state)).first()));
+    if (unfinished.some(Boolean)) fail("Resume or discard the interrupted backup restore before starting another. Wait for any restore cleanup to finish.");
     // Each restore creates an independently owned collection, preserving its portable lineage.
     const now = Date.now();
     const collectionId = await ctx.db.insert("collections", {
@@ -213,7 +253,7 @@ export const beginRestore = mutation({
     });
     const restore = {
       collectionId, ownerId: owner._id, restoreKey, fileHash, header, expectedCount,
-      receivedCount: 0, processedCount: 0, state: "uploading" as const, tableIndex: 0,
+      receivedCount: 0, processedCount: 0, receivedBytes: 0, state: "uploading" as const, tableIndex: 0,
       cursor: null, createdAt: now, updatedAt: now,
     };
     await ctx.db.insert("backupRestores", restore);
@@ -226,11 +266,13 @@ export const uploadPage = mutation({
   returns: stateValidator,
   handler: async (ctx, { collectionId, offset, rows }) => {
     const { restore } = await getRestore(ctx, collectionId);
-    if (restore.state === "discarding") fail("This restore is being discarded.");
+    checkRestoreProgress(restore);
     if (restore.state !== "uploading") return status(restore);
+    checkRestoreRowCount(restore.expectedCount);
     count(offset);
-    if (!rows.length || rows.length > chunkRows || new TextEncoder().encode(JSON.stringify(rows)).length > uploadBytes) fail("Reduce the restore batch size.");
+    if (!rows.length || rows.length > chunkRows || getConvexSize(rows) > uploadBytes) fail("Reduce the restore batch size.");
     if (offset > restore.receivedCount || offset + rows.length > restore.expectedCount) fail("The restore upload is out of order.");
+    let receivedBytes = restore.receivedBytes;
     for (const [index, { table, payload }] of rows.entries()) {
       const ordinal = offset + index;
       if (ordinal < restore.receivedCount) {
@@ -242,14 +284,21 @@ export const uploadPage = mutation({
       const publicId = payload.publicId;
       assertUuid(publicId);
       if (own(payload, "_id") || own(payload, "_creationTime") || own(payload, "collectionId")) fail("The backup contains an internal record field.");
+      checkPortableValue(payload);
+      verifyRecord(table, payload);
       const existing = await ctx.db.query("backupRestoreItems").withIndex("by_collectionId_and_table_and_publicId",
         q => q.eq("collectionId", collectionId).eq("table", table).eq("publicId", publicId)).unique();
       if (existing) fail("A " + table + " record appears twice in the backup.");
-      await ctx.db.insert("backupRestoreItems", { collectionId, table, publicId, payload, ordinal });
+      const staged = { collectionId, table, publicId, payload, ordinal };
+      const bytes = getDocumentSize(staged);
+      if (bytes > maxRecordBytes) fail("One backup record exceeds the restore size limit.");
+      receivedBytes = (receivedBytes ?? await restoreReceivedBytes(ctx, restore)) + bytes;
+      if (receivedBytes > maxRestoreBytes) fail("The backup exceeds the 64 MiB restore limit.");
+      await ctx.db.insert("backupRestoreItems", staged);
     }
     const receivedCount = Math.max(restore.receivedCount, offset + rows.length);
     if (receivedCount === restore.receivedCount) return status(restore);
-    await ctx.db.patch(restore._id, { receivedCount, updatedAt: Date.now() });
+    await ctx.db.patch(restore._id, { receivedCount, receivedBytes, updatedAt: Date.now() });
     return status({ ...restore, receivedCount });
   },
 });
@@ -305,6 +354,7 @@ function shell(table: BackupTable, value: Payload): Payload {
 }
 
 function verifyRecord(table: BackupTable, payload: Payload): void {
+  if (own(payload, "purgeJobId")) fail("The backup contains an internal record field.");
   if (own(payload, "revision")) count(payload.revision, 1);
   if (table === "sourceListings") {
     if (typeof payload.url !== "string" || typeof payload.canonicalUrl !== "string") fail("A listing URL is missing.");
@@ -447,14 +497,17 @@ export const advanceRestore = mutation({
   handler: async (ctx, { collectionId }) => {
     const { restore, collection } = await getRestore(ctx, collectionId);
     if (restore.state === "complete") return status(restore);
-    if (restore.state === "discarding") fail("This restore is being discarded.");
+    checkRestoreProgress(restore);
     const update = async (patch: Partial<Doc<"backupRestores">>) => {
       await ctx.db.patch(restore._id, { ...patch, updatedAt: Date.now() });
       return status({ ...restore, ...patch });
     };
     if (restore.state === "uploading") {
       if (restore.receivedCount !== restore.expectedCount) fail("Upload every backup record before restoring.");
-      return update({ state: "inserting" });
+      checkRestoreRowCount(restore.expectedCount);
+      const receivedBytes = await restoreReceivedBytes(ctx, restore);
+      if (receivedBytes > maxRestoreBytes) fail("The backup exceeds the 64 MiB restore limit.");
+      return update({ state: "inserting", receivedBytes });
     }
     if (restore.state === "summarizing") {
       const page = await ctx.db.query("candidates").withIndex("by_collectionId_and_publicId", q => q.eq("collectionId", collectionId))
@@ -496,6 +549,7 @@ export const advanceRestore = mutation({
       if ((await ctx.db.query("customFields").withIndex("by_collectionId_and_publicId", q => q.eq("collectionId", collectionId)).take(31)).length > 30) {
         fail("The backup exceeds the collection's 30 custom columns.");
       }
+      await checkCollectionCapacity(ctx, collection.ownerId, 0);
       await ctx.db.patch(collectionId, { state: "active", candidateCount: processedCount, updatedAt: Date.now() });
       return update({ state: "complete", cursor: null, processedCount: restore.expectedCount });
     }

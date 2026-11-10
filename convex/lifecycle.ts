@@ -1,15 +1,39 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { requireCollection, signedInMutation, touchCollection } from "./access";
-import { backupTableNames } from "./backupSchema";
+import { backupTableNames, restoreIdleMs, unfinishedRestoreStates } from "./backupSchema";
 import { checkRevision, invalid } from "./trackerValidation";
 
 const collectionArgs = { collectionId: v.id("collections") };
 const candidateArgs = { ...collectionArgs, candidateId: v.id("candidates") };
 const confirmArgs = { expectedRevision: v.number(), confirmation: v.literal("delete") };
+const trackedJob = { tracked: v.optional(v.literal(true)) };
 const batchSize = 12;
+
+async function purgePending(ctx: MutationCtx, jobId: Id<"_scheduled_functions"> | undefined) {
+  const job = jobId && await ctx.db.system.get("_scheduled_functions", jobId);
+  return job?.state.kind === "pending" || job?.state.kind === "inProgress";
+}
+
+async function scheduleCandidatePurge(ctx: MutationCtx, collectionId: Id<"collections">, candidateId: Id<"candidates">): Promise<void> {
+  const purgeJobId = await ctx.scheduler.runAfter(0, internal.lifecycle.purgeCandidate, { collectionId, candidateId, tracked: true });
+  await ctx.db.patch(candidateId, { purgeJobId });
+}
+
+async function scheduleCollectionPurge(ctx: MutationCtx, collectionId: Id<"collections">): Promise<void> {
+  const purgeJobId = await ctx.scheduler.runAfter(0, internal.lifecycle.purgeCollection, { collectionId, tracked: true });
+  await ctx.db.patch(collectionId, { purgeJobId });
+}
+
+async function startCollectionPurge(ctx: MutationCtx, collection: Doc<"collections">): Promise<void> {
+  if (collection.state !== "deleting") {
+    await ctx.db.patch(collection._id, { state: "deleting", revision: collection.revision + 1 });
+    await touchCollection(ctx, collection);
+  }
+  if (!await purgePending(ctx, collection.purgeJobId)) await scheduleCollectionPurge(ctx, collection._id);
+}
 
 export const deleteCandidate = signedInMutation({
   args: { ...candidateArgs, ...confirmArgs }, returns: v.null(),
@@ -23,7 +47,7 @@ export const deleteCandidate = signedInMutation({
       await ctx.db.patch(candidateId, { recordState: "deleting", revision: candidate.revision + 1, updatedAt: Date.now() });
       await touchCollection(ctx, collection);
     }
-    await ctx.scheduler.runAfter(0, internal.lifecycle.purgeCandidate, { collectionId, candidateId });
+    if (!await purgePending(ctx, candidate.purgeJobId)) await scheduleCandidatePurge(ctx, collectionId, candidateId);
     return null;
   },
 });
@@ -32,12 +56,8 @@ export const deleteCollection = signedInMutation({
   args: { ...collectionArgs, ...confirmArgs }, returns: v.null(),
   handler: async (ctx, { collectionId, expectedRevision }) => {
     const collection = await requireCollection(ctx, collectionId, ["active", "archived", "restoring", "deleting"]);
-    if (collection.state !== "deleting") {
-      checkRevision(expectedRevision, collection.revision);
-      await ctx.db.patch(collectionId, { state: "deleting", revision: collection.revision + 1 });
-      await touchCollection(ctx, collection);
-    }
-    await ctx.scheduler.runAfter(0, internal.lifecycle.purgeCollection, { collectionId });
+    if (collection.state !== "deleting") checkRevision(expectedRevision, collection.revision);
+    await startCollectionPurge(ctx, collection);
     return null;
   },
 });
@@ -79,18 +99,20 @@ async function purgeCandidateBatch(ctx: MutationCtx, collectionId: Id<"collectio
 }
 
 export const purgeCandidate = internalMutation({
-  args: candidateArgs, returns: v.null(),
-  handler: async (ctx, { collectionId, candidateId }): Promise<null> => {
+  args: { ...candidateArgs, ...trackedJob }, returns: v.null(),
+  handler: async (ctx, { collectionId, candidateId, tracked }): Promise<null> => {
     const collection = await ctx.db.get(collectionId);
     const candidate = await ctx.db.get(candidateId);
     if (!collection || (collection.state !== "active" && collection.state !== "archived") || candidate?.collectionId !== collectionId || candidate.recordState !== "deleting") return null;
+    // A queued job from before tracking was introduced may run only until the chain has a tracked successor.
+    if (!tracked && candidate.purgeJobId) return null;
     if (await purgeCandidateBatch(ctx, collectionId, candidateId)) {
-      await ctx.scheduler.runAfter(0, internal.lifecycle.purgeCandidate, { collectionId, candidateId });
+      await scheduleCandidatePurge(ctx, collectionId, candidateId);
     } else {
       await ctx.db.delete(candidateId);
       await ctx.db.patch(collectionId, { candidateCount: collection.candidateCount - 1 });
+      await touchCollection(ctx, collection);
     }
-    await touchCollection(ctx, collection);
     return null;
   },
 });
@@ -112,14 +134,32 @@ async function purgeCollectionBatch(ctx: MutationCtx, collectionId: Id<"collecti
 }
 
 export const purgeCollection = internalMutation({
-  args: collectionArgs, returns: v.null(),
-  handler: async (ctx, { collectionId }): Promise<null> => {
+  args: { ...collectionArgs, ...trackedJob }, returns: v.null(),
+  handler: async (ctx, { collectionId, tracked }): Promise<null> => {
     const collection = await ctx.db.get(collectionId);
     if (collection?.state !== "deleting") return null;
+    if (!tracked && collection.purgeJobId) return null;
     if (await purgeCollectionBatch(ctx, collectionId)) {
-      await touchCollection(ctx, collection);
-      await ctx.scheduler.runAfter(0, internal.lifecycle.purgeCollection, { collectionId });
+      await scheduleCollectionPurge(ctx, collectionId);
     } else await ctx.db.delete(collectionId);
+    return null;
+  },
+});
+
+export const expireRestores = internalMutation({
+  args: {}, returns: v.null(),
+  handler: async ctx => {
+    const cutoff = Date.now() - restoreIdleMs;
+    for (const state of unfinishedRestoreStates) {
+      const stale = await ctx.db.query("backupRestores").withIndex("by_state_and_updatedAt", q =>
+        q.eq("state", state).lte("updatedAt", cutoff)).take(8);
+      for (const restore of stale) {
+        const collection = await ctx.db.get(restore.collectionId);
+        if (collection?.ownerId === restore.ownerId && (collection.state === "restoring" || collection.state === "deleting")) {
+          await startCollectionPurge(ctx, collection);
+        }
+      }
+    }
     return null;
   },
 });
