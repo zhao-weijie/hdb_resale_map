@@ -1,13 +1,13 @@
 import {
     createIcons, X, CircleAlert, ChartNoAxesColumn, Building2, ChevronDown,
-    Calendar, MapPin, Search, MousePointer2, Loader, ListFilter, Info, ChevronLeft,
+    Calendar, MapPin, Search, MousePointer2, Loader, ListFilter, Info, ChevronLeft, Bookmark,
 } from 'lucide';
 
 // Keep existing dynamically rendered data-lucide markup, with only used icons bundled.
 const icons = {
     X, AlertCircle: CircleAlert, BarChart2: ChartNoAxesColumn, ChartNoAxesColumn, Building2,
     ChevronDown, Calendar, MapPin, Search, MousePointer2, Loader,
-    Filter: ListFilter, Info, ChevronLeft,
+    Filter: ListFilter, Info, ChevronLeft, Bookmark,
 };
 
 export function refreshIcons(): void { createIcons({ icons }); }

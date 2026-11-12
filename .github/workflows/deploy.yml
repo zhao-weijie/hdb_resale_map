@@ -79,6 +79,8 @@ jobs:
         run: npm test
         
       - name: Build
+        env:
+          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
         run: npm run build
         
       - name: Upload artifact

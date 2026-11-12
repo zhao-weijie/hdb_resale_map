@@ -12,6 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@auth/core": "^0.41.3",
+    "@convex-dev/auth": "^0.0.96",
     "@deck.gl/aggregation-layers": "^9.0.0",
     "@deck.gl/core": "^9.0.0",
     "@deck.gl/layers": "^9.0.0",
@@ -19,6 +21,8 @@
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "apache-arrow": "^18.1.0",
     "chart.js": "^4.4.0",
+    "convex": "^1.49.0",
+    "convex-helpers": "^0.1.134",
     "d3-scale-chromatic": "^3.1.0",
     "lucide": "1.43.0",
     "maplibre-gl": "^4.7.1",
@@ -28,6 +32,7 @@
     "@types/d3-color": "^3.1.3",
     "@types/d3-scale-chromatic": "^3.1.0",
     "@types/rbush": "^3.0.3",
+    "convex-test": "^0.0.67",
     "papaparse": "^5.5.3",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",

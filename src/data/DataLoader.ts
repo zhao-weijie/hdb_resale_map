@@ -270,6 +270,10 @@ export class DataLoader {
         return this.data;
     }
 
+    getComparisonManifest(): DataManifest | null {
+        return this.manifest;
+    }
+
     getRecordCount(): number {
         return this.data.length;
     }

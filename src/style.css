@@ -99,15 +99,11 @@ body {
 }
 
 /* Panel Toggle Button */
-.mobile-panel-title,
-.mobile-panel-count {
-    display: none;
-}
-
 .panel-toggle-chevron {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s ease;
 }
 
 .panel-toggle {
@@ -139,7 +135,7 @@ body {
     transform: translateX(calc(-100% + 20px));
 }
 
-#analytics-panel.collapsed .panel-toggle {
+#analytics-panel.collapsed .panel-toggle-chevron {
     transform: rotate(180deg);
 }
 
@@ -687,41 +683,18 @@ input[type="checkbox"] {
         flex: 0 0 var(--mobile-drawer-peek-height);
         width: 100%;
         height: var(--mobile-drawer-peek-height);
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
-        padding: 0 16px;
         background: var(--color-bg-panel);
         border: 0;
         border-block: 1px solid var(--color-border);
         border-radius: var(--radius-lg) var(--radius-lg) 0 0;
         box-shadow: none;
         color: var(--color-text-main);
-        font-family: inherit;
         transform: none;
         transition: color 0.2s;
     }
 
-    #analytics-panel .mobile-panel-title {
-        display: block;
-        text-align: left;
-        font-size: 16px;
-        font-weight: 600;
-    }
-
-    #analytics-panel .mobile-panel-count {
-        display: block;
-        text-align: right;
-        font-size: 12px;
-        font-weight: normal;
-    }
-
-    #analytics-panel.collapsed .panel-toggle {
-        transform: none;
-    }
-
     #analytics-panel .panel-toggle-chevron {
         transform: rotate(-90deg);
-        transition: transform 0.2s ease;
     }
 
     #analytics-panel.collapsed .panel-toggle-chevron {
@@ -731,6 +704,10 @@ input[type="checkbox"] {
     .mobile-only {
         display: block;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #analytics-panel, #analytics-panel .panel-toggle, #analytics-panel .panel-toggle-chevron { transition: none; }
 }
 
 /* Input with button icon */

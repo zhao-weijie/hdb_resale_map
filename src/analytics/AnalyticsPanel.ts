@@ -84,18 +84,21 @@ export class AnalyticsPanel {
         return this.geocodeCachePromise;
     }
 
-    render(): void {
+    render(openTracker?: () => void): void {
         this.container.innerHTML = `
       <div class="resize-handle" title="Drag to resize"></div>
 
       <!-- Keep the toggle outside the scrolling panel content. -->
-      <button id="panel-toggle" class="panel-toggle" aria-label="Toggle Analytics Panel" aria-expanded="true" aria-controls="analytics-panel-content">
-          <span class="mobile-panel-title">Analytics</span>
+      <button type="button" id="panel-toggle" class="panel-toggle" aria-label="Toggle map panel" aria-expanded="true" aria-controls="analytics-panel-content">
           <span class="panel-toggle-chevron" aria-hidden="true"><i data-lucide="chevron-left"></i></span>
-          <span class="mobile-panel-count" id="mobile-record-count"></span>
       </button>
       
-      <div id="analytics-panel-content" class="panel-content">
+      <div id="analytics-panel-content" class="drawer-content">
+        <nav class="drawer-destinations" aria-label="Map views"${openTracker ? '' : ' hidden'}>
+          <button type="button" data-destination="analytics" aria-current="page">Analytics</button>
+          <button type="button" data-destination="tracker"><i data-lucide="bookmark"></i> Saved homes</button>
+        </nav>
+        <div id="public-analytics" class="panel-content">
         <!-- Header -->
         <div class="analytics-header">
             <h2><i data-lucide="bar-chart-2"></i> Analytics <span style="font-size: 14px; font-weight: normal; color: var(--color-text-muted); margin-left: auto;" id="record-count"></span></h2>
@@ -111,11 +114,15 @@ export class AnalyticsPanel {
         ${this.mopFiltersCard.render()}
       
         <div id="rental-analysis-slot"></div>
+        <div id="tracker-layer-setting" hidden></div>
 
         <!-- Stats & Chart -->
         <div class="card" style="flex: 1; display: flex; flex-direction: column;">
             ${this.overviewTab.render()}
         </div>
+        </div>
+        <div id="tracker-panel" class="panel-content" hidden></div>
+        <div id="tracker-comparison" class="panel-content" hidden></div>
       </div>
 
     `;
@@ -128,7 +135,39 @@ export class AnalyticsPanel {
         }
 
         this.attachEventListeners();
+        this.container.querySelector('[data-destination="analytics"]')?.addEventListener('click', () => this.showDestination('analytics'));
+        this.container.querySelector('[data-destination="tracker"]')?.addEventListener('click', () => {
+            this.showDestination('tracker');
+            openTracker?.();
+        });
         this.renderOverview();
+    }
+
+    showDestination(destination: 'analytics' | 'tracker' | 'comparison'): void {
+        const content = this.container.querySelector<HTMLElement>('.drawer-content');
+        if (!content) return;
+        for (const [id, active] of [
+            ['public-analytics', destination === 'analytics'],
+            ['tracker-panel', destination === 'tracker'],
+            ['tracker-comparison', destination === 'comparison']
+        ] as const) {
+            const view = content.querySelector<HTMLElement>(`#${id}`);
+            if (view) view.hidden = !active;
+        }
+        const navigation = content.querySelector('nav');
+        if (navigation) navigation.hidden = destination === 'comparison';
+        for (const button of navigation?.querySelectorAll<HTMLButtonElement>('button') ?? []) {
+            if (button.dataset.destination === destination) button.setAttribute('aria-current', 'page');
+            else button.removeAttribute('aria-current');
+        }
+        this.setCollapsed(false);
+    }
+
+    private setCollapsed(collapsed: boolean): void {
+        this.container.classList.toggle('collapsed', collapsed);
+        this.container.querySelector('#panel-toggle')?.setAttribute('aria-expanded', String(!collapsed));
+        const content = this.container.querySelector<HTMLElement>('.drawer-content');
+        if (content) content.inert = collapsed;
     }
 
     private attachEventListeners(): void {
@@ -161,8 +200,7 @@ export class AnalyticsPanel {
         // Panel Toggle
         const toggleBtn = document.getElementById('panel-toggle');
         toggleBtn?.addEventListener('click', () => {
-            const collapsed = this.container.classList.toggle('collapsed');
-            toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+            this.setCollapsed(!this.container.classList.contains('collapsed'));
         });
 
         // Bind component events
@@ -207,10 +245,8 @@ export class AnalyticsPanel {
     }
 
     private updateRecordCount(count: number): void {
-        for (const id of ['record-count', 'mobile-record-count']) {
-            const countSpan = document.getElementById(id);
-            if (countSpan) countSpan.textContent = `(${count.toLocaleString()} records)`;
-        }
+        const countSpan = document.getElementById('record-count');
+        if (countSpan) countSpan.textContent = `(${count.toLocaleString()} records)`;
     }
 
     private bindTooltipEvents(): void {
@@ -306,51 +342,7 @@ export class AnalyticsPanel {
         });
 
         // 2. Point Click Handler
-        this.mapView.setOnPointClick((lat, lng, clicked) => {
-            if (this.locationCard.getIsSelectionModeActive()) {
-                return;
-            }
-
-            if (!clicked) return;
-
-            const relevant = applyFilters(
-                this.dataLoader.getTransactionsForBlock(clicked.block, clicked.street_name),
-                appState.get('globalFilters')
-            );
-
-            if (relevant.length === 0) return;
-
-            relevant.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
-
-            const geocodeKey = `${clicked.block}|${clicked.street_name}`;
-            const geocodeData = this.geocodeCache?.[geocodeKey];
-            const postal = geocodeData?.postal || '';
-            const title = postal
-                ? `Blk ${clicked.block} ${clicked.street_name} • ${postal}`
-                : `Blk ${clicked.block} ${clicked.street_name}`;
-
-            const currentYear = new Date().getFullYear();
-            const leaseCommenceYear = Number(clicked.lease_commence_date);
-            const currentLease = 99 - (currentYear - leaseCommenceYear);
-            const mrt = clicked.mrt_distance_m ? `${Math.round(clicked.mrt_distance_m)}m to MRT` : '';
-            const subtitle = currentLease > 0
-                ? [currentLease > 0 ? `${currentLease} yrs lease` : '', mrt].filter(Boolean).join(' • ')
-                : '';
-
-            this.popupTransactions = relevant;
-            this.popupMeta = { lat, lng, title, subtitle, geocodeKey };
-            this.renderTransactionPopup();
-
-            if (!this.geocodeCache) {
-                void this.ensureGeocodeCache().then(() => {
-                    if (this.popupMeta?.geocodeKey !== geocodeKey) return;
-                    const loadedPostal = this.geocodeCache?.[geocodeKey]?.postal;
-                    if (!loadedPostal) return;
-                    this.popupMeta.title = `Blk ${clicked.block} ${clicked.street_name} • ${loadedPostal}`;
-                    this.renderTransactionPopup();
-                });
-            }
-        });
+        this.mapView.setOnPointClick((lat, lng, clicked) => this.openBlockSales(lat, lng, clicked));
 
         // 3. Drag Selection
         this.mapView.setOnDragSelection({
@@ -397,6 +389,35 @@ export class AnalyticsPanel {
                 }
             }
         });
+    }
+
+    openBlockSales(lat: number, lng: number, clicked: HDBTransaction): void {
+        if (this.locationCard.getIsSelectionModeActive() || !clicked) return;
+        const relevant = this.applyFiltersToTransactions(
+            this.dataLoader.getTransactionsForBlock(clicked.block, clicked.street_name));
+        if (!relevant.length) return;
+        relevant.sort((a, b) => b.transaction_date.getTime() - a.transaction_date.getTime());
+
+        const geocodeKey = `${clicked.block}|${clicked.street_name}`;
+        const title = `Blk ${clicked.block} ${clicked.street_name}`;
+        const postal = this.geocodeCache?.[geocodeKey]?.postal;
+        const lease = 99 - (new Date().getFullYear() - Number(clicked.lease_commence_date));
+        const mrt = clicked.mrt_distance_m ? `${Math.round(clicked.mrt_distance_m)}m to MRT` : '';
+        const subtitle = lease > 0 ? [`${lease} yrs lease`, mrt].filter(Boolean).join(' • ') : '';
+        this.popupTransactions = relevant;
+        this.popupMeta = { lat, lng, title: postal ? `${title} • ${postal}` : title, subtitle, geocodeKey };
+        this.renderTransactionPopup();
+
+        if (!this.geocodeCache) {
+            const popup = this.popupMeta;
+            void this.ensureGeocodeCache().then(() => {
+                if (this.popupMeta !== popup) return;
+                const loadedPostal = this.geocodeCache?.[geocodeKey]?.postal;
+                if (!loadedPostal) return;
+                popup.title = `${title} • ${loadedPostal}`;
+                this.renderTransactionPopup();
+            });
+        }
     }
 
     private renderTransactionPopup(): void {
