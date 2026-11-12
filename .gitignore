@@ -26,6 +26,8 @@ env/
 
 # Environment variables and secrets
 .env
+.env.local
+.env.*.local
 .onemap_token.json
 
 # IDE

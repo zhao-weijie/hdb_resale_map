@@ -7,6 +7,7 @@ import maplibregl from 'maplibre-gl';
 import { appState } from '../state/AppState';
 import { buildColorLookup, type ColorScale } from '../components/ColorScaleBar';
 import { circleSelection, rectangleSelection, type SpatialSelection } from '../spatial/selection';
+import { createMopPopup } from './mopPopup';
 import {
     calculateMetricDomain,
     getMetricDefinition,
@@ -18,6 +19,16 @@ import {
 
 
 export type ColorMode = MapMetric;
+export interface SavedBlockPin {
+    key: string;
+    latitude: number;
+    longitude: number;
+    label: string;
+    count: number;
+    selected: boolean;
+    open: (opener: HTMLButtonElement) => void;
+}
+
 export interface RentalMapPoint {
     block: string;
     streetName: string;
@@ -50,6 +61,8 @@ export class MapView {
     private rentalPoints: RentalMapPoint[] = [];
     private rentalDomain: ScaleDomain | null = null;
     private onRentalPointClickCallback: ((point: RentalMapPoint) => void) | null = null;
+    private savedPins = new Map<string, { marker: maplibregl.Marker; button: HTMLButtonElement; pin: SavedBlockPin }>();
+    private comparison: { selection: SpatialSelection; rows: HDBTransaction[]; camera?: maplibregl.CameraOptions } | null = null;
 
     constructor(containerId: string, _dataLoader: DataLoader, isMobile: boolean) {
         const container = document.getElementById(containerId);
@@ -79,10 +92,19 @@ export class MapView {
             ]
         });
 
-        // Add attribution manually since OneMap style might miss it
-        this.map.addControl(new maplibregl.AttributionControl({
-            customAttribution: 'Map data © <a href="https://www.onemap.gov.sg/" target="_blank">OneMap</a>'
-        }), 'bottom-left');
+        // Keep the OneMap credit independent of attribution HTML in the remote style.
+        const attribution = document.createElement('div');
+        attribution.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+        const credit = document.createElement('a');
+        credit.href = 'https://www.onemap.gov.sg/';
+        credit.target = '_blank';
+        credit.rel = 'noopener noreferrer';
+        credit.textContent = 'OneMap';
+        attribution.append('Map data © ', credit);
+        this.map.addControl({
+            onAdd: () => attribution,
+            onRemove: () => attribution.remove(),
+        }, 'bottom-left');
 
         // Custom click handler for closing popups
         this.map.on('click', () => {
@@ -223,6 +245,85 @@ export class MapView {
         });
     }
 
+    setSavedBlockPins(pins: SavedBlockPin[]): void {
+        if (!this.map) return;
+        const keys = new Set(pins.map((pin) => pin.key));
+        for (const [key, entry] of this.savedPins) {
+            if (keys.has(key)) continue;
+            entry.marker.remove();
+            this.savedPins.delete(key);
+        }
+        for (const pin of pins) {
+            let entry = this.savedPins.get(pin.key);
+            if (!entry) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'saved-block-pin';
+                button.innerHTML = '<svg aria-hidden="true" width="27" height="33" viewBox="0 0 27 33"><path d="M3 3h21v26l-10.5-6L3 29Z"/></svg><span aria-hidden="true"></span>';
+                const marker = new maplibregl.Marker({ element: button, anchor: 'bottom' });
+                entry = { marker, button, pin };
+                this.savedPins.set(pin.key, entry);
+                button.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    if (!this.containerElement.classList.contains('selection-active')) this.savedPins.get(pin.key)?.pin.open(button);
+                });
+                marker.setLngLat([pin.longitude, pin.latitude]).addTo(this.map);
+            }
+            entry.pin = pin;
+            entry.marker.setLngLat([pin.longitude, pin.latitude]);
+            entry.button.setAttribute('aria-label', pin.label);
+            entry.button.setAttribute('aria-pressed', String(pin.selected));
+            entry.button.querySelector('span')!.textContent = pin.count > 1 ? String(pin.count) : '';
+        }
+    }
+
+    revealSavedBlock(lat: number, lng: number): void {
+        if (!this.map) return;
+        const bounds = this.containerElement.getBoundingClientRect();
+        const drawer = document.getElementById('analytics-panel')?.getBoundingClientRect();
+        const mobile = window.matchMedia('(max-width: 768px)').matches;
+        const left = !mobile && drawer ? Math.max(24, drawer.right - bounds.left + 32) : 24;
+        const bottom = mobile && drawer ? Math.max(24, bounds.bottom - drawer.top + 48) : 24;
+        const right = bounds.width - 30;
+        const top = 46;
+        const maxY = bounds.height - bottom;
+        if (left > right || top > maxY) return;
+        const pin = this.map.project([lng, lat]);
+        const x = Math.min(right, Math.max(left, pin.x));
+        const y = Math.min(maxY, Math.max(top, pin.y));
+        if (x !== pin.x || y !== pin.y) {
+            this.map.panBy([pin.x - x, pin.y - y], { duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250 });
+        }
+    }
+
+    setCompletedSalesComparison(selection: SpatialSelection, rows: HDBTransaction[]): void {
+        const camera = this.comparison?.camera ?? (this.map && {
+            center: this.map.getCenter(),
+            zoom: this.map.getZoom(),
+            pitch: this.map.getPitch(),
+            bearing: this.map.getBearing(),
+            padding: this.map.getPadding(),
+        }) ?? undefined;
+        this.comparison = { selection, rows, camera };
+        this.closePopup();
+        this.containerElement.classList.add('showing-sales-comparison');
+        this.updateLayers();
+    }
+
+    clearCompletedSalesComparison(): void {
+        if (!this.comparison) return;
+        const camera = this.comparison.camera;
+        this.comparison = null;
+        if (camera) this.map?.jumpTo(camera);
+        this.containerElement.classList.remove('showing-sales-comparison');
+        this.updateLayers();
+    }
+
+    closePopup(): void {
+        this.activePopup?.remove();
+        this.activePopup = null;
+    }
+
     /**
      * Update map with filtered data
      */
@@ -258,6 +359,17 @@ export class MapView {
     }
 
     private createLayers() {
+        if (this.comparison) {
+            return [...this.createSelectionLayers(this.comparison.selection), new ScatterplotLayer({
+                id: 'completed-sales-comparison',
+                data: this.comparison.rows,
+                getPosition: (row: HDBTransaction) => [row.longitude, row.latitude],
+                getRadius: 25,
+                radiusMinPixels: 4,
+                radiusMaxPixels: 13,
+                getFillColor: [32, 91, 170, 210],
+            })];
+        }
         const dataToRender = appState.get('filteredTransactions');
 
         const layers: any[] = [];
@@ -361,27 +473,8 @@ export class MapView {
                     lineWidthMinPixels: 1,
                     onClick: (info: any) => {
                         if (info && info.object) {
-                            const props = info.object.properties;
-                            const html = `
-                                <div style="padding: 10px; min-width: 220px;">
-                                    <h3 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600;">${props.PROJECT_NAME}</h3>
-                                    <div style="margin-bottom: 8px; font-size: 12px; color: #666;">
-                                        ${props.BTO_NAME_SCRAPED ? `<span style="color: #059669;">✓ Verified: ${props.BTO_NAME_SCRAPED}</span>` : '<span style="color: #d97706;">⚠ Unverified Source</span>'}
-                                    </div>
-                                    
-                                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin-bottom: 12px;">
-                                        <strong>Type:</strong> <div>${props.PROJECT_TYPE || 'Unknown'}</div>
-                                        <strong>Units:</strong> <div>${props.TOTAL_UNITS || 'N/A'}</div>
-                                        <strong>MOP Expiry:</strong> <div>${props.MOP_EXPIRY_Q}</div>
-                                        <div style="grid-column: 2; font-size: 11px; color: #888;">${props.MOP_EXPIRY_DATE}</div>
-                                    </div>
-
-                                    <div style="border-top: 1px solid #eee; padding-top: 8px;">
-                                        ${props.BROCHURE_LINK ? `<a href="${props.BROCHURE_LINK}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500;">View Brochure →</a>` : '<span style="color: #999; font-style: italic;">No Brochure</span>'}
-                                    </div>
-                                </div>
-                            `;
-                            this.showPopup(info.coordinate[1], info.coordinate[0], html);
+                            const content = createMopPopup(info.object.properties ?? {});
+                            this.showPopup(info.coordinate[1], info.coordinate[0], content);
                             return true;
                         }
                     }
@@ -542,7 +635,7 @@ export class MapView {
 
     private activePopup: maplibregl.Popup | null = null;
 
-    showPopup(lat: number, lng: number, htmlContent: string): void {
+    showPopup(lat: number, lng: number, content: HTMLElement): void {
         console.log('MapView.showPopup called:', lat, lng);
         if (!this.map) {
             console.warn('MapView.showPopup: Map not initialized');
@@ -561,7 +654,7 @@ export class MapView {
             className: 'hdb-popup'
         })
             .setLngLat([lng, lat])
-            .setHTML(htmlContent)
+            .setDOMContent(content)
             .addTo(this.map);
 
         this.lastPopupTime = Date.now();

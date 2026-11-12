@@ -1,0 +1,92 @@
+.tracker-transfer {
+    overflow-wrap: anywhere;
+}
+
+.tracker-transfer[hidden] {
+    display: none;
+}
+
+.tracker-transfer h2:focus {
+    outline: none;
+}
+
+.tracker-transfer .tracker-transfer-back {
+    color: #214c86;
+}
+
+.tracker-transfer-mapping,
+.tracker-transfer-review {
+    border-block: 1px solid #d8ccba;
+    margin-block: .75rem;
+}
+
+.tracker-transfer-mapping-row {
+    padding-block: .5rem;
+}
+
+.tracker-transfer-mapping-row + .tracker-transfer-mapping-row {
+    border-top: 1px solid #dfd4c3;
+}
+
+.tracker-transfer-row-body,
+.tracker-transfer-correction {
+    display: grid;
+    gap: .6rem;
+    padding-block: .5rem;
+}
+
+.tracker-transfer-row-body p,
+.tracker-transfer-changes,
+.tracker-transfer-problems {
+    margin: 0;
+}
+
+.tracker-transfer-review-row {
+    min-height: 44px;
+}
+
+.tracker-transfer-review-row summary {
+    padding-block: .5rem;
+}
+
+.tracker-transfer-changes {
+    display: grid;
+    grid-template-columns: minmax(6rem, 1fr) minmax(0, 2fr);
+    gap: .4rem 1rem;
+}
+
+.tracker-transfer-changes dt {
+    font-weight: 600;
+}
+
+.tracker-transfer-changes dd {
+    margin: 0;
+}
+
+.tracker-transfer-error,
+.tracker-transfer-problems {
+    color: #8b3026;
+}
+
+.tracker-transfer-columns {
+    border: 1px solid #d8ccba;
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: .1rem .75rem;
+    margin-block: .75rem;
+    padding: .35rem .65rem .55rem;
+}
+
+.tracker-transfer-columns legend {
+    padding-inline: .25rem;
+    font-weight: 600;
+}
+
+.tracker-transfer label:has(input[type="checkbox"]) {
+    align-items: center;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    min-height: 44px;
+}

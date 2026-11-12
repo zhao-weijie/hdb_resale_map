@@ -9,8 +9,9 @@ import { RentalController } from './rental/RentalController';
 import { appState } from './state/AppState';
 import { applyFilters } from './utils/filters';
 import { readSavedFilters } from './utils/savedFilters';
+import './listings/tracker.css';
 
-const isMobile = window.innerWidth < 768;
+const isMobile = window.innerWidth <= 768;
 
 async function initApp() {
     const loading = document.getElementById('loading-overlay');
@@ -31,12 +32,24 @@ async function initApp() {
             await dataLoader.loadManifest();
             await dataLoader.ensureDateRange(filters.date);
             appState.set('allTransactions', dataLoader.getAllData());
-            appState.set('filteredTransactions', applyFilters(dataLoader.getAllData(), filters));
+            mapView.setFilteredData(applyFilters(dataLoader.getAllData(), appState.get('globalFilters')));
         })();
-        await Promise.all([mapReady, dataReady]);
-        mapView.setFilteredData(appState.get('filteredTransactions'));
         const analyticsPanel = new AnalyticsPanel('analytics-panel', dataLoader, mapView);
-        analyticsPanel.render();
+        let tracker: import('./listings/TrackerPanel').TrackerPanel | undefined;
+        let trackerLoading: Promise<void> | undefined;
+        analyticsPanel.render(() => {
+            if (tracker) { tracker.enter(); return; }
+            if (trackerLoading) return;
+            const host = document.getElementById('tracker-panel')!;
+            host.textContent = 'Opening Saved homes…';
+            trackerLoading = import('./listings/TrackerPanel').then(({ TrackerPanel }) => {
+                tracker = new TrackerPanel(host, analyticsPanel, dataLoader, mapView);
+                tracker.enter();
+            }).catch(() => {
+                host.textContent = 'Saved homes could not open. Select Saved homes again to retry.';
+            }).finally(() => { trackerLoading = undefined; });
+        });
+        await Promise.all([mapReady, dataReady]);
         // Rental evidence is loaded only after the buyer selects a rental metric.
         new RentalController(dataLoader, mapView, colorScale);
         loading?.remove();

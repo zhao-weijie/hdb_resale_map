@@ -8,7 +8,7 @@ An interactive, high-performance map visualization of Singapore HDB resale trans
 - 🎯 **Radial Selection** - Draw circular areas to analyze specific neighborhoods
 - 📊 **Time-Series Analytics** - View price trends over time
 - 📱 **Mobile-Optimized** - Map and viewport statistics for mobile devices
-- 💾 **100% Static** - Client-side only, deployable to GitHub Pages/Vercel/Netlify
+- 💾 **Static public map** - Deployable to GitHub Pages. Saved homes use a separate Convex backend.
 - 🚀 **Apache Arrow** - Efficient binary data format for fast loading
 
 ## Quick Start
@@ -58,6 +58,20 @@ npm run build
 ```
 
 Output will be in `dist/` directory, ready for deployment.
+
+### Enable Saved homes
+
+Use Node 24 for the Convex CLI. Run `npx convex dev` and select the existing Convex project to develop against your own deployment. Set the public `VITE_CONVEX_URL` in `.env.local` to that deployment's HTTPS URL. For GitHub Pages, set the repository Actions variable `VITE_CONVEX_URL` to the production deployment URL.
+
+Set `SITE_URL` to the corresponding site URL, including `/hdb_resale_map/`. Configure `JWT_PRIVATE_KEY` and `JWKS` on each deployment using the [Convex Auth key setup](https://labs.convex.dev/auth/setup/manual#configure-private-and-public-key). Set `AUTH_RESEND_KEY` and `AUTH_RESEND_FROM` on the deployment using a Resend key and verified sender. Keep these server credentials and any deploy key out of the frontend and repository. The login form sends an eight-digit code to the user's email.
+
+Run `npx convex deploy` from an authenticated terminal to release the backend. The GitHub Pages workflow uses the configured public URL at build time. The public transaction map also runs without a Convex configuration.
+
+New sign-in codes share a deployment-wide budget of 60 requests per UTC day by default. Set the optional server-side `AUTH_OTP_DAILY_SEND_LIMIT` to an integer from 1 to 1,000 to match the deployment's mail budget. The count includes admitted requests that fail to deliver. A hashed client IP bucket can request up to 15 new codes per UTC day. Calls without an IP share one bucket with the same limit. Shorter send and verification limits also apply, and repeat requests preserve a code while it is valid.
+
+IP-based limits depend on trustworthy request metadata. For a self-hosted deployment, restrict backend access to a trusted proxy that replaces forwarded IP headers. The shared deployment budget applies across source buckets. [Convex request metadata](https://docs.convex.dev/api/modules/server#requestmetadata)
+
+Signed-in tracker mutations share a per-account budget of 120 per minute with capacity for a burst of 120. A backup restore can stage up to 50,000 records and 64 MiB. The hourly cleanup expires unfinished restores after 48 hours of inactivity. Some older in-progress uploads require a restart if the server cannot reconstruct their size within a bounded read.
 
 ## Project Structure
 

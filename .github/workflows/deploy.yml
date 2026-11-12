@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -79,6 +77,8 @@ jobs:
         run: npm test
         
       - name: Build
+        env:
+          VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
         run: npm run build
         
       - name: Upload artifact
@@ -87,6 +87,9 @@ jobs:
           path: ./dist
 
   deploy:
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

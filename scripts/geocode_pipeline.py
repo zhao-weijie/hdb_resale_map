@@ -34,6 +34,12 @@ OUTPUT_DIR = Path(__file__).parent / "data"
 CACHE_FILE = Path(__file__).parent.parent / "public" / "data" / "addresses_geocoded.json"
 RAW_DATA_FILE = OUTPUT_DIR / "hdb_resale_raw.csv"
 TOKEN_CACHE_FILE = Path(__file__).parent / ".onemap_token.json"
+GEOCODE_STATUSES = {"resolved", "not_found", "ambiguous", "transient_failure"}
+GEOCODE_REASONS = {
+    "postal_match", "no_results", "no_postal_match", "multiple_valid_results",
+    "invalid_cached_coordinates", "cached_postal_mismatch",
+    "rate_limited", "http_error", "timeout", "request_failed", "invalid_response",
+}
 
 
 def get_onemap_token() -> Optional[str]:
@@ -68,12 +74,15 @@ def get_onemap_token() -> Optional[str]:
             json={
                 "email": ONEMAP_EMAIL,
                 "password": ONEMAP_PASSWORD
-            }
+            },
+            timeout=10,
         )
         response.raise_for_status()
         data = response.json()
         
         access_token = data.get('access_token')
+        if not isinstance(access_token, str) or not access_token:
+            raise ValueError("Missing OneMap access token")
         expiry_time = time.time() + (3 * 24 * 60 * 60)  # Token valid for 3 days
         
         # Cache the token
@@ -86,13 +95,13 @@ def get_onemap_token() -> Optional[str]:
         print("✓ Successfully authenticated with OneMap API (290 req/min limit)")
         return access_token
         
-    except requests.exceptions.HTTPError as e:
-        print(f"❌ Failed to authenticate with OneMap API: {e}")
+    except requests.exceptions.HTTPError:
+        print("❌ OneMap authentication returned an HTTP error.")
         print("   Check your credentials in .env file")
         print("   Falling back to unauthenticated API")
         return None
-    except Exception as e:
-        print(f"❌ Error during authentication: {e}")
+    except Exception:
+        print("❌ Could not authenticate with OneMap API.")
         print("   Falling back to unauthenticated API")
         return None
 
@@ -189,6 +198,29 @@ def extract_unique_addresses(df: pd.DataFrame) -> List[Tuple[str, str]]:
     return addresses
 
 
+def public_geocode_entry(entry: Dict) -> Dict:
+    """Keep the public address fields and bounded diagnostic codes."""
+    public_entry = {
+        field: entry[field]
+        for field in ("block", "street_name", "postal", "address")
+        if isinstance(entry.get(field), str)
+    }
+    for field, bound in (("latitude", 90), ("longitude", 180)):
+        value = entry.get(field)
+        public_entry[field] = value if type(value) in (int, float) and -bound <= value <= bound else None
+    status = entry.get("status")
+    if not isinstance(status, str) or status not in GEOCODE_STATUSES:
+        status = "resolved" if public_entry["latitude"] is not None and public_entry["longitude"] is not None else "not_found"
+    public_entry["status"] = status
+    reason = entry.get("reason")
+    if isinstance(reason, str) and reason in GEOCODE_REASONS:
+        public_entry["reason"] = reason
+    candidate_count = entry.get("candidate_count")
+    if type(candidate_count) is int and candidate_count >= 0:
+        public_entry["candidate_count"] = candidate_count
+    return public_entry
+
+
 def load_geocode_cache() -> Dict[str, Dict]:
     """
     Load existing geocoding cache if available
@@ -209,9 +241,7 @@ def load_geocode_cache() -> Dict[str, Dict]:
                 street = canonical_address_part(raw_entry.get("street_name", str(old_key).partition("|")[2]))
                 if not block or not street:
                     continue
-                entry = dict(raw_entry, block=block, street_name=street)
-                if "status" not in entry:
-                    entry["status"] = "resolved" if entry.get("latitude") is not None and entry.get("longitude") is not None else "not_found"
+                entry = public_geocode_entry(dict(raw_entry, block=block, street_name=street))
                 cache[canonical_address_key(block, street)] = entry
             print(f"Loaded {len(cache)} cached geocodes from {CACHE_FILE}")
             return cache
@@ -220,9 +250,10 @@ def load_geocode_cache() -> Dict[str, Dict]:
 
 def save_geocode_cache(cache: Dict[str, Dict]):
     """Save geocoding cache to disk"""
+    public_cache = {key: public_geocode_entry(entry) for key, entry in cache.items()}
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
-        json.dump(cache, f, indent=2, ensure_ascii=False)
+        json.dump(public_cache, f, indent=2, ensure_ascii=False)
     print(f"✓ Saved geocode cache to {CACHE_FILE}")
 
 
@@ -280,14 +311,14 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
         "getAddrDetails": "Y"
     }
     
-    # Add token to params if available
-    if token:
-        params["token"] = token
+    headers = {"Authorization": token} if token else {}
     
     try:
-        response = requests.get(ONEMAP_SEARCH_URL, params=params, timeout=10)
+        response = requests.get(ONEMAP_SEARCH_URL, params=params, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
+        if "error" in data:
+            raise ValueError("OneMap search returned an API error")
         
         results = data.get("results", [])
         
@@ -333,16 +364,24 @@ def geocode_address(block: str, street_name: str, token: Optional[str] = None) -
             "reason": "postal_match",
         }
             
-    except Exception as e:
-        return {
-            "block": block,
-            "street_name": street_name,
-            "latitude": None,
-            "longitude": None,
-            "status": "transient_failure",
-            "reason": type(e).__name__,
-            "error": str(e)
-        }
+    except requests.exceptions.HTTPError as error:
+        status = error.response.status_code if error.response is not None else None
+        reason = "rate_limited" if status == 429 else "http_error"
+    except requests.exceptions.Timeout:
+        reason = "timeout"
+    except requests.exceptions.RequestException:
+        reason = "request_failed"
+    except Exception:
+        reason = "invalid_response"
+
+    return {
+        "block": block,
+        "street_name": street_name,
+        "latitude": None,
+        "longitude": None,
+        "status": "transient_failure",
+        "reason": reason,
+    }
 
 
 def verify_cache(cache: Dict[str, Dict]):
@@ -396,6 +435,8 @@ def geocode_addresses(addresses: List[Tuple[str, str]]) -> Dict[str, Dict]:
     ]
     
     if not to_geocode:
+        # A restored CI cache can contain diagnostics from earlier pipeline versions.
+        save_geocode_cache(cache)
         print("All addresses already cached and verified!")
         return cache
     

@@ -18,6 +18,7 @@ export interface AppState {
     filteredTransactions: HDBTransaction[];
     selectedTransactions: HDBTransaction[] | null;
     spatialSelection: SpatialSelection;
+    selectedCandidateId: string | null;
 
     // UI State
     globalFilters: GlobalFilters;
@@ -51,6 +52,7 @@ export class StateStore {
             filteredTransactions: [],
             selectedTransactions: null,
             spatialSelection: NO_SPATIAL_SELECTION,
+            selectedCandidateId: null,
             globalFilters: {
                 date: '2024-01',
                 flatTypes: ['2 ROOM', '3 ROOM', '4 ROOM', '5 ROOM', 'EXECUTIVE', 'MULTI-GENERATION'],
